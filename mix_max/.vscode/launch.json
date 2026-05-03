@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "configurations": [
+    {
+      "name": "Mix Max - Dev",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "dev", "--target", "lib/main.dart"]
+    },
+    {
+      "name": "Mix Max - Prod",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--flavor", "prod", "--target", "lib/main.dart"]
+    },
+    {
+      "name": "Mix Max (profile mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "args": ["--flavor", "prod", "--target", "lib/main.dart"]
+    },
+    {
+      "name": "Mix Max (release mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": ["--flavor", "prod", "--target", "lib/main.dart"]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+name: mix_max
+description: "A new Flutter project."
+publish_to: "none"
+version: 0.0.1+1
+
+environment:
+  sdk: ">=3.7.2 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  ### [Generators] ###
+  # - JSON Classes
+  build_runner: ^2.1.10
+  json_serializable: ^6.2.0
+  json_annotation: ^4.7.0
+  # - Assets
+  flutter_native_splash: ^2.1.6
+  flutter_launcher_icons: ^0.14.3
+  flutter_svg: ^2.1.0
+
+  ### [Services] ###
+  # - Core
+  get_it: ^7.2.0
+  get_it_mixin: ^3.1.4
+  # - Firebase
+  firebase_core: ^3.15.2
+  google_sign_in: ^6.3.0
+  firebase_auth: ^5.0.0
+  firebase_analytics: ^11.0.0
+  firebase_crashlytics: ^4.0.0
+  cloud_firestore: ^5.0.0
+  firebase_storage: ^12.0.0
+  cloud_functions: ^5.0.0
+
+  ### [Utilities] ###
+  crypto: ^3.0.3
+  http: ^1.2.0
+  url_launcher: ^6.3.1
+  package_info_plus: ^8.1.4
+  patterns_canvas: 0.4.0
+
+  ### [App Specific] ###
+  # NOTE: add unique packages here (categorize by main feature)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter_native_splash:
+  color: "#00e075"
+  image: "assets/icon/foreground_small.png"
+  android_12:
+    icon_background_color: "#00e075"
+    image: "assets/icon/foreground_small.png"
+
+flutter_launcher_icons:
+  ios: true
+  android: true
+  image_path_ios: "assets/icon/combined.png"
+  image_path_android: "assets/icon/combined.png"
+  adaptive_icon_background: "assets/icon/background.png"
+  adaptive_icon_foreground: "assets/icon/foreground.png"
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto/Roboto-Regular.ttf
+
+  assets:
+    - assets/svg/icons/

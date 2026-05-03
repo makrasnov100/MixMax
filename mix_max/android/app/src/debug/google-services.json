@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "204221789722",
+    "project_id": "template-app-4513a",
+    "storage_bucket": "template-app-4513a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:204221789722:android:b67f921d4883bbbd1703a3",
+        "android_client_info": {
+          "package_name": "app.myfortuna.mix_max.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTUC39J2sz646tnJE5_ltfx5x2Q13iwLA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

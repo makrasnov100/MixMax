@@ -1,0 +1,1 @@
+This is where debug symbols for android are stored for each version

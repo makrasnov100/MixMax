@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "template-app-4513a",
+    "dev": "template-app-4513a",
+    "prod": "template-app-4513a"
+  },
+  "targets": {},
+  "etags": {
+    "template-app-4513a": {
+      "extensionInstances": {}
+    }
+  },
+  "dataconnectEmulatorConfig": {}
+}

@@ -1,0 +1,1 @@
+This is where the `GoogleService-Info-dev.plist` output of `flutterfire configure` for `dev` goes.

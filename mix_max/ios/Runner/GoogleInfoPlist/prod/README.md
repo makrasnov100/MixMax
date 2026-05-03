@@ -1,0 +1,1 @@
+This is where the `GoogleService-Info-prod.plist` output of `flutterfire configure` for `prod` goes.
