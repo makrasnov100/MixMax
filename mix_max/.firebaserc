@@ -1,8 +1,8 @@
 {
   "projects": {
-    "default": "template-app-4513a",
-    "dev": "template-app-4513a",
-    "prod": "template-app-4513a"
+    "default": "mix-max-7a33e",
+    "dev": "mix-max-7a33e",
+    "prod": "mix-max-7a33e"
   },
   "targets": {},
   "etags": {

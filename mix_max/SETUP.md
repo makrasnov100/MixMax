@@ -1,61 +1,7 @@
 <!-- TODO TEMPLATE: follow all instructions, remove as they are completed -->
 
 How to setup a new project with this template:
-#### Local Renaming
-1. Run `flutter pub get` to install all the base packages
-
-#### Firebase Prod Environment Setup:
-1. Generate release keystore for the project
-  - locate `keytool` Java Binary w/ `flutter doctor -v` - its in `../jbr/bin/keytool.exe`
-  - run command to generate the key store as admin
-    - `keytool -genkey -v -keystore "/Users/makras/Desktop" -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
-    - https://docs.flutter.dev/deployment/android#create-an-upload-keystore
-    - alias: upload name: keystore, pass: whitcity
-  - place into shared space (like google drive)  
-  - place into project inside `android` folder
-  - create `key.properties` file
-    - copy and name `key.properties.example` as `key.properties`
-    - fill in missing values
-1. Add debug and release mode sha to project
-  - generate SHA1 and SHA256 with a terminal command
-   - debug: `keytool -list -v -keystore "C:/Users/[USER]/.android/debug.keystore" -alias androiddebugkey -storepass android -keypass android`
-   - release: `keytool -list -v -keystore "{keystore_directory}/mix-max-key.jks" -alias upload`
-  - https://stackoverflow.com/questions/15727912/sha-1-fingerprint-of-keystore-certificate
-  - remember will have to do the same for SHA given by google play
-1. Perform setup for needed services
-    - Firestore:
-      - Provision from the console
-      - Keep (default) name and keep in the US
-
 #### Firebase PROD Initialization:
-1. Change the project name in `.firebaserc` file for prod and default alike 
-1. Run `firebase use prod`
-1. Delete local firebase.json `platforms` property
-1. Run `npm install` inside the `cloud_functions/functions` directory
-1. Run Firebase CLI command to generate new firebase files for prod on OSX device
-    - run the command for ios-build-config: `Debug-prod` and `Release-prod`
-    - run `cd ios`, `pod install`
-    - test that in Xcode the prod release configuration builds suecessfully
-
-```
-flutterfire configure \
---yes \
---project=mix-max \
---platforms=android,ios \
---android-out=android/app/src/prod/google-services.json \
---android-package-name=app.myfortuna.mix_max \
---ios-build-config=Debug-prod \
---ios-out=ios/Runner/GoogleInfoPlist/prod/GoogleService-Info-prod.plist \
---ios-bundle-id=app.myfortuna.mixMax \
---out=lib/flavors/prod/firebase_options.dart
-```
-
-1. Configure firestore rules and indexes by deploying them with the cli
-- `firebase deploy` (everything)
-- `firebase deploy --only firestore` (database rules and indexes)
-- `firebase deploy --only storage` (file storage rules)
-- `firebase deploy --only functions` (cloud functions)
-
 1. Create general info collection and initial document
   - collection("General").doc("app").set({
     "social": {

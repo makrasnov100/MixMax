@@ -47,19 +47,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDTUC39J2sz646tnJE5_ltfx5x2Q13iwLA',
-    appId: '1:204221789722:android:b67f921d4883bbbd1703a3',
-    messagingSenderId: '204221789722',
-    projectId: 'template-app-4513a',
-    storageBucket: 'template-app-4513a.firebasestorage.app',
+    apiKey: 'AIzaSyDyVFXxZOqP19CiI8V7VwTqAb1b8xhZtc0',
+    appId: '1:124263762128:android:e8622bc7d3d243cbf776d5',
+    messagingSenderId: '124263762128',
+    projectId: 'mix-max-7a33e',
+    storageBucket: 'mix-max-7a33e.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyC7wD9SnoTquk5EAmUC6ogdijd4bVs-5Xk',
-    appId: '1:204221789722:ios:6e2497ee8db876fc1703a3',
-    messagingSenderId: '204221789722',
-    projectId: 'template-app-4513a',
-    storageBucket: 'template-app-4513a.firebasestorage.app',
-    iosBundleId: 'app.myfortuna.mixMax.dev',
+    apiKey: 'AIzaSyAAfTLrsTgvQs_WqT5QhNcmPAaZIcQMT0A',
+    appId: '1:124263762128:ios:3a0a2df1ffb96a40f776d5',
+    messagingSenderId: '124263762128',
+    projectId: 'mix-max-7a33e',
+    storageBucket: 'mix-max-7a33e.firebasestorage.app',
+    iosBundleId: 'app.myfortuna.mixMax',
   );
+
 }
