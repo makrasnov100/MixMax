@@ -5,7 +5,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:mix_max/pages/entry_page.dart';
+import 'package:mix_max/pages/experiments_list_page.dart';
 import 'package:mix_max/services/app_navigator_observer.dart';
 import 'package:mix_max/services/globals.dart';
 import 'package:mix_max/services/ui/app_colors.dart';
@@ -63,7 +63,7 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
         useMaterial3: false,
       ),
-      home: EntryPage(),
+      home: const ExperimentsListPage(),
       navigatorKey: Navigation.navigatorKey,
       navigatorObservers: [navigatorObserver, analyticsObserver],
     );
