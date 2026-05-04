@@ -1,0 +1,54 @@
+---
+description: Prefer custom widgets from lib/widgets over built-in Flutter widgets
+globs: lib/**/*.dart
+alwaysApply: false
+---
+
+# Use Custom Widgets First
+
+Before reaching for a built-in Flutter widget, always check `lib/widgets/` for an existing custom alternative.
+
+## Available Custom Widgets
+
+The table below lists known examples — **this is not exhaustive**. Always browse `lib/widgets/` directly before assuming a widget doesn't exist.
+
+| Category | Widget | Use instead of |
+|---|---|---|
+| **Text** | `NormalText` | `Text` |
+| **Text** | `HeadlineText` | `Text` (headings) |
+| **Text** | `CenterMessage` | `Center` + `Text` |
+| **Text** | `WarningRow` | `Row` + warning `Text` |
+| **Text** | `RecognizerText` | `Text` with `TapGestureRecognizer` |
+| **Text** | `PrivacyAndTermsLinks` | manual link text |
+| **Text** | `WordSeperator` | plain divider text |
+| **Input** | `LinkButton` | `TextButton` / `GestureDetector` for links |
+| **Input** | `IconOnlyButton` | `IconButton` |
+| **Input** | `GoBackButton` | back `IconButton` / `AppBar` leading |
+| **Input** | `SignInWithGoogleButton` | custom Google sign-in row |
+| **Input** | `SignInWithAppleButton` | custom Apple sign-in row |
+| **Wrappers** | `OrientationScaffold` | `Scaffold` |
+| **Wrappers** | `SingleButtonHolder` | bare `Column`/`Row` with one button |
+| **Wrappers** | `BottomDrawer` | `BottomSheet` |
+| **Wrappers** | `ConfirmBottomDrawer` | confirm `BottomSheet` |
+| **Shapes** | `LineSeparator` | `Divider` |
+| **Background** | `PatternBackground` | plain `Container` background |
+| **Functional** | `PopOnOrientationChange` | manual orientation listener |
+| **…and more** | See `lib/widgets/` | Always check before using a built-in |
+
+## Examples
+
+```dart
+// ❌ BAD
+Text('Hello world')
+IconButton(onPressed: _back, icon: Icon(Icons.arrow_back))
+Scaffold(body: content)
+Divider()
+
+// ✅ GOOD
+NormalText('Hello world')
+GoBackButton()
+OrientationScaffold(body: content)
+LineSeparator()
+```
+
+If no custom widget covers the use case, you may use a Flutter built-in — but first consider whether a new widget should be added to `lib/widgets/`.

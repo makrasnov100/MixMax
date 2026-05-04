@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:mix_max/pages/entry_page.dart';
+import 'package:mix_max/pages/experiment_details_page.dart';
+import 'package:mix_max/pages/experiments_list_page.dart';
 
 enum DrawerType { block, confirm }
 
-enum Destination { entry, unknown }
+enum Destination { experimentsList, experimentDetails, unknown }
 
 enum PageMoveType { push, replace }
 
@@ -19,8 +20,10 @@ class Navigation {
     PageMoveType type = PageMoveType.push,
   }) async {
     Destination destination = Destination.unknown;
-    if (page is EntryPage) {
-      destination = Destination.entry;
+    if (page is ExperimentsListPage) {
+      destination = Destination.experimentsList;
+    } else if (page is ExperimentDetailsPage) {
+      destination = Destination.experimentDetails;
     }
     //TODO TEMPLATE: add some more pages that will definetly be needed
     // else if (page is GalleryPage) {
