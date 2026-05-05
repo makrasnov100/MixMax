@@ -9,6 +9,7 @@ part of '../../classes/schema/experiment.dart';
 SchemaExperiment _$SchemaExperimentFromJson(Map<String, dynamic> json) =>
     SchemaExperiment(
       id: json['id'] as String,
+      userId: json['userId'] as String?,
       name: json['name'] as String?,
       parameters: (json['parameters'] as List<dynamic>?)
           ?.map((e) => SchemaParameter.fromJson(e as Map<String, dynamic>))
@@ -29,6 +30,7 @@ Map<String, dynamic> _$SchemaExperimentToJson(SchemaExperiment instance) {
     }
   }
 
+  writeNotNull('userId', instance.userId);
   writeNotNull('name', instance.name);
   writeNotNull(
       'parameters', instance.parameters?.map((e) => e.toJson()).toList());

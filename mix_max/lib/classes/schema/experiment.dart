@@ -6,12 +6,14 @@ part '../../generated/schema/experiment.g.dart';
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
 class SchemaExperiment {
   String id;
+  String? userId;
   String? name;
   List<SchemaParameter>? parameters;
   List<SchemaOutcome>? outcomes;
 
   SchemaExperiment({
     required this.id,
+    this.userId,
     this.name,
     this.parameters,
     this.outcomes,
@@ -19,6 +21,7 @@ class SchemaExperiment {
 
   SchemaExperiment.unknown({
     this.id = "",
+    this.userId,
     this.name,
     this.parameters,
     this.outcomes,

@@ -2,6 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isOwner() {
+      return request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    function isOwnerOnCreate() {
+      return request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
     function noRestrictedUserChanges(incoming) {
       return incoming.keys().hasOnly(['id', 'name', 'email']) &&
       incoming.diff(resource.data).affectedKeys().hasOnly(['name', 'email']);
@@ -22,6 +30,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /Experiments/{experimentId} {
+      allow read: if isOwner();
+      allow create: if isOwnerOnCreate();
+      allow update: if isOwner();
+      allow delete: if isOwner();
+    }
 
     match /{document=**} {
       allow read, write: if false;

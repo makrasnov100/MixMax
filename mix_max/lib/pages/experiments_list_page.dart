@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
+import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
+import 'package:mix_max/services/get_it.dart';
 import 'package:mix_max/services/ui/app_colors.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/services/ui/size_config.dart';
@@ -12,9 +14,11 @@ class ExperimentsListPage extends StatelessWidget {
   const ExperimentsListPage({super.key});
 
   Future<void> _addExperiment(BuildContext context) async {
+    final userId = getIt<AuthService>().user.id;
     final docRef = DatabaseService.experimentsRef.doc();
     final experiment = SchemaExperiment(
       id: docRef.id,
+      userId: userId,
       name: 'New Experiment',
     );
     await docRef.set(experiment);

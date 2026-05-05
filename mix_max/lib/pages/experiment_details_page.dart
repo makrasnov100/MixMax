@@ -36,6 +36,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     final parameter = SchemaParameter(id: id, name: 'New Parameter');
     final updated = SchemaExperiment(
       id: _experiment.id,
+      userId: _experiment.userId,
       name: _experiment.name,
       parameters: [...(_experiment.parameters ?? []), parameter],
       outcomes: _experiment.outcomes,
@@ -49,6 +50,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     final outcome = SchemaOutcome(id: id, name: 'New Outcome');
     final updated = SchemaExperiment(
       id: _experiment.id,
+      userId: _experiment.userId,
       name: _experiment.name,
       parameters: _experiment.parameters,
       outcomes: [...(_experiment.outcomes ?? []), outcome],
