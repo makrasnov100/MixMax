@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-//TODO TEMPLATE: update colors to match project
 //NOTE: color palette can quickly be generated using https://coolors.co/
 class AppColors {
   // [Palette Colors]

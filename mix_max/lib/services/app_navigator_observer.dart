@@ -11,14 +11,14 @@ class AppNavigatorObserver<R extends Route<dynamic>> extends RouteObserver<R> {
       return null;
     }
 
-    Destination destination = Destination.entry;
-    if (routeName == "/" || routeName == "entry") {
-      destination = Destination.entry;
+    Destination destination = Destination.experimentsList;
+    if (routeName == "/" || routeName == "experimentsList") {
+      destination = Destination.experimentsList;
     } else {
       destination = Destination.values.firstWhere(
         (e) => e.name == routeName,
         orElse: () {
-          return Destination.entry;
+          return Destination.experimentsList;
         },
       );
     }

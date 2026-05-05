@@ -25,11 +25,6 @@ class Navigation {
     } else if (page is ExperimentDetailsPage) {
       destination = Destination.experimentDetails;
     }
-    //TODO TEMPLATE: add some more pages that will definetly be needed
-    // else if (page is GalleryPage) {
-    //   destination = Destination.gallery;
-    // }
-    // print(destination.name);
 
     if (destination == Destination.unknown) {
       throw Exception("Unknown destination");

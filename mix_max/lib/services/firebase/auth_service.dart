@@ -34,8 +34,6 @@ class AuthService extends ChangeNotifier {
   StreamSubscription<User?>? firebaseUserStreamSubscription;
 
   //[STREAMING USER INFO]
-  // TODO TEMPLATE: decide if user should be signed in anonymously automatically or not
-  // - if not do not sign in anonymously when user is null next function
   void listenToLogin() async {
     waitForSignInComplete(timeout: Duration(seconds: 10));
     firebaseUser = FirebaseAuth.instance.currentUser;

@@ -2,7 +2,6 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/flutter_fire.dart';
-import 'package:mix_max/services/firebase/network_queue_service.dart';
 import 'package:mix_max/services/general_info_service.dart';
 import 'package:get_it/get_it.dart';
 
@@ -41,8 +40,4 @@ void initializeLateSingletons() async {
 void setupGetIt() {
   getIt.registerSingleton<FlutterFire>(FlutterFire());
   getIt.registerSingleton<GeneralInfoService>(GeneralInfoService());
-
-  //TODO TEMPLATE: add any new services that will be needed
-  // - uploading and downloading of files via a queue
-  getIt.registerSingleton<NetworkQueueService>(NetworkQueueService());
 }
