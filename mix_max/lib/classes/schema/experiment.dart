@@ -1,19 +1,27 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mix_max/classes/schema/parameter.dart';
+import 'package:mix_max/classes/schema/outcome.dart';
 part '../../generated/schema/experiment.g.dart';
 
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
 class SchemaExperiment {
   String id;
   String? name;
+  List<SchemaParameter>? parameters;
+  List<SchemaOutcome>? outcomes;
 
   SchemaExperiment({
     required this.id,
     this.name,
+    this.parameters,
+    this.outcomes,
   });
 
   SchemaExperiment.unknown({
     this.id = "",
     this.name,
+    this.parameters,
+    this.outcomes,
   });
 
   bool isValid() {
