@@ -10,6 +10,14 @@ SchemaParameter _$SchemaParameterFromJson(Map<String, dynamic> json) =>
     SchemaParameter(
       id: json['id'] as String,
       name: json['name'] as String?,
+      type: $enumDecodeNullable(_$ParameterTypeEnumMap, json['type']),
+      unit: json['unit'] as String?,
+      min: (json['min'] as num?)?.toDouble(),
+      max: (json['max'] as num?)?.toDouble(),
+      options:
+          (json['options'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      items:
+          (json['items'] as List<dynamic>?)?.map((e) => e as String).toList(),
     );
 
 Map<String, dynamic> _$SchemaParameterToJson(SchemaParameter instance) {
@@ -24,5 +32,19 @@ Map<String, dynamic> _$SchemaParameterToJson(SchemaParameter instance) {
   }
 
   writeNotNull('name', instance.name);
+  writeNotNull('type', _$ParameterTypeEnumMap[instance.type]);
+  writeNotNull('unit', instance.unit);
+  writeNotNull('min', instance.min);
+  writeNotNull('max', instance.max);
+  writeNotNull('options', instance.options);
+  writeNotNull('items', instance.items);
   return val;
 }
+
+const _$ParameterTypeEnumMap = {
+  ParameterType.number: 'number',
+  ParameterType.duration: 'duration',
+  ParameterType.toggle: 'toggle',
+  ParameterType.choice: 'choice',
+  ParameterType.order: 'order',
+};

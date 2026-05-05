@@ -5,6 +5,7 @@ import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/app_colors.dart';
 import 'package:mix_max/services/ui/size_config.dart';
+import 'package:mix_max/widgets/experiments/add_parameter_drawer.dart';
 import 'package:mix_max/widgets/input/icon_button/icon_button.dart';
 import 'package:mix_max/widgets/text/headline_text.dart';
 import 'package:mix_max/widgets/text/normal_text.dart';
@@ -31,9 +32,16 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     _experiment = widget.experiment;
   }
 
-  Future<void> _addParameter() async {
-    final id = DatabaseService.experimentsRef.doc().id;
-    final parameter = SchemaParameter(id: id, name: 'New Parameter');
+  void _showAddParameterDrawer() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => AddParameterDrawer(onSave: _saveParameter),
+    );
+  }
+
+  Future<void> _saveParameter(SchemaParameter parameter) async {
     final updated = SchemaExperiment(
       id: _experiment.id,
       userId: _experiment.userId,
@@ -59,6 +67,38 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     setState(() => _experiment = updated);
   }
 
+  String _parameterSubtitle(SchemaParameter p) {
+    final parts = <String>[];
+
+    switch (p.type) {
+      case ParameterType.number:
+        if (p.unit != null) parts.add(p.unit!);
+        if (p.min != null && p.max != null) {
+          parts.add('${_fmt(p.min!)}–${_fmt(p.max!)}');
+        } else if (p.min != null) {
+          parts.add('≥ ${_fmt(p.min!)}');
+        } else if (p.max != null) {
+          parts.add('≤ ${_fmt(p.max!)}');
+        }
+      case ParameterType.choice:
+        if (p.options != null && p.options!.isNotEmpty) {
+          parts.add(p.options!.join(', '));
+        }
+      case ParameterType.order:
+        if (p.items != null && p.items!.isNotEmpty) {
+          parts.add(p.items!.join(' → '));
+        }
+      case ParameterType.duration:
+      case ParameterType.toggle:
+      case null:
+        break;
+    }
+
+    return parts.join('  ·  ');
+  }
+
+  String _fmt(double v) => v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
+
   @override
   Widget build(BuildContext context) {
     final hPad = SizeConfig.safeBlockHorizontal * 5;
@@ -67,13 +107,14 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
 
     return OrientationScaffold(
       body: Stack(
+        fit: StackFit.expand,
         children: [
           SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
               hPad,
               SizeConfig.safeBlockVertical * 3,
               hPad,
-              SizeConfig.safeBlockVertical * 22,
+              SizeConfig.safeBlockVertical * 14,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,20 +133,13 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                 ),
                 SizedBox(height: SizeConfig.safeBlockVertical * 1),
                 if (parameters.isEmpty)
-                  NormalText(
-                    text: 'No parameters yet.',
-                    color: AppColors.grey,
-                  )
+                  NormalText(text: 'No parameters yet.', color: AppColors.grey)
                 else
-                  ...parameters.map(
-                    (p) => Padding(
-                      padding: EdgeInsets.symmetric(vertical: SizeConfig.safeBlockVertical * 0.5),
-                      child: NormalText(
-                        text: p.name ?? '',
-                        color: AppColors.dark,
-                      ),
-                    ),
-                  ),
+                  ...parameters.map((p) => _ParameterRow(
+                        name: p.name ?? '',
+                        typeLabel: p.type?.name ?? '',
+                        subtitle: _parameterSubtitle(p),
+                      )),
 
                 SizedBox(height: SizeConfig.safeBlockVertical * 4),
 
@@ -117,18 +151,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                 ),
                 SizedBox(height: SizeConfig.safeBlockVertical * 1),
                 if (outcomes.isEmpty)
-                  NormalText(
-                    text: 'No outcomes yet.',
-                    color: AppColors.grey,
-                  )
+                  NormalText(text: 'No outcomes yet.', color: AppColors.grey)
                 else
                   ...outcomes.map(
                     (o) => Padding(
                       padding: EdgeInsets.symmetric(vertical: SizeConfig.safeBlockVertical * 0.5),
-                      child: NormalText(
-                        text: o.name ?? '',
-                        color: AppColors.dark,
-                      ),
+                      child: NormalText(text: o.name ?? '', color: AppColors.dark),
                     ),
                   ),
               ],
@@ -138,25 +166,87 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
             bottom: SizeConfig.safeBlockVertical * 3,
             left: hPad,
             right: hPad,
-            child: Column(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                AppIconButton(
-                  text: 'Add Parameter',
-                  iconEnd: Icons.add,
-                  color: AppColors.addGreen,
-                  spaceOutside: true,
-                  onPressed: _addParameter,
+                Expanded(
+                  child: AppIconButton(
+                    text: 'Add Parameter',
+                    iconEnd: Icons.add,
+                    color: AppColors.addGreen,
+                    spaceOutside: true,
+                    customButtonMargin: EdgeInsets.zero,
+                    onPressed: _showAddParameterDrawer,
+                  ),
                 ),
-                AppIconButton(
-                  text: 'Add Outcome',
-                  iconEnd: Icons.add,
-                  color: AppColors.addGreen,
-                  spaceOutside: true,
-                  onPressed: _addOutcome,
+                SizedBox(width: SizeConfig.safeBlockHorizontal * 3),
+                Expanded(
+                  child: AppIconButton(
+                    text: 'Add Output',
+                    iconEnd: Icons.add,
+                    color: AppColors.actionOrange,
+                    spaceOutside: true,
+                    customButtonMargin: EdgeInsets.zero,
+                    onPressed: _addOutcome,
+                  ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ParameterRow extends StatelessWidget {
+  final String name;
+  final String typeLabel;
+  final String subtitle;
+
+  const _ParameterRow({
+    required this.name,
+    required this.typeLabel,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: SizeConfig.safeBlockVertical * 0.8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                NormalText(text: name, color: AppColors.dark, fontWeight: FontWeight.w500),
+                if (subtitle.isNotEmpty)
+                  NormalText(
+                    text: subtitle,
+                    color: AppColors.grey,
+                    fontSize: SizeConfig.getFontSize(2.8),
+                  ),
+              ],
+            ),
+          ),
+          if (typeLabel.isNotEmpty)
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: SizeConfig.safeBlockHorizontal * 2.5,
+                vertical: SizeConfig.safeBlockVertical * 0.4,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.lightGrey,
+                borderRadius: BorderRadius.circular(SizeConfig.safeBlockHorizontal * 1.5),
+              ),
+              child: NormalText(
+                text: typeLabel,
+                color: AppColors.dark,
+                fontSize: SizeConfig.getFontSize(2.6),
+              ),
+            ),
         ],
       ),
     );
