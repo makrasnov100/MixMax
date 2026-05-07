@@ -10,6 +10,10 @@ SchemaOutcome _$SchemaOutcomeFromJson(Map<String, dynamic> json) =>
     SchemaOutcome(
       id: json['id'] as String,
       name: json['name'] as String?,
+      unit: json['unit'] as String?,
+      min: (json['min'] as num?)?.toDouble(),
+      max: (json['max'] as num?)?.toDouble(),
+      goal: $enumDecodeNullable(_$OutcomeGoalEnumMap, json['goal']),
     );
 
 Map<String, dynamic> _$SchemaOutcomeToJson(SchemaOutcome instance) {
@@ -24,5 +28,14 @@ Map<String, dynamic> _$SchemaOutcomeToJson(SchemaOutcome instance) {
   }
 
   writeNotNull('name', instance.name);
+  writeNotNull('unit', instance.unit);
+  writeNotNull('min', instance.min);
+  writeNotNull('max', instance.max);
+  writeNotNull('goal', _$OutcomeGoalEnumMap[instance.goal]);
   return val;
 }
+
+const _$OutcomeGoalEnumMap = {
+  OutcomeGoal.minimize: 'minimize',
+  OutcomeGoal.maximize: 'maximize',
+};

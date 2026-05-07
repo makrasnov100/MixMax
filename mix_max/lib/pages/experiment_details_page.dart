@@ -5,6 +5,7 @@ import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/app_colors.dart';
 import 'package:mix_max/services/ui/size_config.dart';
+import 'package:mix_max/widgets/experiments/add_output_drawer.dart';
 import 'package:mix_max/widgets/experiments/add_parameter_drawer.dart';
 import 'package:mix_max/widgets/input/icon_button/icon_button.dart';
 import 'package:mix_max/widgets/text/headline_text.dart';
@@ -53,9 +54,16 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     setState(() => _experiment = updated);
   }
 
-  Future<void> _addOutcome() async {
-    final id = DatabaseService.experimentsRef.doc().id;
-    final outcome = SchemaOutcome(id: id, name: 'New Outcome');
+  void _showAddOutputDrawer() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => AddOutputDrawer(onSave: _saveOutcome),
+    );
+  }
+
+  Future<void> _saveOutcome(SchemaOutcome outcome) async {
     final updated = SchemaExperiment(
       id: _experiment.id,
       userId: _experiment.userId,
@@ -89,6 +97,14 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
           parts.add(p.items!.join(' → '));
         }
       case ParameterType.duration:
+        if (p.unit != null) parts.add(p.unit!);
+        if (p.min != null && p.max != null) {
+          parts.add('${_fmt(p.min!)}–${_fmt(p.max!)}');
+        } else if (p.min != null) {
+          parts.add('≥ ${_fmt(p.min!)}');
+        } else if (p.max != null) {
+          parts.add('≤ ${_fmt(p.max!)}');
+        }
       case ParameterType.toggle:
       case null:
         break;
@@ -151,14 +167,9 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                 ),
                 SizedBox(height: SizeConfig.safeBlockVertical * 1),
                 if (outcomes.isEmpty)
-                  NormalText(text: 'No outcomes yet.', color: AppColors.grey)
+                  NormalText(text: 'No outputs yet.', color: AppColors.grey)
                 else
-                  ...outcomes.map(
-                    (o) => Padding(
-                      padding: EdgeInsets.symmetric(vertical: SizeConfig.safeBlockVertical * 0.5),
-                      child: NormalText(text: o.name ?? '', color: AppColors.dark),
-                    ),
-                  ),
+                  ...outcomes.map((o) => _OutcomeRow(outcome: o)),
               ],
             ),
           ),
@@ -187,12 +198,89 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     color: AppColors.actionOrange,
                     spaceOutside: true,
                     customButtonMargin: EdgeInsets.zero,
-                    onPressed: _addOutcome,
+                    onPressed: _showAddOutputDrawer,
                   ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OutcomeRow extends StatelessWidget {
+  final SchemaOutcome outcome;
+
+  const _OutcomeRow({required this.outcome});
+
+  String _subtitle() {
+    final parts = <String>[];
+    if (outcome.unit != null) parts.add(outcome.unit!);
+    if (outcome.min != null && outcome.max != null) {
+      parts.add('${_fmt(outcome.min!)}–${_fmt(outcome.max!)}');
+    } else if (outcome.min != null) {
+      parts.add('≥ ${_fmt(outcome.min!)}');
+    } else if (outcome.max != null) {
+      parts.add('≤ ${_fmt(outcome.max!)}');
+    }
+    return parts.join('  ·  ');
+  }
+
+  String _fmt(double v) => v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = _subtitle();
+    final goal = outcome.goal;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: SizeConfig.safeBlockVertical * 0.8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                NormalText(text: outcome.name ?? '', color: AppColors.dark, fontWeight: FontWeight.w500),
+                if (subtitle.isNotEmpty)
+                  NormalText(
+                    text: subtitle,
+                    color: AppColors.grey,
+                    fontSize: SizeConfig.getFontSize(2.8),
+                  ),
+              ],
+            ),
+          ),
+          if (goal != null)
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: SizeConfig.safeBlockHorizontal * 2.5,
+                vertical: SizeConfig.safeBlockVertical * 0.4,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.lightGrey,
+                borderRadius: BorderRadius.circular(SizeConfig.safeBlockHorizontal * 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    goal == OutcomeGoal.minimize ? Icons.arrow_downward : Icons.arrow_upward,
+                    size: SizeConfig.getFontSize(2.8),
+                    color: AppColors.dark,
+                  ),
+                  SizedBox(width: SizeConfig.safeBlockHorizontal * 1),
+                  NormalText(
+                    text: goal == OutcomeGoal.minimize ? 'minimize' : 'maximize',
+                    color: AppColors.dark,
+                    fontSize: SizeConfig.getFontSize(2.6),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

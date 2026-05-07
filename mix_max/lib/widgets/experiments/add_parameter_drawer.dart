@@ -28,6 +28,9 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   final List<String> _options = [];
   final List<String> _items = [];
 
+  static const List<String> _durationUnits = ['seconds', 'minutes', 'hours'];
+  String _durationUnit = 'minutes';
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -44,11 +47,15 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     if (name.isEmpty || _selectedType == null) return;
 
     final id = DatabaseService.experimentsRef.doc().id;
+    final isDuration = _selectedType == ParameterType.duration;
+    final unit = isDuration
+        ? _durationUnit
+        : (_unitController.text.trim().isEmpty ? null : _unitController.text.trim());
     final parameter = SchemaParameter(
       id: id,
       name: name,
       type: _selectedType,
-      unit: _unitController.text.trim().isEmpty ? null : _unitController.text.trim(),
+      unit: unit,
       min: double.tryParse(_minController.text),
       max: double.tryParse(_maxController.text),
       options: _options.isEmpty ? null : List.from(_options),
@@ -186,6 +193,46 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
         child: NormalText(text: text, color: AppColors.grey, fontSize: SizeConfig.getFontSize(3)),
       );
 
+  Widget _durationUnitDropdown() {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: SizeConfig.safeBlockHorizontal * 3,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(SizeConfig.safeBlockHorizontal * 2),
+        border: Border.all(color: AppColors.lightGrey),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _durationUnit,
+          isExpanded: true,
+          icon: Icon(Icons.arrow_drop_down, color: AppColors.dark),
+          style: TextStyle(
+            fontSize: SizeConfig.getFontSize(3.2),
+            color: AppColors.dark,
+            fontFamily: 'Roboto',
+          ),
+          items: _durationUnits
+              .map(
+                (u) => DropdownMenuItem<String>(
+                  value: u,
+                  child: NormalText(
+                    text: u,
+                    color: AppColors.dark,
+                    fontSize: SizeConfig.getFontSize(3.2),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (val) {
+            if (val == null) return;
+            setState(() => _durationUnit = val);
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BottomDrawer(
@@ -230,6 +277,32 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
                           _maxController,
                           'Max (optional)',
                           keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_selectedType == ParameterType.duration) ...[
+                  SizedBox(height: SizeConfig.safeBlockVertical * 2.5),
+                  _label('Unit'),
+                  _durationUnitDropdown(),
+                  SizedBox(height: SizeConfig.safeBlockVertical * 2),
+                  _label('Range (optional)'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _field(
+                          _minController,
+                          'Min',
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
+                      ),
+                      SizedBox(width: SizeConfig.safeBlockHorizontal * 3),
+                      Expanded(
+                        child: _field(
+                          _maxController,
+                          'Max',
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         ),
                       ),
                     ],
