@@ -11,12 +11,16 @@ class SchemaExperiment {
   List<SchemaParameter>? parameters;
   List<SchemaOutcome>? outcomes;
 
+  /// Seconds since Unix epoch.
+  int? createdAt;
+
   SchemaExperiment({
     required this.id,
     this.userId,
     this.name,
     this.parameters,
     this.outcomes,
+    this.createdAt,
   });
 
   SchemaExperiment.unknown({
@@ -25,6 +29,7 @@ class SchemaExperiment {
     this.name,
     this.parameters,
     this.outcomes,
+    this.createdAt,
   });
 
   bool isValid() {

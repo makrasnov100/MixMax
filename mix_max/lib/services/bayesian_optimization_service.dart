@@ -74,7 +74,7 @@ class BayesianOptimizationService {
     var bestEI = double.negativeInfinity;
 
     for (int i = 0; i < _numCandidates; i++) {
-      final candidate = List<double>.generate(featureDim, (_) => rng.nextDouble());
+      final candidate = _sampleCandidate(parameters, rng);
       final pred = gp.predict(candidate);
       final ei = _expectedImprovement(pred.mean, pred.stdDev, fBest);
       if (ei > bestEI) {
@@ -107,10 +107,10 @@ class BayesianOptimizationService {
   /// Encodes all parameter values into a flat normalised vector in [0, 1].
   ///
   /// Dimension breakdown per ParameterType:
-  ///   number / duration → 1  (linearly scaled by [min, max])
-  ///   toggle            → 1  (false = 0.0, true = 1.0)
-  ///   choice            → 1  (option index / (n−1))
-  ///   order with n items→ n  (position of each item / (n−1))
+  ///   number / duration → 1            (linearly scaled by [min, max])
+  ///   toggle            → 1            (false = 0.0, true = 1.0)
+  ///   choice (n opts)   → max(n, 1)    (one-hot; unknown value → all zeros)
+  ///   order  (n items)  → n            (position of each item / (n−1))
   static List<double> _encodeParameters(
     List<SchemaParameter> parameters,
     Map<String, dynamic> values,
@@ -134,12 +134,14 @@ class BayesianOptimizationService {
         case ParameterType.choice:
           final options = param.options ?? [];
           if (options.isEmpty) {
+            // Keep one slot so encode/decode cursors stay in lock-step.
             features.add(0.0);
           } else {
-            final idx = options.indexOf(raw?.toString() ?? '');
-            features.add(
-              options.length > 1 ? idx.clamp(0, options.length - 1) / (options.length - 1) : 0.0,
-            );
+            final selected = raw?.toString() ?? '';
+            final idx = options.indexOf(selected);
+            for (int i = 0; i < options.length; i++) {
+              features.add(i == idx ? 1.0 : 0.0);
+            }
           }
 
         case ParameterType.order:
@@ -185,9 +187,18 @@ class BayesianOptimizationService {
             result[param.id] = null;
             cursor++;
           } else {
-            final v = features[cursor++].clamp(0.0, 1.0);
-            final idx = (v * (options.length - 1)).round().clamp(0, options.length - 1);
-            result[param.id] = options[idx];
+            // Argmax over the one-hot slice; robust to any non-one-hot input
+            // because we just pick the strongest dimension.
+            int bestIdx = 0;
+            double bestVal = double.negativeInfinity;
+            for (int i = 0; i < options.length; i++) {
+              final v = features[cursor++];
+              if (v > bestVal) {
+                bestVal = v;
+                bestIdx = i;
+              }
+            }
+            result[param.id] = options[bestIdx];
           }
 
         case ParameterType.order:
@@ -293,6 +304,63 @@ class BayesianOptimizationService {
     }
 
     return result;
+  }
+
+  // ── Candidate sampling ─────────────────────────────────────────────────────
+
+  /// Samples a single candidate in the GP's feature space, respecting the
+  /// discrete structure of each parameter:
+  ///   number / duration → uniform in [0, 1]
+  ///   toggle            → {0.0, 1.0}
+  ///   choice            → one-hot over options
+  ///   order             → rank vector of a real random permutation
+  ///
+  /// This guarantees every acquisition evaluation happens at a legal point,
+  /// instead of wasting candidates on impossible interpolations.
+  static List<double> _sampleCandidate(
+    List<SchemaParameter> parameters,
+    math.Random rng,
+  ) {
+    final candidate = <double>[];
+
+    for (final param in parameters) {
+      switch (param.type) {
+        case ParameterType.number:
+        case ParameterType.duration:
+          candidate.add(rng.nextDouble());
+
+        case ParameterType.toggle:
+          candidate.add(rng.nextBool() ? 1.0 : 0.0);
+
+        case ParameterType.choice:
+          final options = param.options ?? [];
+          if (options.isEmpty) {
+            candidate.add(0.0);
+          } else {
+            final pick = rng.nextInt(options.length);
+            for (int i = 0; i < options.length; i++) {
+              candidate.add(i == pick ? 1.0 : 0.0);
+            }
+          }
+
+        case ParameterType.order:
+          final items = param.items ?? [];
+          if (items.isEmpty) break;
+          final indices = List<int>.generate(items.length, (i) => i)..shuffle(rng);
+          final positions = List<int>.filled(items.length, 0);
+          for (int rank = 0; rank < indices.length; rank++) {
+            positions[indices[rank]] = rank;
+          }
+          for (int i = 0; i < items.length; i++) {
+            candidate.add(items.length > 1 ? positions[i] / (items.length - 1) : 0.0);
+          }
+
+        case null:
+          candidate.add(0.0);
+      }
+    }
+
+    return candidate;
   }
 
   // ── Acquisition function ───────────────────────────────────────────────────

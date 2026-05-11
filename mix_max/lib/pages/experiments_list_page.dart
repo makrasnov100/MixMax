@@ -46,6 +46,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     final experiment = SchemaExperiment(
       id: docRef.id,
       userId: userId,
+      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
     );
     await docRef.set(experiment);
 
@@ -64,7 +65,10 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     if (userId.isEmpty || userId == 'INITIAL') {
       return null;
     }
-    return DatabaseService.experimentsRef.where('userId', isEqualTo: userId).snapshots();
+    return DatabaseService.experimentsRef
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 
   @override
