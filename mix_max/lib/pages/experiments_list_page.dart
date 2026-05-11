@@ -48,7 +48,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
       userId: userId,
       createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
     );
-    await docRef.set(experiment);
+    await docRef.set(experiment, SetOptions(merge: true));
 
     if (!mounted) return;
     Navigation.goTo(

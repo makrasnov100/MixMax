@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
@@ -56,16 +57,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   }
 
   Future<void> _saveName(String name) async {
-    final updated = SchemaExperiment(
-      id: _experiment.id,
-      userId: _experiment.userId,
-      name: name,
-      parameters: _experiment.parameters,
-      outcomes: _experiment.outcomes,
-    );
-    await DatabaseService.experimentsRef.doc(_experiment.id).set(updated);
+    _experiment.name = name;
+    await DatabaseService.experimentsRef
+        .doc(_experiment.id)
+        .set(_experiment, SetOptions(merge: true));
     if (!mounted) return;
-    setState(() => _experiment = updated);
+    setState(() {});
   }
 
   void _showAddParameterDrawer() {
@@ -78,15 +75,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   }
 
   Future<void> _saveParameter(SchemaParameter parameter) async {
-    final updated = SchemaExperiment(
-      id: _experiment.id,
-      userId: _experiment.userId,
-      name: _experiment.name,
-      parameters: [...(_experiment.parameters ?? []), parameter],
-      outcomes: _experiment.outcomes,
-    );
-    await DatabaseService.experimentsRef.doc(_experiment.id).set(updated);
-    setState(() => _experiment = updated);
+    _experiment.parameters = [...(_experiment.parameters ?? []), parameter];
+    await DatabaseService.experimentsRef
+        .doc(_experiment.id)
+        .set(_experiment, SetOptions(merge: true));
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _showAddOutputDrawer() {
@@ -99,15 +93,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   }
 
   Future<void> _saveOutcome(SchemaOutcome outcome) async {
-    final updated = SchemaExperiment(
-      id: _experiment.id,
-      userId: _experiment.userId,
-      name: _experiment.name,
-      parameters: _experiment.parameters,
-      outcomes: [...(_experiment.outcomes ?? []), outcome],
-    );
-    await DatabaseService.experimentsRef.doc(_experiment.id).set(updated);
-    setState(() => _experiment = updated);
+    _experiment.outcomes = [...(_experiment.outcomes ?? []), outcome];
+    await DatabaseService.experimentsRef
+        .doc(_experiment.id)
+        .set(_experiment, SetOptions(merge: true));
+    if (!mounted) return;
+    setState(() {});
   }
 
   String _parameterSubtitle(SchemaParameter p) {
