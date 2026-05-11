@@ -9,12 +9,15 @@ part of '../../classes/schema/run.dart';
 SchemaRun _$SchemaRunFromJson(Map<String, dynamic> json) => SchemaRun(
       id: json['id'] as String,
       experimentId: json['experimentId'] as String?,
+      userId: json['userId'] as String?,
       parameterValues: json['parameterValues'] != null
           ? Map<String, dynamic>.from(json['parameterValues'] as Map)
           : null,
       outcomeValues: (json['outcomeValues'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),
+      createdAt: (json['createdAt'] as num?)?.toInt(),
+      completedAt: (json['completedAt'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$SchemaRunToJson(SchemaRun instance) {
@@ -29,7 +32,10 @@ Map<String, dynamic> _$SchemaRunToJson(SchemaRun instance) {
   }
 
   writeNotNull('experimentId', instance.experimentId);
+  writeNotNull('userId', instance.userId);
   writeNotNull('parameterValues', instance.parameterValues);
   writeNotNull('outcomeValues', instance.outcomeValues);
+  writeNotNull('createdAt', instance.createdAt);
+  writeNotNull('completedAt', instance.completedAt);
   return val;
 }

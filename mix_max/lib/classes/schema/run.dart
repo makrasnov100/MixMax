@@ -5,6 +5,7 @@ part '../../generated/schema/run.g.dart';
 class SchemaRun {
   String id;
   String? experimentId;
+  String? userId;
 
   /// Parameter values keyed by parameterId.
   /// Values are typed per ParameterType:
@@ -17,18 +18,30 @@ class SchemaRun {
   /// Outcome values keyed by outcomeId.
   Map<String, double>? outcomeValues;
 
+  /// Seconds since Unix epoch when the run was generated.
+  int? createdAt;
+
+  /// Seconds since Unix epoch when all outcomes were recorded.
+  int? completedAt;
+
   SchemaRun({
     required this.id,
     this.experimentId,
+    this.userId,
     this.parameterValues,
     this.outcomeValues,
+    this.createdAt,
+    this.completedAt,
   });
 
   SchemaRun.unknown({
     this.id = '',
     this.experimentId,
+    this.userId,
     this.parameterValues,
     this.outcomeValues,
+    this.createdAt,
+    this.completedAt,
   });
 
   bool isValid() => id.isNotEmpty;

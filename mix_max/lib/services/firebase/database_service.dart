@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
+import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/classes/schema/user.dart';
 
 class DatabaseService {
@@ -31,5 +32,20 @@ class DatabaseService {
           }
         },
         toFirestore: (experiment, _) => experiment.toJson(),
+      );
+
+  static final runsRef = FirebaseFirestore.instance
+      .collection('Runs')
+      .withConverter<SchemaRun>(
+        fromFirestore: (snapshot, _) {
+          Map<String, dynamic>? data = snapshot.data();
+
+          if (data != null) {
+            return SchemaRun.fromJson(data);
+          } else {
+            return SchemaRun.unknown();
+          }
+        },
+        toFirestore: (run, _) => run.toJson(),
       );
 }

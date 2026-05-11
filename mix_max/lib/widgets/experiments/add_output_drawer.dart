@@ -22,6 +22,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
   final _unitController = TextEditingController();
   final _minController = TextEditingController();
   final _maxController = TextEditingController();
+  final _stepController = TextEditingController();
 
   OutcomeGoal? _goal;
 
@@ -31,12 +32,16 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
     _unitController.dispose();
     _minController.dispose();
     _maxController.dispose();
+    _stepController.dispose();
     super.dispose();
   }
 
   void _save() {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
+
+    final stepRaw = double.tryParse(_stepController.text);
+    final step = (stepRaw != null && stepRaw > 0) ? stepRaw : null;
 
     final id = DatabaseService.experimentsRef.doc().id;
     final outcome = SchemaOutcome(
@@ -45,6 +50,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
       unit: _unitController.text.trim().isEmpty ? null : _unitController.text.trim(),
       min: double.tryParse(_minController.text),
       max: double.tryParse(_maxController.text),
+      step: step,
       goal: _goal,
     );
 
@@ -135,7 +141,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
   @override
   Widget build(BuildContext context) {
     return BottomDrawer(
-      height: SizeConfig.safeBlockVertical * 65,
+      height: SizeConfig.safeBlockVertical * 75,
       title: 'Add Output',
       children: [
         Expanded(
@@ -175,6 +181,13 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
                       ),
                     ),
                   ],
+                ),
+                SizedBox(height: SizeConfig.safeBlockVertical * 2.5),
+                _label('Step (optional, default 1)'),
+                _field(
+                  _stepController,
+                  'e.g. 1, 0.5, 0.1',
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
                 SizedBox(height: SizeConfig.safeBlockVertical * 2.5),
                 AppIconButton(

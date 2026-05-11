@@ -10,6 +10,9 @@ class SchemaOutcome {
   String? unit;
   double? min;
   double? max;
+
+  /// Increment used by the rating slider. Defaults to 1.0 when null.
+  double? step;
   OutcomeGoal? goal;
 
   SchemaOutcome({
@@ -18,6 +21,7 @@ class SchemaOutcome {
     this.unit,
     this.min,
     this.max,
+    this.step,
     this.goal,
   });
 
@@ -27,6 +31,7 @@ class SchemaOutcome {
     this.unit,
     this.min,
     this.max,
+    this.step,
     this.goal,
   });
 

@@ -53,12 +53,14 @@ class BayesianOptimizationService {
     }
 
     // Encode past runs into a normalised feature matrix and objective vector.
-    final X = validRuns
-        .map((r) => _encodeParameters(parameters, r.parameterValues!))
-        .toList();
-    final y = validRuns
-        .map((r) => _computeObjective(outcomes, r.outcomeValues!))
-        .toList();
+    final X =
+        validRuns
+            .map((r) => _encodeParameters(parameters, r.parameterValues!))
+            .toList();
+    final y =
+        validRuns
+            .map((r) => _computeObjective(outcomes, r.outcomeValues!))
+            .toList();
 
     final gp = _GaussianProcess(
       lengthScale: _lengthScale,
@@ -147,7 +149,8 @@ class BayesianOptimizationService {
         case ParameterType.order:
           final items = param.items ?? [];
           final ordering =
-              (raw as List?)?.map((e) => e.toString()).toList() ?? List<String>.from(items);
+              (raw as List?)?.map((e) => e.toString()).toList() ??
+              List<String>.from(items);
           for (final item in items) {
             final pos = ordering.indexOf(item).clamp(0, items.length - 1);
             features.add(items.length > 1 ? pos / (items.length - 1) : 0.0);
@@ -211,7 +214,10 @@ class BayesianOptimizationService {
               positions.add(features[cursor++].clamp(0.0, 1.0));
             }
             // Re-order items by their decoded positions (ascending).
-            final indexed = List.generate(items.length, (i) => (i, positions[i]));
+            final indexed = List.generate(
+              items.length,
+              (i) => (i, positions[i]),
+            );
             indexed.sort((a, b) => a.$2.compareTo(b.$2));
             result[param.id] = indexed.map((e) => items[e.$1]).toList();
           }
@@ -346,13 +352,16 @@ class BayesianOptimizationService {
         case ParameterType.order:
           final items = param.items ?? [];
           if (items.isEmpty) break;
-          final indices = List<int>.generate(items.length, (i) => i)..shuffle(rng);
+          final indices = List<int>.generate(items.length, (i) => i)
+            ..shuffle(rng);
           final positions = List<int>.filled(items.length, 0);
           for (int rank = 0; rank < indices.length; rank++) {
             positions[indices[rank]] = rank;
           }
           for (int i = 0; i < items.length; i++) {
-            candidate.add(items.length > 1 ? positions[i] / (items.length - 1) : 0.0);
+            candidate.add(
+              items.length > 1 ? positions[i] / (items.length - 1) : 0.0,
+            );
           }
 
         case null:
@@ -410,6 +419,7 @@ class _GaussianProcess {
   final double signalVariance;
   final double noise;
 
+  // ignore_for_file: non_constant_identifier_names
   late List<List<double>> _X;
   late List<double> _alpha; // (K + σ²I)⁻¹ y
   late List<List<double>> _L; // Cholesky factor L where K + σ²I = L Lᵀ
@@ -428,7 +438,8 @@ class _GaussianProcess {
       final d = a[i] - b[i];
       sqDist += d * d;
     }
-    return signalVariance * math.exp(-sqDist / (2.0 * lengthScale * lengthScale));
+    return signalVariance *
+        math.exp(-sqDist / (2.0 * lengthScale * lengthScale));
   }
 
   // ── Training ─────────────────────────────────────────────────────────────

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
+import 'package:mix_max/pages/run_iteration_page.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/experiments/add_output_drawer.dart';
 import 'package:mix_max/widgets/experiments/add_parameter_drawer.dart';
@@ -141,11 +143,19 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
 
   String _fmt(double v) => v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
 
+  void _runExperiment() {
+    Navigation.goTo(
+      context: context,
+      page: RunIterationPage(experiment: _experiment),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hPad = SizeConfig.safeBlockHorizontal * 5;
     final parameters = _experiment.parameters ?? [];
     final outcomes = _experiment.outcomes ?? [];
+    final canRun = parameters.isNotEmpty && outcomes.isNotEmpty;
 
     return OrientationScaffold(
       body: Stack(
@@ -156,7 +166,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
               hPad,
               SizeConfig.safeBlockVertical * 3,
               hPad,
-              SizeConfig.safeBlockVertical * 14,
+              SizeConfig.safeBlockVertical * 22,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,29 +221,43 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
             bottom: SizeConfig.safeBlockVertical * 3,
             left: hPad,
             right: hPad,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: AppIconButton(
-                    text: 'Add Parameter',
-                    iconEnd: Icons.add,
-                    color: AppColors.addGreen,
-                    spaceOutside: true,
-                    customButtonMargin: EdgeInsets.zero,
-                    onPressed: _showAddParameterDrawer,
-                  ),
+                AppIconButton(
+                  text: 'Run Experiment',
+                  iconEnd: Icons.play_arrow_rounded,
+                  color: canRun ? AppColors.optionDarkBlue : AppColors.grey,
+                  spaceOutside: true,
+                  customButtonMargin: EdgeInsets.zero,
+                  onPressed: canRun ? _runExperiment : null,
                 ),
-                SizedBox(width: SizeConfig.safeBlockHorizontal * 3),
-                Expanded(
-                  child: AppIconButton(
-                    text: 'Add Output',
-                    iconEnd: Icons.add,
-                    color: AppColors.actionOrange,
-                    spaceOutside: true,
-                    customButtonMargin: EdgeInsets.zero,
-                    onPressed: _showAddOutputDrawer,
-                  ),
+                SizedBox(height: SizeConfig.safeBlockVertical * 1.5),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: AppIconButton(
+                        text: 'Add Parameter',
+                        iconEnd: Icons.add,
+                        color: AppColors.addGreen,
+                        spaceOutside: true,
+                        customButtonMargin: EdgeInsets.zero,
+                        onPressed: _showAddParameterDrawer,
+                      ),
+                    ),
+                    SizedBox(width: SizeConfig.safeBlockHorizontal * 3),
+                    Expanded(
+                      child: AppIconButton(
+                        text: 'Add Output',
+                        iconEnd: Icons.add,
+                        color: AppColors.actionOrange,
+                        spaceOutside: true,
+                        customButtonMargin: EdgeInsets.zero,
+                        onPressed: _showAddOutputDrawer,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -258,6 +282,9 @@ class _OutcomeRow extends StatelessWidget {
       parts.add('≥ ${_fmt(outcome.min!)}');
     } else if (outcome.max != null) {
       parts.add('≤ ${_fmt(outcome.max!)}');
+    }
+    if (outcome.step != null && outcome.step! > 0) {
+      parts.add('step ${_fmt(outcome.step!)}');
     }
     return parts.join('  ·  ');
   }

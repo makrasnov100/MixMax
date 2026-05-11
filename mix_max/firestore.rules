@@ -37,6 +37,13 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
 
+    match /Runs/{runId} {
+      allow read: if isOwner();
+      allow create: if isOwnerOnCreate();
+      allow update: if isOwner();
+      allow delete: if isOwner();
+    }
+
     match /{document=**} {
       allow read, write: if false;
       allow delete: if false;
