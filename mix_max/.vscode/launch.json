@@ -12,6 +12,7 @@
       "name": "Mix Max - Prod",
       "request": "launch",
       "type": "dart",
+      "program": "lib/main.dart",
       "args": ["--flavor", "prod", "--target", "lib/main.dart"]
     },
     {

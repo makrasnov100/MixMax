@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/app_colors.dart';
@@ -89,10 +90,15 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
     TextEditingController controller,
     String hint, {
     TextInputType? keyboardType,
+    int? maxLength,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      maxLength: maxLength,
+      inputFormatters: maxLength == null
+          ? null
+          : [LengthLimitingTextInputFormatter(maxLength)],
       style: TextStyle(
         fontSize: SizeConfig.getFontSize(3.2),
         color: AppColors.dark,
@@ -137,7 +143,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _field(_nameController, 'Output name'),
+                _field(_nameController, 'Output name', maxLength: 50),
                 SizedBox(height: SizeConfig.safeBlockVertical * 2.5),
                 _field(_unitController, 'Unit (optional)  e.g. kg, ms, °C'),
                 SizedBox(height: SizeConfig.safeBlockVertical * 2.5),

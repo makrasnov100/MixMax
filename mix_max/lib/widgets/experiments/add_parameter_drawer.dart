@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/app_colors.dart';
@@ -100,10 +101,19 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     );
   }
 
-  Widget _field(TextEditingController controller, String hint, {TextInputType? keyboardType}) {
+  Widget _field(
+    TextEditingController controller,
+    String hint, {
+    TextInputType? keyboardType,
+    int? maxLength,
+  }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      maxLength: maxLength,
+      inputFormatters: maxLength == null
+          ? null
+          : [LengthLimitingTextInputFormatter(maxLength)],
       style: TextStyle(
         fontSize: SizeConfig.getFontSize(3.2),
         color: AppColors.dark,
@@ -244,7 +254,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _field(_nameController, 'Parameter name'),
+                _field(_nameController, 'Parameter name', maxLength: 50),
                 SizedBox(height: SizeConfig.safeBlockVertical * 2.5),
                 _label('Type'),
                 Wrap(

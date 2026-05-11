@@ -7,6 +7,7 @@ import 'package:mix_max/services/ui/app_colors.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/experiments/add_output_drawer.dart';
 import 'package:mix_max/widgets/experiments/add_parameter_drawer.dart';
+import 'package:mix_max/widgets/experiments/rename_experiment_drawer.dart';
 import 'package:mix_max/widgets/input/icon_button/icon_button.dart';
 import 'package:mix_max/widgets/text/headline_text.dart';
 import 'package:mix_max/widgets/text/normal_text.dart';
@@ -14,10 +15,12 @@ import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 
 class ExperimentDetailsPage extends StatefulWidget {
   final SchemaExperiment experiment;
+  final bool autoPromptName;
 
   const ExperimentDetailsPage({
     super.key,
     required this.experiment,
+    this.autoPromptName = false,
   });
 
   @override
@@ -31,6 +34,38 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   void initState() {
     super.initState();
     _experiment = widget.experiment;
+    if (widget.autoPromptName) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showRenameDrawer(title: 'Name Experiment');
+      });
+    }
+  }
+
+  void _showRenameDrawer({String title = 'Rename Experiment'}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => RenameExperimentDrawer(
+        title: title,
+        initialName: _experiment.name,
+        onSave: _saveName,
+      ),
+    );
+  }
+
+  Future<void> _saveName(String name) async {
+    final updated = SchemaExperiment(
+      id: _experiment.id,
+      userId: _experiment.userId,
+      name: name,
+      parameters: _experiment.parameters,
+      outcomes: _experiment.outcomes,
+    );
+    await DatabaseService.experimentsRef.doc(_experiment.id).set(updated);
+    if (!mounted) return;
+    setState(() => _experiment = updated);
   }
 
   void _showAddParameterDrawer() {
@@ -135,9 +170,17 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                HeadlineText(
-                  text: _experiment.name ?? 'Experiment Details',
-                  color: AppColors.dark,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _showRenameDrawer(),
+                  child: HeadlineText(
+                    text: (_experiment.name?.isNotEmpty == true)
+                        ? _experiment.name!
+                        : 'Untitled experiment',
+                    color: AppColors.dark,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 SizedBox(height: SizeConfig.safeBlockVertical * 4),
 
@@ -244,7 +287,13 @@ class _OutcomeRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                NormalText(text: outcome.name ?? '', color: AppColors.dark, fontWeight: FontWeight.w500),
+                NormalText(
+                  text: outcome.name ?? '',
+                  color: AppColors.dark,
+                  fontWeight: FontWeight.w500,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 if (subtitle.isNotEmpty)
                   NormalText(
                     text: subtitle,
@@ -309,7 +358,13 @@ class _ParameterRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                NormalText(text: name, color: AppColors.dark, fontWeight: FontWeight.w500),
+                NormalText(
+                  text: name,
+                  color: AppColors.dark,
+                  fontWeight: FontWeight.w500,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 if (subtitle.isNotEmpty)
                   NormalText(
                     text: subtitle,

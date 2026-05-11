@@ -57,7 +57,11 @@ class BottomDrawer extends StatelessWidget {
               if (title != null && title != "")
                 Container(
                   margin: EdgeInsets.only(bottom: SizeConfig.safeBlockVertical * 2),
-                  child: HeadlineText(text: title!, fontSize: SizeConfig.getFontSize(4)),
+                  child: HeadlineText(
+                    text: title!,
+                    fontSize: SizeConfig.getFontSize(4),
+                    color: AppColors.dark,
+                  ),
                 ),
               ...children!,
               SizedBox(height: SizeConfig.safeBlockVertical),
