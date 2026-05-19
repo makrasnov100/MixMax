@@ -10,12 +10,13 @@
 
 ## Google Play
 
-1. Build: `flutter build appbundle --flavor prod --obfuscate --split-debug-info=.\debug_info\0.0.1`
-2. Upload Symbols (update the app ids): `firebase crashlytics:symbols:upload --app=1:484314165504:android:b4fd071322193d0f3203e5 .\debug_info\0.0.1`
-3. Upload Native symbols to Google Play:
+1. Test: `flutter test`
+2. Build: `flutter build appbundle --flavor prod --obfuscate --split-debug-info=.\debug_info\0.0.1`
+3. Upload Symbols (update the app ids): `firebase crashlytics:symbols:upload --app=1:484314165504:android:b4fd071322193d0f3203e5 .\debug_info\0.0.1`
+4. Upload Native symbols to Google Play:
    a. Test and Release -> App bundle explorer -> Release Details -> Downloads
    b. Upload only arm and x86_64 from `build\app\intermediates\merged_native_libs\prodRelease\out\lib` in a zip
-4. (if forgot use) `flutter symbolize -i ".\stack_traces\3.txt" -d ".\debug_info\0.0.1\app.android-x64.symbols"`
+5. (if forgot use) `flutter symbolize -i ".\stack_traces\3.txt" -d ".\debug_info\0.0.1\app.android-x64.symbols"`
 
 ## Cloud Functions
 
