@@ -4,14 +4,12 @@ Add general todo items here and plan out prompts as needed
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
   - Design automatically running tests for this but test some manually aswell
 - Oboarding, show a user a sample use case step by step
-  - create expireminet
+  - create expirement
   - add parameters
   - create runs
   - find the best parameters
-- Do redesign of UI with inspiration from others (maybe give to fiver)
-  - Icons in more places
-  - more stylesd controls more graphics
-  - make on boarding flow 
+- experiment runs as paid feature with x amount of free runs per account (10)
+- ability to pay for lifetime subscription
 - Simple icon, Simple screnshots, simple ASO, simple listings, simple website additions
 - Attempt to publish on both stores (paid app)
 
@@ -29,10 +27,7 @@ Add general todo items here and plan out prompts as needed
 - Allow to submit outcome later? from run list? after closing the app at the try parmaeters list
 - Tag after expiemrnets showing number of expirements there are
 
-
 ---------------------------------------------
 # Addons:
 - Ability to freeze a certain variable (no igredients, liked a particular variable)
 - Make the app work fully offline (sembast? backup but everything compied online aswell)
-- add run result images (premium)
-- Add more animations
