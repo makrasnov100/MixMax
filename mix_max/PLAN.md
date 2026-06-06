@@ -9,6 +9,8 @@ Add general todo items here and plan out prompts as needed
 
 --- MVP ---
 - Delete an expirement w/ confirmation
+- Editing a parameter
+- Deleting a parameter
 
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
