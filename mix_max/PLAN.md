@@ -5,7 +5,7 @@ Add general todo items here and plan out prompts as needed
 - add best so far section for expirement item in expirement list page and needed fields for that in class and firestore
   - implement in the expirement details page aswell 
 
-- implment count of runs in top right of expirement details that leads to run log?
+- implment count of runs in top right of expirement details that leads to run log?, implment best run
 
 --- MVP ---
 - Delete an expirement w/ confirmation

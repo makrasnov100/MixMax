@@ -15,9 +15,9 @@ import 'package:mix_max/widgets/design/ions/text/display_text.dart';
 import 'package:mix_max/widgets/design/ions/text/section_label_text.dart';
 import 'package:mix_max/widgets/experiments/add_output_drawer.dart';
 import 'package:mix_max/widgets/experiments/add_parameter_drawer.dart';
-import 'package:mix_max/widgets/experiments/rename_experiment_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
+import 'package:mix_max/widgets/pages/experiment_details/rename_experiment_drawer.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 
 /// The Experiment Details screen.
@@ -35,10 +35,7 @@ import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 class ExperimentDetailsPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
-  const ExperimentDetailsPage({
-    super.key,
-    required this.experiment,
-  });
+  const ExperimentDetailsPage({super.key, required this.experiment});
 
   @override
   State<ExperimentDetailsPage> createState() => _ExperimentDetailsPageState();
@@ -53,16 +50,17 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     _experiment = widget.experiment;
   }
 
-  void _showRenameDrawer({String title = 'Rename Experiment'}) {
+  void _showRenameDrawer({String title = 'Rename experiment'}) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => RenameExperimentDrawer(
-        title: title,
-        initialName: _experiment.name,
-        onSave: _saveName,
-      ),
+      builder:
+          (_) => RenameExperimentDrawer(
+            title: title,
+            initialName: _experiment.name,
+            onSave: _saveName,
+          ),
     );
   }
 
@@ -123,9 +121,10 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     final parameters = _experiment.parameters ?? const [];
     final outcomes = _experiment.outcomes ?? const [];
     final canRun = parameters.isNotEmpty && outcomes.isNotEmpty;
-    final name = _experiment.name?.isNotEmpty == true
-        ? _experiment.name!
-        : 'Untitled experiment';
+    final name =
+        _experiment.name?.isNotEmpty == true
+            ? _experiment.name!
+            : 'Untitled experiment';
 
     return OrientationScaffold(
       body: ColoredBox(
@@ -148,31 +147,33 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     ],
                   ),
 
-                  // Tappable experiment name → rename drawer.
+                  // Tappable experiment name → rename drawer. The edit glyph
+                  // flows inline right after the name (an Expanded row would
+                  // shove it to the far screen edge instead).
                   const SizedBox(height: 18),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _showRenameDrawer(),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: DisplayText(
-                            text: name,
-                            fontSize: 36,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                    child: Text.rich(
+                      TextSpan(
+                        text: name,
+                        style: DisplayText.styleOf(fontSize: 36),
+                        children: const [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: EdgeInsets.only(left: 10),
+                              child: MixMaxIcon(
+                                MixMaxGlyph.edit,
+                                size: 19,
+                                color: AppColors.inkFaint,
+                              ),
+                            ),
                           ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.only(left: 10, top: 8),
-                          child: MixMaxIcon(
-                            MixMaxGlyph.edit,
-                            size: 19,
-                            color: AppColors.inkFaint,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
 
@@ -332,7 +333,11 @@ class _RoundButton extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.hairline, width: 1),
             boxShadow: const [
-              BoxShadow(color: Color(0x0D221F2A), offset: Offset(0, 1), blurRadius: 2),
+              BoxShadow(
+                color: Color(0x0D221F2A),
+                offset: Offset(0, 1),
+                blurRadius: 2,
+              ),
             ],
           ),
           child: MixMaxIcon(glyph, size: 20, color: AppColors.ink),

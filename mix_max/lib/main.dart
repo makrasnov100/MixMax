@@ -67,6 +67,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSwatch(
           primarySwatch: AppColors.primary,
         ).copyWith(secondary: AppColors.gold),
+        // Text fields default their cursor / selection handles / highlight to
+        // the (purple) primary swatch — recolor them to the signature gold so
+        // every input fits the "Quiet Instrument" palette.
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: AppColors.gold,
+          selectionHandleColor: AppColors.gold,
+          selectionColor: AppColors.goldTint,
+        ),
       ),
       home: const ExperimentsListPage(),
       navigatorKey: Navigation.navigatorKey,
