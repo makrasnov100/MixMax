@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/functinal/pop_on_orientation_change.dart';
 import 'package:mix_max/widgets/text/headline_text.dart';

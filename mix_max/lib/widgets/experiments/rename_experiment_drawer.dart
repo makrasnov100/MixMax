@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/input/icon_button/icon_button.dart';
 import 'package:mix_max/widgets/wrappers/bottom_drawer/bottom_drawer.dart';

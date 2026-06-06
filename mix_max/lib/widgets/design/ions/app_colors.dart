@@ -40,6 +40,45 @@ class AppColors {
   );
   static MaterialColor primaryDark = primary;
 
+  // ===========================================================================
+  // [Quiet Instrument] — design system tokens (design_app/theme.jsx)
+  // Editorial / calm / premium. Warm off-white, near-black ink, gold signature,
+  // muted sage (parameters) + violet (outcomes). Use these for new UI.
+  // ===========================================================================
+
+  // [Surfaces]
+  static const Color bg = Color(0xFFFBF7F0); // warm off-white app background
+  static const Color bgAlt = Color(0xFFF4EEE3); // slightly deeper warm
+  static const Color surface = Color(0xFFFFFFFF); // cards
+  static const Color surfaceSoft = Color(0xFFFBF8F2); // inset fields
+  static const Color scrim = Color.fromRGBO(28, 24, 20, 0.42);
+
+  // [Ink]
+  static const Color ink = Color(0xFF221F2A); // primary text / commit buttons
+  static const Color inkSoft = Color(0xFF6E6A75); // secondary text
+  static const Color inkFaint = Color(0xFFA9A4AE); // placeholders / tertiary
+  static const Color hairline = Color(0xFFECE6DA); // warm borders
+  static const Color hairlineStrong = Color(0xFFE0D9CB);
+
+  // [Signature — Gold] optimization / run / active
+  static const Color gold = Color(0xFFB5872B);
+  static const Color goldDeep = Color(0xFF8A6519);
+  static const Color goldTint = Color(0xFFF4EBD4); // gold soft background
+  static const Color goldText = Color(0xFF7C5C16);
+
+  // [Parameters — Sage]
+  static const Color sage = Color(0xFF6E8A63);
+  static const Color sageTint = Color(0xFFE9EFE3);
+  static const Color sageText = Color(0xFF4C6743);
+
+  // [Outcomes — Violet]
+  static const Color violet = Color(0xFF7E719A);
+  static const Color violetTint = Color(0xFFECE7F2);
+  static const Color violetText = Color(0xFF5A4E78);
+
+  // [Status]
+  static const Color danger = Color(0xFFC0492F);
+
   // [Helper Functions]
   static Color darken(Color color, [double amount = .1]) {
     assert(amount >= 0 && amount <= 1);

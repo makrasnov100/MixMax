@@ -5,7 +5,7 @@ import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/pages/run_iteration_page.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/experiments/add_output_drawer.dart';

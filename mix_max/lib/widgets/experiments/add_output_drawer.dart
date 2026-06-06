@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/input/icon_button/icon_button.dart';
 import 'package:mix_max/widgets/text/normal_text.dart';

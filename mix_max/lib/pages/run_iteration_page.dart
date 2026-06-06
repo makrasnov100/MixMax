@@ -9,7 +9,7 @@ import 'package:mix_max/services/bayesian_optimization_service.dart';
 import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/get_it.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/input/icon_button/icon_button.dart';
 import 'package:mix_max/widgets/text/headline_text.dart';

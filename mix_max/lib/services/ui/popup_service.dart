@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/services/globals.dart';
 import 'package:mix_max/services/firebase/format_exception_message.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 
 class PopupService {
   static Future<void> performToastOperation({

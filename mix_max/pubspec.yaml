@@ -70,6 +70,20 @@ flutter:
     - family: Roboto
       fonts:
         - asset: assets/fonts/Roboto/Roboto-Regular.ttf
+    - family: Newsreader
+      fonts:
+        - asset: assets/fonts/Newsreader_24pt-Regular.ttf
+        - asset: assets/fonts/Newsreader_24pt-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Newsreader_24pt-SemiBold.ttf
+          weight: 600
+    - family: Schibsted Grotesk
+      fonts:
+        - asset: assets/fonts/SchibstedGrotesk-Regular.ttf
+        - asset: assets/fonts/SchibstedGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/SchibstedGrotesk-SemiBold.ttf
+          weight: 600
 
   assets:
     - assets/svg/icons/

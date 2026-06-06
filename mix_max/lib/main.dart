@@ -8,7 +8,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:mix_max/pages/experiments_list_page.dart';
 import 'package:mix_max/services/app_navigator_observer.dart';
 import 'package:mix_max/services/globals.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/firebase/flutter_fire.dart';
 import 'package:mix_max/services/get_it.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';

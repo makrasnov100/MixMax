@@ -1,6 +1,6 @@
 import 'package:mix_max/services/general_info_service.dart';
 import 'package:mix_max/services/get_it.dart';
-import 'package:mix_max/services/ui/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/ui/link_service.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/input/link_button.dart';
