@@ -75,6 +75,18 @@ class MyApp extends StatelessWidget {
           selectionHandleColor: AppColors.gold,
           selectionColor: AppColors.goldTint,
         ),
+        // Flutter switched the default route transition to a flat fade; restore
+        // the zoom transition on every platform.
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+            TargetPlatform.macOS: ZoomPageTransitionsBuilder(),
+            TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+            TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+            TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+          },
+        ),
       ),
       home: const ExperimentsListPage(),
       navigatorKey: Navigation.navigatorKey,

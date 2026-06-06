@@ -2,11 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mix_max/pages/experiment_details_page.dart';
 import 'package:mix_max/pages/experiments_list_page.dart';
-import 'package:mix_max/pages/run_iteration_page.dart';
+import 'package:mix_max/pages/record_outcomes_page.dart';
+import 'package:mix_max/pages/suggested_run_page.dart';
 
 enum DrawerType { block, confirm }
 
-enum Destination { experimentsList, experimentDetails, runIteration, unknown }
+enum Destination {
+  experimentsList,
+  experimentDetails,
+  suggestedRun,
+  recordOutcomes,
+  unknown,
+}
 
 enum PageMoveType { push, replace }
 
@@ -25,8 +32,10 @@ class Navigation {
       destination = Destination.experimentsList;
     } else if (page is ExperimentDetailsPage) {
       destination = Destination.experimentDetails;
-    } else if (page is RunIterationPage) {
-      destination = Destination.runIteration;
+    } else if (page is SuggestedRunPage) {
+      destination = Destination.suggestedRun;
+    } else if (page is RecordOutcomesPage) {
+      destination = Destination.recordOutcomes;
     }
 
     if (destination == Destination.unknown) {

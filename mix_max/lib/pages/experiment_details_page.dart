@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
-import 'package:mix_max/pages/run_iteration_page.dart';
+import 'package:mix_max/pages/suggested_run_page.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -112,7 +113,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   void _runExperiment() {
     Navigation.goTo(
       context: context,
-      page: RunIterationPage(experiment: _experiment),
+      page: SuggestedRunPage(experiment: _experiment),
     );
   }
 
@@ -140,7 +141,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                   // Top bar: back.
                   Row(
                     children: [
-                      _RoundButton(
+                      MixMaxRoundButton(
                         glyph: MixMaxGlyph.arrowLeft,
                         onTap: () => Navigator.of(context).maybePop(),
                       ),
@@ -304,45 +305,6 @@ class _SectionHeader extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-/// A 40px circular icon button — the back affordance in the top bar.
-///
-/// Source: `ui.jsx` `RoundBtn` (neutral tone): a white surface disc with a
-/// hairline ring and a soft shadow.
-class _RoundButton extends StatelessWidget {
-  final MixMaxGlyph glyph;
-  final VoidCallback onTap;
-
-  const _RoundButton({required this.glyph, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.hairline, width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0D221F2A),
-                offset: Offset(0, 1),
-                blurRadius: 2,
-              ),
-            ],
-          ),
-          child: MixMaxIcon(glyph, size: 20, color: AppColors.ink),
-        ),
-      ),
     );
   }
 }

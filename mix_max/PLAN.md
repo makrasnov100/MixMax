@@ -9,8 +9,11 @@ Add general todo items here and plan out prompts as needed
 
 --- MVP ---
 - Delete an expirement w/ confirmation
-- Editing a parameter
-- Deleting a parameter
+- Editing a parameter & output
+- Deleting a parameter & output
+- The quick ads outcomes casing is not preserved
+- the scale inputs could use a range indicator from min to max
+- if user navigates back from record outcomes page they should go back to expirment details but before a bottom drawer confirming the exit and that the run will be disposed should be shown 
 
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
