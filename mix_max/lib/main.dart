@@ -62,6 +62,11 @@ class MyApp extends StatelessWidget {
         primarySwatch: AppColors.primary,
         visualDensity: VisualDensity.adaptivePlatformDensity,
         useMaterial3: false,
+        // Overscroll glow (shown when a list hits its end) reads from
+        // colorScheme.secondary — point it at the app's signature gold.
+        colorScheme: ColorScheme.fromSwatch(
+          primarySwatch: AppColors.primary,
+        ).copyWith(secondary: AppColors.gold),
       ),
       home: const ExperimentsListPage(),
       navigatorKey: Navigation.navigatorKey,

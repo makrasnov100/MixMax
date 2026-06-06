@@ -27,7 +27,7 @@ class OrientationScaffold extends StatelessWidget {
       children: [
         Container(color: AppColors.black, width: double.infinity, height: double.infinity),
         Center(
-          child: Container(color: AppColors.background, width: SizeConfig.screenWidth, height: SizeConfig.screenHeight),
+          child: Container(color: AppColors.bg, width: SizeConfig.screenWidth, height: SizeConfig.screenHeight),
         ),
         OrientationBuilder(
           builder: (context, orientation) {

@@ -18,9 +18,6 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
 
-  // [Background Colors]
-  static const Color background = Color(0xFFF0ECE4);
-
   // [Primary Colors]
   static Color primaryColor = Color.fromRGBO(29, 211, 176, 1);
   static MaterialColor primary = MaterialColor(

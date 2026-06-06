@@ -1,17 +1,29 @@
 Add general todo items here and plan out prompts as needed
 
--------------------------------------------
+--- Redesign ---
+
+- add best so far section for expirement item in expirement list page and needed fields for that in class and firestore
+  - implement in the expirement details page aswell 
+
+--- MVP ---
+
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
-  - Design automatically running tests for this but test some manually aswell
+
 - Oboarding, show a user a sample use case step by step
   - create expirement
   - add parameters
   - create runs
   - find the best parameters
+
 - experiment runs as paid feature with x amount of free runs per account (10)
 - ability to pay for lifetime subscription
+
+--- Publishing ---
+
 - Simple icon, Simple screnshots, simple ASO, simple listings, simple website additions
 - Attempt to publish on both stores (paid app)
+
+--- Updates ---
 
 - Ability to see previous runs and ratings for those (seperate page)
 - Rating slider outcome not always visible
@@ -26,8 +38,5 @@ Add general todo items here and plan out prompts as needed
 - Expirement list shoul allow emoji at start, can be pressed to change
 - Allow to submit outcome later? from run list? after closing the app at the try parmaeters list
 - Tag after expiemrnets showing number of expirements there are
-
----------------------------------------------
-# Addons:
 - Ability to freeze a certain variable (no igredients, liked a particular variable)
 - Make the app work fully offline (sembast? backup but everything compied online aswell)

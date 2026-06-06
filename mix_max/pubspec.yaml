@@ -67,9 +67,6 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: Roboto
-      fonts:
-        - asset: assets/fonts/Roboto/Roboto-Regular.ttf
     - family: Newsreader
       fonts:
         - asset: assets/fonts/Newsreader_24pt-Regular.ttf
