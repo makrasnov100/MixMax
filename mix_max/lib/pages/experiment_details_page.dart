@@ -5,17 +5,33 @@ import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/pages/run_iteration_page.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
-import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
-import 'package:mix_max/services/ui/size_config.dart';
+import 'package:mix_max/widgets/design/atoms/button.dart';
+import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/text/body_text.dart';
+import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
+import 'package:mix_max/widgets/design/ions/text/display_text.dart';
+import 'package:mix_max/widgets/design/ions/text/section_label_text.dart';
 import 'package:mix_max/widgets/experiments/add_output_drawer.dart';
 import 'package:mix_max/widgets/experiments/add_parameter_drawer.dart';
 import 'package:mix_max/widgets/experiments/rename_experiment_drawer.dart';
-import 'package:mix_max/widgets/input/icon_button/icon_button.dart';
-import 'package:mix_max/widgets/text/headline_text.dart';
-import 'package:mix_max/widgets/text/normal_text.dart';
+import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart';
+import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 
+/// The Experiment Details screen.
+///
+/// Source: `design_app/screens.jsx` `ExperimentDetailsScreen`. A warm
+/// editorial layout: a back top bar, the tappable serif experiment name, then
+/// the grouped Parameters and Outcomes cards. A sticky footer carries the gold
+/// "Run experiment" action and the sage / violet "add" buttons.
+///
+/// The add-parameter, add-outcome and rename flows still open the existing
+/// bottom-sheet drawers — only the page chrome has been moved onto the new
+/// design system. The runs chip and the "Best mix so far" banner are
+/// intentionally left out for now; they'll be wired up with a runs source
+/// later.
 class ExperimentDetailsPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
@@ -95,46 +111,6 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     setState(() {});
   }
 
-  String _parameterSubtitle(SchemaParameter p) {
-    final parts = <String>[];
-
-    switch (p.type) {
-      case ParameterType.number:
-        if (p.unit != null) parts.add(p.unit!);
-        if (p.min != null && p.max != null) {
-          parts.add('${_fmt(p.min!)}–${_fmt(p.max!)}');
-        } else if (p.min != null) {
-          parts.add('≥ ${_fmt(p.min!)}');
-        } else if (p.max != null) {
-          parts.add('≤ ${_fmt(p.max!)}');
-        }
-      case ParameterType.choice:
-        if (p.options != null && p.options!.isNotEmpty) {
-          parts.add(p.options!.join(', '));
-        }
-      case ParameterType.order:
-        if (p.items != null && p.items!.isNotEmpty) {
-          parts.add(p.items!.join(' → '));
-        }
-      case ParameterType.duration:
-        if (p.unit != null) parts.add(p.unit!);
-        if (p.min != null && p.max != null) {
-          parts.add('${_fmt(p.min!)}–${_fmt(p.max!)}');
-        } else if (p.min != null) {
-          parts.add('≥ ${_fmt(p.min!)}');
-        } else if (p.max != null) {
-          parts.add('≤ ${_fmt(p.max!)}');
-        }
-      case ParameterType.toggle:
-      case null:
-        break;
-    }
-
-    return parts.join('  ·  ');
-  }
-
-  String _fmt(double v) => v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
-
   void _runExperiment() {
     Navigation.goTo(
       context: context,
@@ -144,263 +120,223 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hPad = SizeConfig.safeBlockHorizontal * 5;
-    final parameters = _experiment.parameters ?? [];
-    final outcomes = _experiment.outcomes ?? [];
+    final parameters = _experiment.parameters ?? const [];
+    final outcomes = _experiment.outcomes ?? const [];
     final canRun = parameters.isNotEmpty && outcomes.isNotEmpty;
+    final name = _experiment.name?.isNotEmpty == true
+        ? _experiment.name!
+        : 'Untitled experiment';
 
     return OrientationScaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              hPad,
-              SizeConfig.safeBlockVertical * 3,
-              hPad,
-              SizeConfig.safeBlockVertical * 22,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _showRenameDrawer(),
-                  child: HeadlineText(
-                    text: (_experiment.name?.isNotEmpty == true)
-                        ? _experiment.name!
-                        : 'Untitled experiment',
-                    color: AppColors.dark,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                SizedBox(height: SizeConfig.safeBlockVertical * 4),
-
-                // Parameters section
-                NormalText(
-                  text: 'Parameters',
-                  color: AppColors.dark,
-                  fontWeight: FontWeight.w600,
-                ),
-                SizedBox(height: SizeConfig.safeBlockVertical * 1),
-                if (parameters.isEmpty)
-                  NormalText(text: 'No parameters yet.', color: AppColors.grey)
-                else
-                  ...parameters.map((p) => _ParameterRow(
-                        name: p.name ?? '',
-                        typeLabel: p.type?.name ?? '',
-                        subtitle: _parameterSubtitle(p),
-                      )),
-
-                SizedBox(height: SizeConfig.safeBlockVertical * 4),
-
-                // Outcomes section
-                NormalText(
-                  text: 'Outcomes',
-                  color: AppColors.dark,
-                  fontWeight: FontWeight.w600,
-                ),
-                SizedBox(height: SizeConfig.safeBlockVertical * 1),
-                if (outcomes.isEmpty)
-                  NormalText(text: 'No outputs yet.', color: AppColors.grey)
-                else
-                  ...outcomes.map((o) => _OutcomeRow(outcome: o)),
-              ],
-            ),
-          ),
-          Positioned(
-            bottom: SizeConfig.safeBlockVertical * 3,
-            left: hPad,
-            right: hPad,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppIconButton(
-                  text: 'Run Experiment',
-                  iconEnd: Icons.play_arrow_rounded,
-                  color: canRun ? AppColors.optionDarkBlue : AppColors.grey,
-                  spaceOutside: true,
-                  customButtonMargin: EdgeInsets.zero,
-                  onPressed: canRun ? _runExperiment : null,
-                ),
-                SizedBox(height: SizeConfig.safeBlockVertical * 1.5),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: AppIconButton(
-                        text: 'Add Parameter',
-                        iconEnd: Icons.add,
-                        color: AppColors.addGreen,
-                        spaceOutside: true,
-                        customButtonMargin: EdgeInsets.zero,
-                        onPressed: _showAddParameterDrawer,
-                      ),
-                    ),
-                    SizedBox(width: SizeConfig.safeBlockHorizontal * 3),
-                    Expanded(
-                      child: AppIconButton(
-                        text: 'Add Output',
-                        iconEnd: Icons.add,
-                        color: AppColors.actionOrange,
-                        spaceOutside: true,
-                        customButtonMargin: EdgeInsets.zero,
-                        onPressed: _showAddOutputDrawer,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OutcomeRow extends StatelessWidget {
-  final SchemaOutcome outcome;
-
-  const _OutcomeRow({required this.outcome});
-
-  String _subtitle() {
-    final parts = <String>[];
-    if (outcome.unit != null) parts.add(outcome.unit!);
-    if (outcome.min != null && outcome.max != null) {
-      parts.add('${_fmt(outcome.min!)}–${_fmt(outcome.max!)}');
-    } else if (outcome.min != null) {
-      parts.add('≥ ${_fmt(outcome.min!)}');
-    } else if (outcome.max != null) {
-      parts.add('≤ ${_fmt(outcome.max!)}');
-    }
-    if (outcome.step != null && outcome.step! > 0) {
-      parts.add('step ${_fmt(outcome.step!)}');
-    }
-    return parts.join('  ·  ');
-  }
-
-  String _fmt(double v) => v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
-
-  @override
-  Widget build(BuildContext context) {
-    final subtitle = _subtitle();
-    final goal = outcome.goal;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: SizeConfig.safeBlockVertical * 0.8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                NormalText(
-                  text: outcome.name ?? '',
-                  color: AppColors.dark,
-                  fontWeight: FontWeight.w500,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (subtitle.isNotEmpty)
-                  NormalText(
-                    text: subtitle,
-                    color: AppColors.grey,
-                    fontSize: SizeConfig.getFontSize(2.8),
-                  ),
-              ],
-            ),
-          ),
-          if (goal != null)
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: SizeConfig.safeBlockHorizontal * 2.5,
-                vertical: SizeConfig.safeBlockVertical * 0.4,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.lightGrey,
-                borderRadius: BorderRadius.circular(SizeConfig.safeBlockHorizontal * 1.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+      body: ColoredBox(
+        color: AppColors.bg,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 200),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    goal == OutcomeGoal.minimize ? Icons.arrow_downward : Icons.arrow_upward,
-                    size: SizeConfig.getFontSize(2.8),
-                    color: AppColors.dark,
+                  // Top bar: back.
+                  Row(
+                    children: [
+                      _RoundButton(
+                        glyph: MixMaxGlyph.arrowLeft,
+                        onTap: () => Navigator.of(context).maybePop(),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: SizeConfig.safeBlockHorizontal * 1),
-                  NormalText(
-                    text: goal == OutcomeGoal.minimize ? 'minimize' : 'maximize',
-                    color: AppColors.dark,
-                    fontSize: SizeConfig.getFontSize(2.6),
+
+                  // Tappable experiment name → rename drawer.
+                  const SizedBox(height: 18),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _showRenameDrawer(),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: DisplayText(
+                            text: name,
+                            fontSize: 36,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 10, top: 8),
+                          child: MixMaxIcon(
+                            MixMaxGlyph.edit,
+                            size: 19,
+                            color: AppColors.inkFaint,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+
+                  // Parameters.
+                  const SizedBox(height: 26),
+                  _SectionHeader(
+                    label: 'Parameters',
+                    count: parameters.isEmpty ? null : parameters.length,
+                  ),
+                  const SizedBox(height: 4),
+                  const BodyText(
+                    text: 'The knobs Mix Max tunes for you.',
+                    fontSize: 13,
+                  ),
+                  const SizedBox(height: 13),
+                  ParameterListCard(parameters: parameters),
+
+                  // Outcomes.
+                  const SizedBox(height: 24),
+                  _SectionHeader(
+                    label: 'Outcomes',
+                    count: outcomes.isEmpty ? null : outcomes.length,
+                  ),
+                  const SizedBox(height: 4),
+                  const BodyText(
+                    text: 'What you measure to score each run.',
+                    fontSize: 13,
+                  ),
+                  const SizedBox(height: 13),
+                  OutcomeListCard(outcomes: outcomes),
                 ],
               ),
             ),
-        ],
+
+            // Sticky footer over a bg fade.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x00FBF7F0), AppColors.bg],
+                    stops: [0.0, 0.28],
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MixMaxButton(
+                      label: 'Run experiment',
+                      variant: MixMaxButtonVariant.gold,
+                      enabled: canRun,
+                      onPressed: canRun ? _runExperiment : null,
+                      trailing: MixMaxIcon(
+                        MixMaxGlyph.play,
+                        size: 20,
+                        color: canRun ? Colors.white : AppColors.inkFaint,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: MixMaxButton(
+                            label: 'Parameter',
+                            variant: MixMaxButtonVariant.sage,
+                            onPressed: _showAddParameterDrawer,
+                            leading: const MixMaxIcon(
+                              MixMaxGlyph.plus,
+                              size: 20,
+                              color: AppColors.sageText,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MixMaxButton(
+                            label: 'Outcome',
+                            variant: MixMaxButtonVariant.violet,
+                            onPressed: _showAddOutputDrawer,
+                            leading: const MixMaxIcon(
+                              MixMaxGlyph.plus,
+                              size: 20,
+                              color: AppColors.violetText,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ParameterRow extends StatelessWidget {
-  final String name;
-  final String typeLabel;
-  final String subtitle;
+/// The italic serif section heading with an optional faint count beside it.
+///
+/// Source: `ui.jsx` `SectionLabel` (serif italic label + sans count, baseline
+/// aligned).
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  final int? count;
 
-  const _ParameterRow({
-    required this.name,
-    required this.typeLabel,
-    required this.subtitle,
-  });
+  const _SectionHeader({required this.label, this.count});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: SizeConfig.safeBlockVertical * 0.8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                NormalText(
-                  text: name,
-                  color: AppColors.dark,
-                  fontWeight: FontWeight.w500,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (subtitle.isNotEmpty)
-                  NormalText(
-                    text: subtitle,
-                    color: AppColors.grey,
-                    fontSize: SizeConfig.getFontSize(2.8),
-                  ),
-              ],
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        SectionLabelText(text: label),
+        if (count != null) ...[
+          const SizedBox(width: 9),
+          CaptionText(
+            text: '$count',
+            color: AppColors.inkFaint,
+            fontWeight: FontWeight.w600,
           ),
-          if (typeLabel.isNotEmpty)
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: SizeConfig.safeBlockHorizontal * 2.5,
-                vertical: SizeConfig.safeBlockVertical * 0.4,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.lightGrey,
-                borderRadius: BorderRadius.circular(SizeConfig.safeBlockHorizontal * 1.5),
-              ),
-              child: NormalText(
-                text: typeLabel,
-                color: AppColors.dark,
-                fontSize: SizeConfig.getFontSize(2.6),
-              ),
-            ),
         ],
+      ],
+    );
+  }
+}
+
+/// A 40px circular icon button — the back affordance in the top bar.
+///
+/// Source: `ui.jsx` `RoundBtn` (neutral tone): a white surface disc with a
+/// hairline ring and a soft shadow.
+class _RoundButton extends StatelessWidget {
+  final MixMaxGlyph glyph;
+  final VoidCallback onTap;
+
+  const _RoundButton({required this.glyph, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.hairline, width: 1),
+            boxShadow: const [
+              BoxShadow(color: Color(0x0D221F2A), offset: Offset(0, 1), blurRadius: 2),
+            ],
+          ),
+          child: MixMaxIcon(glyph, size: 20, color: AppColors.ink),
+        ),
       ),
     );
   }
