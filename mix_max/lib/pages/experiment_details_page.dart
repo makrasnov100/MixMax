@@ -18,12 +18,10 @@ import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 
 class ExperimentDetailsPage extends StatefulWidget {
   final SchemaExperiment experiment;
-  final bool autoPromptName;
 
   const ExperimentDetailsPage({
     super.key,
     required this.experiment,
-    this.autoPromptName = false,
   });
 
   @override
@@ -37,12 +35,6 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   void initState() {
     super.initState();
     _experiment = widget.experiment;
-    if (widget.autoPromptName) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _showRenameDrawer(title: 'Name Experiment');
-      });
-    }
   }
 
   void _showRenameDrawer({String title = 'Rename Experiment'}) {

@@ -6,6 +6,7 @@ Add general todo items here and plan out prompts as needed
   - implement in the expirement details page aswell 
 
 --- MVP ---
+- Delete an expirement w/ confirmation
 
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 

@@ -6,6 +6,7 @@ import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/get_it.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/pages/experiment_details_page.dart';
+import 'package:mix_max/widgets/pages/experiments_list/create_experiment_drawer.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
@@ -49,12 +50,26 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _addExperiment() async {
+  /// Prompts for a name first. Nothing is persisted until the user saves —
+  /// dismissing the drawer creates no experiment.
+  void _addExperiment() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => CreateExperimentDrawer(
+        onSave: _createExperiment,
+      ),
+    );
+  }
+
+  Future<void> _createExperiment(String name) async {
     final userId = _authService.user.id;
     final docRef = DatabaseService.experimentsRef.doc();
     final experiment = SchemaExperiment(
       id: docRef.id,
       userId: userId,
+      name: name,
       createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
     );
     await docRef.set(experiment, SetOptions(merge: true));
@@ -62,10 +77,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     if (!mounted) return;
     Navigation.goTo(
       context: context,
-      page: ExperimentDetailsPage(
-        experiment: experiment,
-        autoPromptName: true,
-      ),
+      page: ExperimentDetailsPage(experiment: experiment),
     );
   }
 
