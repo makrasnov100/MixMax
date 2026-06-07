@@ -12,6 +12,7 @@ import 'package:mix_max/widgets/design/atoms/progress_dots.dart';
 import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
+import 'package:mix_max/widgets/design/molecules/confirm_drawer.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -60,16 +61,31 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
     setState(() => _currentOutcomeIndex += 1);
   }
 
-  void _onGoBack() {
-    if (_currentOutcomeIndex == 0) {
-      // Backing out of the first outcome returns to the experiment details,
-      // skipping past the suggested-run page.
-      Navigator.of(context).popUntil(
-        (route) => route.settings.name == Destination.experimentDetails.name,
-      );
+  /// The single back path for both the in-app arrow and the system back gesture
+  /// (routed here via the [PopScope] in [build]). Stepping back through outcomes
+  /// just rewinds the index — no data is lost, so no prompt. Backing out of the
+  /// first outcome leaves the whole flow, returning to the experiment details
+  /// and skipping past the suggested-run page; since that drops the suggested
+  /// run entirely (its parameters and any ratings), we always confirm first.
+  Future<void> _handleBackRequest() async {
+    if (_currentOutcomeIndex > 0) {
+      setState(() => _currentOutcomeIndex -= 1);
       return;
     }
-    setState(() => _currentOutcomeIndex -= 1);
+
+    final discard = await ConfirmDrawer.show(
+      context,
+      title: 'Discard this run?',
+      subtitle: "Suggested values and any outcomes won't be saved.",
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep rating',
+    );
+    if (!discard) return;
+
+    if (!mounted) return;
+    Navigator.of(context).popUntil(
+      (route) => route.settings.name == Destination.experimentDetails.name,
+    );
   }
 
   Future<void> _saveRun() async {
@@ -102,25 +118,39 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return OrientationScaffold(
-      body: ColoredBox(
-        color: AppColors.bg,
-        child: switch (_phase) {
-          _RecordPhase.saving => const _StatusView(message: 'Saving run…'),
-          _RecordPhase.error => _ErrorView(
+    // Always intercept the system back / swipe: the default pop would land on
+    // the suggested-run page, but back from here belongs to [_handleBackRequest]
+    // (rewind an outcome, or leave to the experiment details), matching the
+    // in-app arrow.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBackRequest();
+      },
+      child: OrientationScaffold(
+        body: ColoredBox(
+          color: AppColors.bg,
+          child: switch (_phase) {
+            _RecordPhase.saving => const _StatusView(message: 'Saving run…'),
+            _RecordPhase.error => _ErrorView(
               message: _errorMessage ?? 'Something went wrong.',
               onRetry: () => setState(() => _phase = _RecordPhase.recording),
             ),
-          _RecordPhase.recording => _RecordingView(
+            _RecordPhase.recording => _RecordingView(
               experiment: widget.experiment,
               currentIndex: _currentOutcomeIndex,
-              existingValue: _outcomeValues[
-                  widget.experiment.outcomes![_currentOutcomeIndex].id],
+              existingValue:
+                  _outcomeValues[widget
+                      .experiment
+                      .outcomes![_currentOutcomeIndex]
+                      .id],
               errorMessage: _errorMessage,
               onSubmit: _onOutcomeValueSubmitted,
-              onBack: _onGoBack,
+              onBack: _handleBackRequest,
             ),
-        },
+          },
+        ),
       ),
     );
   }
@@ -231,12 +261,12 @@ class _RecordingViewState extends State<_RecordingView> {
   Widget build(BuildContext context) {
     final outcomes = widget.experiment.outcomes ?? [];
     final isLast = widget.currentIndex == outcomes.length - 1;
-    final canSubmit = _hasBounds
-        ? true
-        : double.tryParse(_textController.text.trim()) != null;
+    final canSubmit =
+        _hasBounds
+            ? true
+            : double.tryParse(_textController.text.trim()) != null;
 
-    final name =
-        _outcome.name?.isNotEmpty == true ? _outcome.name! : 'Outcome';
+    final name = _outcome.name?.isNotEmpty == true ? _outcome.name! : 'Outcome';
     final unit = _outcome.unit ?? '';
 
     return Stack(
@@ -455,9 +485,7 @@ class _NumberEntry extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Center(
-          child: CaptionText(text: 'Enter measured value'),
-        ),
+        const Center(child: CaptionText(text: 'Enter measured value')),
         const SizedBox(height: 14),
         MixMaxTextInput(
           controller: controller,
@@ -466,8 +494,10 @@ class _NumberEntry extends StatelessWidget {
           big: true,
           textAlign: TextAlign.center,
           placeholder: unit.isNotEmpty ? 'value ($unit)' : 'value',
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true, signed: true),
+          keyboardType: const TextInputType.numberWithOptions(
+            decimal: true,
+            signed: true,
+          ),
         ),
       ],
     );
@@ -513,7 +543,11 @@ class _ErrorView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Center(
-            child: MixMaxIcon(MixMaxGlyph.info, size: 40, color: AppColors.danger),
+            child: MixMaxIcon(
+              MixMaxGlyph.info,
+              size: 40,
+              color: AppColors.danger,
+            ),
           ),
           const SizedBox(height: 16),
           BodyText(

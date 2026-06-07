@@ -32,7 +32,8 @@ Add general todo items here and plan out prompts as needed
 - Attempt to publish on both stores (paid app)
 
 --- Updates ---
-
+- weighted outcome priority (pie chart?)
+- Subitting a run outputs later skipping a rating (secondary option during rating)
 - Ability to see previous runs and ratings for those (seperate page)
 - Rating slider outcome not always visible
 - Simple outcome presets that prefil the form
