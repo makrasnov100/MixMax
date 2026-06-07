@@ -62,6 +62,7 @@ const BTN_VARIANTS = {
   sage:   { bg: T.sageTint,   fg: T.sageText,    sh: 'none', bd: 'none' },
   violet: { bg: T.violetTint, fg: T.violetText,  sh: 'none', bd: 'none' },
   ghost:  { bg: 'transparent',fg: T.ink,         sh: 'none', bd: `1.5px solid ${T.hairlineStrong}` },
+  danger: { bg: T.danger,     fg: '#FFFFFF',     sh: '0 1px 2px rgba(120,40,25,0.18), 0 12px 24px -14px rgba(150,55,35,0.6)', bd: 'none' },
   disabled:{bg: '#ECE6DA',    fg: T.inkFaint,    sh: 'none', bd: 'none' },
 };
 
@@ -117,6 +118,7 @@ const TILE_TONES = {
   violet:  { bg: T.violetTint, fg: T.violet },
   gold:    { bg: T.goldTint,   fg: T.gold },
   neutral: { bg: T.bgAlt,      fg: T.inkSoft },
+  danger:  { bg: T.dangerTint, fg: T.danger },
   ink:     { bg: '#2A2632',    fg: '#F4EBD4' },
 };
 function Tile({ icon, tone = 'sage', size = 44, radius = T.rTile, stroke = 1.9 }) {

@@ -34,7 +34,9 @@ const T = {
   violetText: '#5A4E78',
 
   // status
-  danger:   '#C0492F',
+  danger:     '#C0492F',
+  dangerTint: '#F6E3DC',
+  dangerText: '#9A3A24',
 
   // fonts
   serif: '"Newsreader", Georgia, serif',

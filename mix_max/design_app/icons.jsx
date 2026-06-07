@@ -34,6 +34,8 @@ function Icon({ name, size = 22, color = 'currentColor', stroke = 1.8, style }) 
     bag: <g {...p}><path d="M6 8h12l-1 12H7L6 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></g>,
     trash: <g {...p}><path d="M5 7h14M10 7V5h4v2M6 7l1 13h10l1-13" /></g>,
     clock: <g {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></g>,
+    more: <g {...p}><circle cx="5" cy="12" r="1.4" fill={color} stroke="none" /><circle cx="12" cy="12" r="1.4" fill={color} stroke="none" /><circle cx="19" cy="12" r="1.4" fill={color} stroke="none" /></g>,
+    alert: <g {...p}><path d="M12 3.5 21 19H3L12 3.5Z" /><path d="M12 10v4.5M12 17.4v.2" /></g>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={style} aria-hidden="true">

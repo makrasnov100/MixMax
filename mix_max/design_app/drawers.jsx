@@ -323,4 +323,70 @@ function AddOutputDrawer({ onSave, onClose }) {
   );
 }
 
-Object.assign(window, { DrawerShell, NameDrawer, AddParameterDrawer, AddOutputDrawer, Segmented, TextInput });
+// ── 4. Experiment actions sheet ──────────────────────────
+function ActionRow({ icon, tone = 'neutral', label, sublabel, danger, onClick }) {
+  const [press, setPress] = useState(false);
+  return (
+    <button onClick={onClick}
+      onMouseDown={() => setPress(true)} onMouseUp={() => setPress(false)} onMouseLeave={() => setPress(false)}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+        background: press ? T.bgAlt : T.surface, border: `1px solid ${T.hairline}`,
+        borderRadius: T.rField, padding: '14px 15px', cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent', transition: 'background .12s',
+      }}>
+      <Tile icon={icon} tone={tone} size={42} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 16, color: danger ? T.danger : T.ink }}>{label}</div>
+        {sublabel && <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginTop: 2 }}>{sublabel}</div>}
+      </div>
+      <Icon name="chevR" size={19} color={danger ? T.danger : T.inkFaint} stroke={2} />
+    </button>
+  );
+}
+
+function ExperimentActionsDrawer({ exp, onRename, onDelete, onClose }) {
+  return (
+    <DrawerShell title={exp.name || 'Untitled experiment'} subtitle="Manage this experiment" onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 18 }}>
+        <ActionRow icon="edit" tone="neutral" label="Rename experiment" sublabel="Change its title" onClick={onRename} />
+        <ActionRow icon="trash" tone="danger" danger label="Delete experiment" sublabel="Remove it and all its data" onClick={onDelete} />
+      </div>
+    </DrawerShell>
+  );
+}
+
+// ── 5. Confirm delete (destructive) ──────────────────────
+function ConfirmDeleteDrawer({ exp, onConfirm, onClose }) {
+  const pc = (exp.parameters || []).length;
+  const oc = (exp.outcomes || []).length;
+  const rc = (exp.runs || []).length;
+  const bits = [
+    `${pc} parameter${pc === 1 ? '' : 's'}`,
+    `${oc} outcome${oc === 1 ? '' : 's'}`,
+    `${rc} run${rc === 1 ? '' : 's'}`,
+  ];
+  return (
+    <DrawerShell onClose={onClose}
+      title={<span>Delete <span style={{ fontStyle: 'italic' }}>“{exp.name || 'Untitled experiment'}”</span>?</span>}
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn label="Delete experiment" icon="trash" variant="danger" onClick={onConfirm} />
+          <Btn label="Keep it" variant="ghost" onClick={onClose} />
+        </div>
+      }>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 4 }}>
+        <Tile icon="alert" tone="danger" size={56} radius={18} stroke={2} />
+        <div style={{ fontFamily: T.sans, fontSize: 14.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 16, maxWidth: 300 }}>
+          This permanently removes the experiment and everything in it. This can’t be undone.
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 18 }}>
+          {bits.map((b, i) => <Chip key={i} tone="soft">{b}</Chip>)}
+        </div>
+      </div>
+      <div style={{ height: 8 }} />
+    </DrawerShell>
+  );
+}
+
+Object.assign(window, { DrawerShell, NameDrawer, AddParameterDrawer, AddOutputDrawer, Segmented, TextInput, ExperimentActionsDrawer, ConfirmDeleteDrawer });

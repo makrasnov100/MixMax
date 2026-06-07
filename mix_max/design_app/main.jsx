@@ -84,6 +84,12 @@ function App() {
     updateExp(route.expId, e => ({ ...e, name }));
     setDrawer(null);
   };
+
+  const deleteExperiment = (id) => {
+    setExperiments(list => list.filter(e => e.id !== id));
+    setDrawer(null);
+    setRoute({ name: 'list' });
+  };
   const saveParam = (param) => { updateExp(route.expId, e => ({ ...e, parameters: [...e.parameters, param] })); setDrawer(null); };
   const saveOutput = (out) => { updateExp(route.expId, e => ({ ...e, outcomes: [...e.outcomes, out] })); setDrawer(null); };
 
@@ -125,6 +131,7 @@ function App() {
       onRename={() => setDrawer({ kind: 'name' })}
       onAddParam={() => setDrawer({ kind: 'param' })}
       onAddOutput={() => setDrawer({ kind: 'output' })}
+      onMenu={() => setDrawer({ kind: 'actions' })}
       onRun={runExperiment} />;
   } else if (route.name === 'run' && current) {
     screen = <RunSuggestionScreen exp={current} suggestion={suggestion}
@@ -147,6 +154,17 @@ function App() {
       )}
       {drawer && drawer.kind === 'param' && <AddParameterDrawer onSave={saveParam} onClose={() => setDrawer(null)} />}
       {drawer && drawer.kind === 'output' && <AddOutputDrawer onSave={saveOutput} onClose={() => setDrawer(null)} />}
+      {drawer && drawer.kind === 'actions' && current && (
+        <ExperimentActionsDrawer exp={current}
+          onRename={() => setDrawer({ kind: 'name' })}
+          onDelete={() => setDrawer({ kind: 'confirmDelete' })}
+          onClose={() => setDrawer(null)} />
+      )}
+      {drawer && drawer.kind === 'confirmDelete' && current && (
+        <ConfirmDeleteDrawer exp={current}
+          onConfirm={() => deleteExperiment(current.id)}
+          onClose={() => setDrawer(null)} />
+      )}
     </div>
   );
 }

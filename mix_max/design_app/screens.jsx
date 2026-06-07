@@ -144,7 +144,7 @@ function ExperimentsListScreen({ experiments, onOpen, onAdd }) {
 // ════════════════════════════════════════════════════════
 // 2. EXPERIMENT DETAILS
 // ════════════════════════════════════════════════════════
-function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun }) {
+function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun, onMenu }) {
   const params = exp.parameters || [];
   const outcomes = exp.outcomes || [];
   const runs = exp.runs || [];
@@ -164,7 +164,10 @@ function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutpu
       <TopPad h={50} />
       <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <RoundBtn icon="arrowL" onClick={onBack} />
-        <Chip tone="soft" icon="flask">{runs.length} run{runs.length === 1 ? '' : 's'} logged</Chip>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Chip tone="soft" icon="flask">{runs.length} run{runs.length === 1 ? '' : 's'} logged</Chip>
+          <RoundBtn icon="more" onClick={onMenu} />
+        </div>
       </div>
 
       <div style={{ padding: '18px 20px 0' }}>
