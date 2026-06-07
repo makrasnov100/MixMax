@@ -2,15 +2,16 @@ Add general todo items here and plan out prompts as needed
 
 --- MVP ---
 - Delete an expirement w/ confirmation
+
 - Editing a parameter & output
 - Deleting a parameter & output
-- The quick ads outcomes casing is not preserved
-- the scale inputs could use a range indicator from min to max
-- if user navigates back from record outcomes page they should go back to expirment details but before a bottom drawer confirming the exit and that the run will be disposed should be shown 
+
 - run list with items list
 - pressing on best mix goes to that mix details (reuse the suggested parameters Ui)
 
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
+
+- Sharing functionality, image generated with my best combo.
 
 - Oboarding, show a user a sample use case step by step
   - create expirement
@@ -27,6 +28,7 @@ Add general todo items here and plan out prompts as needed
 - Attempt to publish on both stores (paid app)
 
 --- Updates ---
+- description for outcomes for more detail when rating 
 - The large rating text is a bit grainy
 - weighted outcome priority (pie chart?)
 - Subitting a run outputs later skipping a rating (secondary option during rating)

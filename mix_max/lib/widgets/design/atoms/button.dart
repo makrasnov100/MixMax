@@ -10,7 +10,8 @@ import 'package:mix_max/widgets/design/ions/text/label_text.dart';
 ///   • [sage]   — quiet parameter-tinted action (tint fill, no elevation).
 ///   • [violet] — quiet outcome-tinted action (tint fill, no elevation).
 ///   • [ghost]  — low-emphasis. Transparent with a hairline outline.
-enum MixMaxButtonVariant { ink, gold, sage, violet, ghost }
+///   • [danger] — destructive commit. Deep red fill + a soft red glow.
+enum MixMaxButtonVariant { ink, gold, sage, violet, ghost, danger }
 
 /// Primary labelled action button for the "Quiet Instrument" system.
 ///
@@ -179,6 +180,12 @@ class _MixMaxButtonStyle {
             BorderSide(color: AppColors.hairlineStrong, width: 1.5),
           ),
         );
+      case MixMaxButtonVariant.danger:
+        return const _MixMaxButtonStyle(
+          bg: AppColors.danger,
+          fg: Colors.white,
+          shadow: _dangerShadow,
+        );
       case null: // disabled
         return const _MixMaxButtonStyle(
           bg: AppColors.hairline,
@@ -197,5 +204,11 @@ class _MixMaxButtonStyle {
   static const List<BoxShadow> _goldShadow = [
     BoxShadow(color: Color(0x2E785A14), offset: Offset(0, 1), blurRadius: 2),
     BoxShadow(color: Color(0x99966E1E), offset: Offset(0, 12), blurRadius: 24, spreadRadius: -14),
+  ];
+
+  // Danger glow — '0 1px 2px rgba(120,40,25,0.18), 0 12px 24px -14px rgba(150,55,35,0.6)'
+  static const List<BoxShadow> _dangerShadow = [
+    BoxShadow(color: Color(0x2E782819), offset: Offset(0, 1), blurRadius: 2),
+    BoxShadow(color: Color(0x99963723), offset: Offset(0, 12), blurRadius: 24, spreadRadius: -14),
   ];
 }

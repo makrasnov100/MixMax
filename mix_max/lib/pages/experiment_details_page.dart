@@ -16,6 +16,8 @@ import 'package:mix_max/widgets/design/ions/text/section_label_text.dart';
 import 'package:mix_max/widgets/pages/experiment_details/add_output_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/add_parameter_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/best_mix_card.dart';
+import 'package:mix_max/widgets/pages/experiment_details/confirm_delete_experiment_drawer.dart';
+import 'package:mix_max/widgets/pages/experiment_details/experiment_actions_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/rename_experiment_drawer.dart';
@@ -49,6 +51,43 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   void initState() {
     super.initState();
     _experiment = widget.experiment;
+  }
+
+  /// Opens the "Manage this experiment" actions drawer (rename / delete).
+  void _showActionsDrawer() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => ExperimentActionsDrawer(
+        experimentName: _experiment.name,
+        onRename: _showRenameDrawer,
+        onDelete: _showConfirmDeleteDrawer,
+      ),
+    );
+  }
+
+  /// Opens the destructive confirm-delete drawer.
+  void _showConfirmDeleteDrawer() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => ConfirmDeleteExperimentDrawer(
+        experimentName: _experiment.name,
+        parameterCount: _experiment.parameters?.length ?? 0,
+        outcomeCount: _experiment.outcomes?.length ?? 0,
+        runCount: _experiment.runCount,
+        onConfirm: _deleteExperiment,
+      ),
+    );
+  }
+
+  /// Deletes the experiment, then returns straight to the experiments list.
+  Future<void> _deleteExperiment() async {
+    await _experiment.delete();
+    if (!mounted) return;
+    Navigator.of(context).maybePop();
   }
 
   void _showRenameDrawer({String title = 'Rename experiment'}) {
@@ -148,10 +187,21 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                         glyph: MixMaxGlyph.arrowLeft,
                         onTap: () => Navigator.of(context).maybePop(),
                       ),
-                      MixMaxChip(
-                        tone: MixMaxChipTone.soft,
-                        icon: MixMaxGlyph.flask,
-                        label: '$runCount run${runCount == 1 ? '' : 's'} logged',
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          MixMaxChip(
+                            tone: MixMaxChipTone.soft,
+                            icon: MixMaxGlyph.flask,
+                            label:
+                                '$runCount run${runCount == 1 ? '' : 's'} logged',
+                          ),
+                          const SizedBox(width: 10),
+                          MixMaxRoundButton(
+                            glyph: MixMaxGlyph.more,
+                            onTap: _showActionsDrawer,
+                          ),
+                        ],
                       ),
                     ],
                   ),

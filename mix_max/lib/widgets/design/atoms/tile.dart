@@ -6,7 +6,8 @@ import 'package:mix_max/widgets/design/atoms/icon.dart';
 /// pairs a soft tinted fill with a saturated icon ink:
 ///   • [sage]    parameters   • [violet] outcomes   • [gold] signature/run
 ///   • [neutral] quiet/meta    • [ink]    inverted (dark fill, gold glyph)
-enum MixMaxTileTone { sage, violet, gold, neutral, ink }
+///   • [danger]  destructive (soft red fill, deep red glyph)
+enum MixMaxTileTone { sage, violet, gold, neutral, ink, danger }
 
 /// A tinted rounded square holding a single [MixMaxIcon] — the system's way of
 /// giving a list row or affordance a colored "type" glyph.
@@ -64,5 +65,7 @@ _TonePalette _tonePalette(MixMaxTileTone tone) {
     case MixMaxTileTone.ink:
       // Inverted: dark fill (not a named token) with the gold-tint glyph.
       return const _TonePalette(Color(0xFF2A2632), AppColors.goldTint);
+    case MixMaxTileTone.danger:
+      return const _TonePalette(AppColors.dangerTint, AppColors.danger);
   }
 }

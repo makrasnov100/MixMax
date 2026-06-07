@@ -73,8 +73,10 @@ class AppColors {
   static const Color violetTint = Color(0xFFECE7F2);
   static const Color violetText = Color(0xFF5A4E78);
 
-  // [Status]
+  // [Status — Danger]
   static const Color danger = Color(0xFFC0492F);
+  static const Color dangerTint = Color(0xFFF6E3DC);
+  static const Color dangerText = Color(0xFF9A3A24);
 
   // [Helper Functions]
   static Color darken(Color color, [double amount = .1]) {

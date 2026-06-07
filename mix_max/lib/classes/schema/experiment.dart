@@ -70,6 +70,13 @@ class SchemaExperiment {
         .set(this, SetOptions(merge: true));
   }
 
+  /// Permanently removes this experiment's Firestore document. The cached
+  /// parameters, outcomes and best run live on the document, so deleting it
+  /// drops everything in one write.
+  Future<void> delete() {
+    return DatabaseService.experimentsRef.doc(id).delete();
+  }
+
   /// Promotes [run] to [bestRun] when it scores higher than the run already
   /// stored (or when none is stored yet), duplicating it onto this experiment.
   ///

@@ -71,7 +71,8 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
 
   void _applyPreset(_OutcomePreset preset) {
     setState(() {
-      _nameController.text = preset.name;
+      // Seed the name from the cased title so quick adds keep their casing.
+      _nameController.text = preset.title;
       _unitController.text = preset.unit ?? '';
       _goal = preset.goal;
       _minController.text = preset.min.toString();
@@ -281,7 +282,6 @@ class _OutcomePreset {
   final MixMaxGlyph glyph;
 
   // Seeded form values.
-  final String name;
   final String? unit;
   final num min;
   final num max;
@@ -292,7 +292,6 @@ class _OutcomePreset {
     required this.title,
     required this.hint,
     required this.glyph,
-    required this.name,
     this.unit,
     required this.min,
     required this.max,
@@ -306,7 +305,6 @@ const List<_OutcomePreset> _presets = [
     title: 'Taste',
     hint: '1–10, higher',
     glyph: MixMaxGlyph.spark2,
-    name: 'taste',
     min: 1,
     max: 10,
     step: 1,
@@ -316,7 +314,6 @@ const List<_OutcomePreset> _presets = [
     title: 'Quality',
     hint: '1–5, higher',
     glyph: MixMaxGlyph.trophy,
-    name: 'quality',
     min: 1,
     max: 5,
     step: 1,
@@ -326,7 +323,6 @@ const List<_OutcomePreset> _presets = [
     title: 'Yield',
     hint: '%, higher',
     glyph: MixMaxGlyph.up,
-    name: 'yield',
     unit: '%',
     min: 0,
     max: 100,
@@ -337,7 +333,6 @@ const List<_OutcomePreset> _presets = [
     title: 'Time',
     hint: 'min, lower',
     glyph: MixMaxGlyph.clock,
-    name: 'time',
     unit: 'min',
     min: 0,
     max: 60,
