@@ -1,12 +1,5 @@
 Add general todo items here and plan out prompts as needed
 
---- Redesign ---
-
-- add best so far section for expirement item in expirement list page and needed fields for that in class and firestore
-  - implement in the expirement details page aswell 
-
-- implment count of runs in top right of expirement details that leads to run log?, implment best run
-
 --- MVP ---
 - Delete an expirement w/ confirmation
 - Editing a parameter & output
@@ -14,6 +7,8 @@ Add general todo items here and plan out prompts as needed
 - The quick ads outcomes casing is not preserved
 - the scale inputs could use a range indicator from min to max
 - if user navigates back from record outcomes page they should go back to expirment details but before a bottom drawer confirming the exit and that the run will be disposed should be shown 
+- run list with items list
+- pressing on best mix goes to that mix details (reuse the suggested parameters Ui)
 
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
@@ -32,6 +27,7 @@ Add general todo items here and plan out prompts as needed
 - Attempt to publish on both stores (paid app)
 
 --- Updates ---
+- The large rating text is a bit grainy
 - weighted outcome priority (pie chart?)
 - Subitting a run outputs later skipping a rating (secondary option during rating)
 - Ability to see previous runs and ratings for those (seperate page)

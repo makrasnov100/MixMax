@@ -1,48 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
-import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/widgets/design/atoms/card.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/title_text.dart';
+import 'package:mix_max/widgets/pages/experiment_details/best_mix_card.dart';
 
 /// One experiment row on the Experiments list — a tappable summary card.
 ///
 /// Source: `screens.jsx` `ExperimentCard`. A white [MixMaxCard] holding the
 /// experiment name (serif), a strip of "type" glyphs for its parameters and
-/// outcomes, a meta line counting each, and — once runs exist — a gold
+/// outcomes, a meta line counting each, and — once a best run exists — a gold
 /// "Best so far" footer.
 ///
-/// [runs] is optional because the Flutter `SchemaExperiment` does not embed its
-/// runs (they live in their own collection keyed by `experimentId`). When a
-/// caller has the runs in hand, pass them to light up the runs meta-bit and the
-/// best-so-far footer; when omitted both are hidden, matching the design's
-/// behaviour for an experiment with no runs.
+/// The "Best so far" footer is driven by the experiment's cached
+/// [SchemaExperiment.bestRun] and shows whenever one exists.
 class ExperimentListItem extends StatelessWidget {
   final SchemaExperiment experiment;
   final VoidCallback onTap;
-
-  /// Recorded runs for this experiment, if known. Null/empty hides the runs
-  /// count and the best-so-far footer.
-  final List<SchemaRun>? runs;
 
   const ExperimentListItem({
     Key? key,
     required this.experiment,
     required this.onTap,
-    this.runs,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final params = experiment.parameters ?? const [];
     final outcomes = experiment.outcomes ?? const [];
-    final runs = this.runs ?? const [];
-    // TODO: source from the experiment's cached best run once implemented.
-    const String? best = null;
+    final bestRun = experiment.bestRun;
+    final best =
+        bestRun == null ? null : BestMixCard.labelFor(outcomes, bestRun);
 
     return MixMaxCard(
       onTap: onTap,
@@ -112,11 +104,11 @@ class ExperimentListItem extends StatelessWidget {
                 text: '${outcomes.length} '
                     'outcome${outcomes.length == 1 ? '' : 's'}',
               ),
-              if (this.runs != null)
-                _MetaBit(
-                  glyph: MixMaxGlyph.play,
-                  text: '${runs.length} run${runs.length == 1 ? '' : 's'}',
-                ),
+              _MetaBit(
+                glyph: MixMaxGlyph.play,
+                text: '${experiment.runCount} '
+                    'run${experiment.runCount == 1 ? '' : 's'}',
+              ),
             ],
           ),
 

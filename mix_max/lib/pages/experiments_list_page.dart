@@ -65,14 +65,13 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
 
   Future<void> _createExperiment(String name) async {
     final userId = _authService.user.id;
-    final docRef = DatabaseService.experimentsRef.doc();
     final experiment = SchemaExperiment(
-      id: docRef.id,
+      id: DatabaseService.experimentsRef.doc().id,
       userId: userId,
       name: name,
       createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
     );
-    await docRef.set(experiment, SetOptions(merge: true));
+    await experiment.save();
 
     if (!mounted) return;
     Navigation.goTo(

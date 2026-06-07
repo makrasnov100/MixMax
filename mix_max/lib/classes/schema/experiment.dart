@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/run.dart';
+import 'package:mix_max/services/firebase/database_service.dart';
 part '../../generated/schema/experiment.g.dart';
 
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
@@ -17,6 +19,11 @@ class SchemaExperiment {
   /// whenever a run is completed with a higher [SchemaRun.finalRating].
   SchemaRun? bestRun;
 
+  /// Number of runs completed for this experiment, kept on the experiment so
+  /// the run total can be shown without loading the Runs collection. Bumped by
+  /// [recordCompletedRun] each time a run is logged.
+  int runCount;
+
   /// Seconds since Unix epoch.
   int? createdAt;
 
@@ -27,6 +34,7 @@ class SchemaExperiment {
     this.parameters,
     this.outcomes,
     this.bestRun,
+    this.runCount = 0,
     this.createdAt,
   });
 
@@ -37,11 +45,29 @@ class SchemaExperiment {
     this.parameters,
     this.outcomes,
     this.bestRun,
+    this.runCount = 0,
     this.createdAt,
   });
 
   bool isValid() {
     return id.isNotEmpty;
+  }
+
+  /// Records a freshly completed [run]: increments [runCount], promotes it to
+  /// [bestRun] when it scores higher, and persists the experiment so the count
+  /// and best mix can be shown without loading the whole Runs collection.
+  Future<void> recordCompletedRun(SchemaRun run) {
+    runCount += 1;
+    updateBestRun(run);
+    return save();
+  }
+
+  /// Persists this experiment to its Firestore document, merging with the
+  /// existing fields so partial updates stay safe.
+  Future<void> save() {
+    return DatabaseService.experimentsRef
+        .doc(id)
+        .set(this, SetOptions(merge: true));
   }
 
   /// Promotes [run] to [bestRun] when it scores higher than the run already

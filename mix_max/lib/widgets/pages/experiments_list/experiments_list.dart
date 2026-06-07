@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
-import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
@@ -20,11 +19,6 @@ class ExperimentsList extends StatelessWidget {
   /// Tapping a card opens its experiment.
   final void Function(SchemaExperiment experiment) onOpen;
 
-  /// Recorded runs per experiment id, if known. When an experiment has an entry
-  /// here its card shows the runs count and best-so-far footer; otherwise both
-  /// are hidden. See [ExperimentListItem.runs].
-  final Map<String, List<SchemaRun>>? runsByExperiment;
-
   /// Outer padding. Defaults to the design's `22 / 20 / 8 / 20` (T R B L); the
   /// caller should add bottom room for the floating action button.
   final EdgeInsetsGeometry padding;
@@ -33,7 +27,6 @@ class ExperimentsList extends StatelessWidget {
     Key? key,
     required this.experiments,
     required this.onOpen,
-    this.runsByExperiment,
     this.padding = const EdgeInsets.fromLTRB(20, 22, 20, 8),
   }) : super(key: key);
 
@@ -51,7 +44,6 @@ class ExperimentsList extends StatelessWidget {
         final experiment = experiments[index];
         return ExperimentListItem(
           experiment: experiment,
-          runs: runsByExperiment?[experiment.id],
           onTap: () => onOpen(experiment),
         );
       },

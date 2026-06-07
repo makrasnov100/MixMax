@@ -103,7 +103,7 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
           .doc(run.id)
           .set(run, SetOptions(merge: true));
 
-      await _updateBestRun(run);
+      await widget.experiment.recordCompletedRun(run);
 
       if (!mounted) return;
       // Pop back past the suggested-run page to the experiment details.
@@ -117,16 +117,6 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
         _errorMessage = 'Could not save run. Please try again.';
       });
     }
-  }
-
-  /// Persists the experiment when [run] becomes its new best, so the best mix
-  /// can be shown without loading the whole Runs collection.
-  Future<void> _updateBestRun(SchemaRun run) async {
-    if (!widget.experiment.updateBestRun(run)) return;
-
-    await DatabaseService.experimentsRef
-        .doc(widget.experiment.id)
-        .set(widget.experiment, SetOptions(merge: true));
   }
 
   @override

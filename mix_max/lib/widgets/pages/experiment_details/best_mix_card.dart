@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:mix_max/classes/schema/outcome.dart';
+import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/format.dart';
 import 'package:mix_max/widgets/design/ions/text/eyebrow_text.dart';
 import 'package:mix_max/widgets/design/ions/text/label_text.dart';
 
@@ -46,5 +49,23 @@ class BestMixCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// One-line summary of [run] — its first three recorded outcomes as
+  /// "name value", joined by a middot (e.g. `Sweetness 8  ·  Bitterness 2`).
+  ///
+  /// Returns null when there's nothing to describe (no outcomes defined, or the
+  /// run carries no outcome values) — the signal to hide the banner.
+  static String? labelFor(List<SchemaOutcome> outcomes, SchemaRun run) {
+    final values = run.outcomeValues;
+    if (outcomes.isEmpty || values == null) return null;
+
+    final parts = outcomes
+        .take(3)
+        .where((o) => values[o.id] != null)
+        .map((o) => '${o.name} ${MixMaxFormat.number(values[o.id])}')
+        .toList();
+
+    return parts.isEmpty ? null : parts.join('  ·  ');
   }
 }

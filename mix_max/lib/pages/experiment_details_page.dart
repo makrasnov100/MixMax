@@ -1,12 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/pages/suggested_run_page.dart';
-import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
+import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
@@ -16,6 +15,7 @@ import 'package:mix_max/widgets/design/ions/text/display_text.dart';
 import 'package:mix_max/widgets/design/ions/text/section_label_text.dart';
 import 'package:mix_max/widgets/pages/experiment_details/add_output_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/add_parameter_drawer.dart';
+import 'package:mix_max/widgets/pages/experiment_details/best_mix_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/rename_experiment_drawer.dart';
@@ -30,9 +30,9 @@ import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 ///
 /// The add-parameter, add-outcome and rename flows still open the existing
 /// bottom-sheet drawers — only the page chrome has been moved onto the new
-/// design system. The runs chip and the "Best mix so far" banner are
-/// intentionally left out for now; they'll be wired up with a runs source
-/// later.
+/// design system. The "Best mix so far" banner shows once the experiment has a
+/// cached [SchemaExperiment.bestRun], and the top bar carries a soft chip with
+/// the experiment's [SchemaExperiment.runCount].
 class ExperimentDetailsPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
@@ -67,9 +67,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
 
   Future<void> _saveName(String name) async {
     _experiment.name = name;
-    await DatabaseService.experimentsRef
-        .doc(_experiment.id)
-        .set(_experiment, SetOptions(merge: true));
+    await _experiment.save();
     if (!mounted) return;
     setState(() {});
   }
@@ -85,9 +83,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
 
   Future<void> _saveParameter(SchemaParameter parameter) async {
     _experiment.parameters = [...(_experiment.parameters ?? []), parameter];
-    await DatabaseService.experimentsRef
-        .doc(_experiment.id)
-        .set(_experiment, SetOptions(merge: true));
+    await _experiment.save();
     if (!mounted) return;
     setState(() {});
   }
@@ -103,18 +99,20 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
 
   Future<void> _saveOutcome(SchemaOutcome outcome) async {
     _experiment.outcomes = [...(_experiment.outcomes ?? []), outcome];
-    await DatabaseService.experimentsRef
-        .doc(_experiment.id)
-        .set(_experiment, SetOptions(merge: true));
+    await _experiment.save();
     if (!mounted) return;
     setState(() {});
   }
 
-  void _runExperiment() {
-    Navigation.goTo(
+  Future<void> _runExperiment() async {
+    // The run flow mutates [_experiment] in place (e.g. promoting a new best
+    // run); rebuild on return so the "Best mix so far" banner reflects it.
+    await Navigation.goTo(
       context: context,
       page: SuggestedRunPage(experiment: _experiment),
     );
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -122,6 +120,10 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     final parameters = _experiment.parameters ?? const [];
     final outcomes = _experiment.outcomes ?? const [];
     final canRun = parameters.isNotEmpty && outcomes.isNotEmpty;
+    final runCount = _experiment.runCount;
+    final bestRun = _experiment.bestRun;
+    final bestLabel =
+        bestRun == null ? null : BestMixCard.labelFor(outcomes, bestRun);
     final name =
         _experiment.name?.isNotEmpty == true
             ? _experiment.name!
@@ -138,12 +140,18 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top bar: back.
+                  // Top bar: back + the run-count chip on the right.
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       MixMaxRoundButton(
                         glyph: MixMaxGlyph.arrowLeft,
                         onTap: () => Navigator.of(context).maybePop(),
+                      ),
+                      MixMaxChip(
+                        tone: MixMaxChipTone.soft,
+                        icon: MixMaxGlyph.flask,
+                        label: '$runCount run${runCount == 1 ? '' : 's'} logged',
                       ),
                     ],
                   ),
@@ -177,6 +185,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+
+                  // Best mix so far — only once a winning run is recorded.
+                  if (bestLabel != null) ...[
+                    const SizedBox(height: 22),
+                    BestMixCard(label: bestLabel),
+                  ],
 
                   // Parameters.
                   const SizedBox(height: 26),
