@@ -683,20 +683,20 @@ function RunDetailsScreen({ exp, run, num, isBest, onBack }) {
         </div>
       </div>
 
-      {/* parameters used */}
+      {/* rating breakdown */}
       <div style={{ padding: '28px 20px 0' }}>
+        <SectionLabel count={outcomes.length || undefined}>Rating breakdown</SectionLabel>
+        <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>Each outcome's score, by weight, adds up to the rating.</div>
+        <RatingBreakdown exp={exp} run={run} />
+      </div>
+
+      {/* parameters used */}
+      <div style={{ padding: '26px 20px 0' }}>
         <SectionLabel count={params.length || undefined}>Parameters used</SectionLabel>
         <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>The exact mix of values you tried.</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           {params.map(p => <SuggestionCard key={p.id} p={p} value={pv[p.id]} />)}
         </div>
-      </div>
-
-      {/* rating breakdown */}
-      <div style={{ padding: '26px 20px 0' }}>
-        <SectionLabel count={outcomes.length || undefined}>Rating breakdown</SectionLabel>
-        <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>Each outcome's score, by weight, adds up to the rating.</div>
-        <RatingBreakdown exp={exp} run={run} />
       </div>
       <div style={{ height: 8 }} />
     </Screen>
