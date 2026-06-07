@@ -10,9 +10,7 @@ SchemaRun _$SchemaRunFromJson(Map<String, dynamic> json) => SchemaRun(
       id: json['id'] as String,
       experimentId: json['experimentId'] as String?,
       userId: json['userId'] as String?,
-      parameterValues: json['parameterValues'] != null
-          ? Map<String, dynamic>.from(json['parameterValues'] as Map)
-          : null,
+      parameterValues: json['parameterValues'] as Map<String, dynamic>?,
       outcomeValues: (json['outcomeValues'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),

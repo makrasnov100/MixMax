@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
-import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/widgets/design/atoms/card.dart';
@@ -42,7 +41,8 @@ class ExperimentListItem extends StatelessWidget {
     final params = experiment.parameters ?? const [];
     final outcomes = experiment.outcomes ?? const [];
     final runs = this.runs ?? const [];
-    final best = _bestOutcomeLabel(outcomes, runs);
+    // TODO: source from the experiment's cached best run once implemented.
+    const String? best = null;
 
     return MixMaxCard(
       onTap: onTap,
@@ -197,44 +197,3 @@ MixMaxGlyph _glyphForType(ParameterType? type) {
   }
 }
 
-/// One-line summary of the best run, or null when there's nothing to score.
-///
-/// Source: `screens.jsx` `bestOutcomeLabel`. Scores each completed run as the
-/// sum of its outcomes normalised into [0,1] (inverted for `minimize` goals),
-/// then describes the winning run by its first three outcomes.
-String? _bestOutcomeLabel(List<SchemaOutcome> outcomes, List<SchemaRun> runs) {
-  final scored = runs.where((r) => r.outcomeValues != null).toList();
-  if (scored.isEmpty || outcomes.isEmpty) return null;
-
-  SchemaRun? bestRun;
-  var bestScore = double.negativeInfinity;
-  for (final run in scored) {
-    var score = 0.0;
-    for (final o in outcomes) {
-      final v = run.outcomeValues![o.id];
-      if (v == null) continue;
-      final min = o.min ?? 0;
-      final max = o.max ?? 10;
-      final norm = max > min ? (v - min) / (max - min) : 0.0;
-      score += o.goal == OutcomeGoal.minimize ? (1 - norm) : norm;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestRun = run;
-    }
-  }
-  if (bestRun == null) return null;
-
-  return outcomes
-      .take(3)
-      .map((o) => '${o.name} ${_fmt(bestRun!.outcomeValues![o.id])}')
-      .join('  ·  ');
-}
-
-/// Format a number nicely, dropping a trailing `.0`. Source: `theme.jsx` `fmt`.
-String _fmt(double? v) {
-  if (v == null || v.isNaN) return '—';
-  return v == v.truncateToDouble()
-      ? v.truncate().toString()
-      : v.toString();
-}

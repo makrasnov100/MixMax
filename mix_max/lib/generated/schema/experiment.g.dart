@@ -17,6 +17,9 @@ SchemaExperiment _$SchemaExperimentFromJson(Map<String, dynamic> json) =>
       outcomes: (json['outcomes'] as List<dynamic>?)
           ?.map((e) => SchemaOutcome.fromJson(e as Map<String, dynamic>))
           .toList(),
+      bestRun: json['bestRun'] == null
+          ? null
+          : SchemaRun.fromJson(json['bestRun'] as Map<String, dynamic>),
       createdAt: (json['createdAt'] as num?)?.toInt(),
     );
 
@@ -36,6 +39,7 @@ Map<String, dynamic> _$SchemaExperimentToJson(SchemaExperiment instance) {
   writeNotNull(
       'parameters', instance.parameters?.map((e) => e.toJson()).toList());
   writeNotNull('outcomes', instance.outcomes?.map((e) => e.toJson()).toList());
+  writeNotNull('bestRun', instance.bestRun?.toJson());
   writeNotNull('createdAt', instance.createdAt);
   return val;
 }

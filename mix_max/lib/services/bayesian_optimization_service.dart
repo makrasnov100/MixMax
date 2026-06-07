@@ -57,10 +57,7 @@ class BayesianOptimizationService {
         validRuns
             .map((r) => _encodeParameters(parameters, r.parameterValues!))
             .toList();
-    final y =
-        validRuns
-            .map((r) => _computeObjective(outcomes, r.outcomeValues!))
-            .toList();
+    final y = validRuns.map((r) => r.finalRating(outcomes)).toList();
 
     final gp = _GaussianProcess(
       lengthScale: _lengthScale,
@@ -232,47 +229,6 @@ class BayesianOptimizationService {
   }
 
   // ── Objective ──────────────────────────────────────────────────────────────
-
-  /// Combines all observed outcome values into a single scalar the GP
-  /// maximises (higher = better).
-  ///
-  /// Each outcome is normalised to [0, 1] using its declared bounds and then
-  /// flipped when the goal is to minimise.  Multiple outcomes are averaged.
-  static double _computeObjective(
-    List<SchemaOutcome> outcomes,
-    Map<String, double> outcomeValues,
-  ) {
-    if (outcomes.isEmpty) return 0.0;
-
-    double total = 0.0;
-    int count = 0;
-
-    for (final outcome in outcomes) {
-      final value = outcomeValues[outcome.id];
-      if (value == null) continue;
-
-      final lo = outcome.min;
-      final hi = outcome.max;
-
-      double normalised;
-      if (lo != null && hi != null && hi > lo) {
-        normalised = ((value - lo) / (hi - lo)).clamp(0.0, 1.0);
-      } else {
-        // No declared bounds — use the raw value directly.
-        normalised = value;
-      }
-
-      // GP maximises, so invert when the goal is to minimise.
-      if (outcome.goal == OutcomeGoal.minimize) {
-        normalised = 1.0 - normalised;
-      }
-
-      total += normalised;
-      count++;
-    }
-
-    return count > 0 ? total / count : 0.0;
-  }
 
   // ── Cold-start fallback ────────────────────────────────────────────────────
 
