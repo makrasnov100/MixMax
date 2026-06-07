@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
+import 'package:mix_max/pages/run_history_page.dart';
 import 'package:mix_max/pages/suggested_run_page.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
-import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
@@ -21,6 +21,7 @@ import 'package:mix_max/widgets/pages/experiment_details/experiment_actions_draw
 import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/rename_experiment_drawer.dart';
+import 'package:mix_max/widgets/pages/experiment_details/runs_pill.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 
 /// The Experiment Details screen.
@@ -143,6 +144,14 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     setState(() {});
   }
 
+  /// Opens the Run History page for this experiment.
+  void _openRunHistory() {
+    Navigation.goTo(
+      context: context,
+      page: RunHistoryPage(experiment: _experiment),
+    );
+  }
+
   Future<void> _runExperiment() async {
     // The run flow mutates [_experiment] in place (e.g. promoting a new best
     // run); rebuild on return so the "Best mix so far" banner reflects it.
@@ -190,11 +199,9 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          MixMaxChip(
-                            tone: MixMaxChipTone.soft,
-                            icon: MixMaxGlyph.flask,
-                            label:
-                                '$runCount run${runCount == 1 ? '' : 's'}',
+                          RunsPill(
+                            count: runCount,
+                            onTap: _openRunHistory,
                           ),
                           const SizedBox(width: 10),
                           MixMaxRoundButton(

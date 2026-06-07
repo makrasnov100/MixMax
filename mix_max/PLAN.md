@@ -1,12 +1,12 @@
 Add general todo items here and plan out prompts as needed
 
 --- MVP ---
-- run list with items list
 - pressing on best mix goes to that mix details (reuse the suggested parameters Ui)
 
 - Editing a parameter & output
 - Deleting a parameter & output
 
+- check step is supported? any better way to represent it?
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
 - Sharing functionality, image generated with my best combo.
@@ -26,6 +26,7 @@ Add general todo items here and plan out prompts as needed
 - Attempt to publish on both stores (paid app)
 
 --- Updates ---
+- editing suggested paramers befre recording updates
 - description for outcomes for more detail when rating 
 - The large rating text is a bit grainy
 - weighted outcome priority (pie chart?)
