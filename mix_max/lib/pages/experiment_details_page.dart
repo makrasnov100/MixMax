@@ -194,7 +194,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                             tone: MixMaxChipTone.soft,
                             icon: MixMaxGlyph.flask,
                             label:
-                                '$runCount run${runCount == 1 ? '' : 's'} logged',
+                                '$runCount run${runCount == 1 ? '' : 's'}',
                           ),
                           const SizedBox(width: 10),
                           MixMaxRoundButton(

@@ -105,7 +105,7 @@ class ExperimentListItem extends StatelessWidget {
                     'outcome${outcomes.length == 1 ? '' : 's'}',
               ),
               _MetaBit(
-                glyph: MixMaxGlyph.play,
+                glyph: MixMaxGlyph.flask,
                 text: '${experiment.runCount} '
                     'run${experiment.runCount == 1 ? '' : 's'}',
               ),

@@ -1,5 +1,8 @@
 // main.jsx — Mix Max prototype root: state, navigation, seed data, mount
 
+const _NOW = Math.floor(Date.now() / 1000);
+const DAY = 86400;
+
 const SEED = [
   {
     id: 'best-tea', name: 'Best Tea',
@@ -15,9 +18,9 @@ const SEED = [
       { id: 'o3', name: 'appearance', min: 1, max: 10, step: 1, goal: 'maximize' },
     ],
     runs: [
-      { id: 'r1', outcomeValues: { o1: 5, o2: 6, o3: 5 } },
-      { id: 'r2', outcomeValues: { o1: 8, o2: 7, o3: 6 } },
-      { id: 'r3', outcomeValues: { o1: 6, o2: 6, o3: 7 } },
+      { id: 'r1', parameterValues: { p1: 11, p2: 3, p3: false, p4: 'honey' }, outcomeValues: { o1: 5, o2: 6, o3: 5 }, createdAt: _NOW - 12 * DAY - 2400, completedAt: _NOW - 12 * DAY },
+      { id: 'r2', parameterValues: { p1: 10.5, p2: 5, p3: true, p4: 'honey' }, outcomeValues: { o1: 8, o2: 7, o3: 6 }, createdAt: _NOW - 5 * DAY - 1800, completedAt: _NOW - 5 * DAY },
+      { id: 'r3', parameterValues: { p1: 12, p2: 4, p3: true, p4: 'sugar' }, outcomeValues: { o1: 6, o2: 6, o3: 7 }, createdAt: _NOW - 1 * DAY - 3000, completedAt: _NOW - 1 * DAY },
     ],
   },
   {
@@ -32,8 +35,8 @@ const SEED = [
       { id: 'co2', name: 'bitterness', min: 1, max: 10, step: 1, goal: 'minimize' },
     ],
     runs: [
-      { id: 'cr1', outcomeValues: { co1: 7, co2: 4 } },
-      { id: 'cr2', outcomeValues: { co1: 6, co2: 6 } },
+      { id: 'cr1', parameterValues: { cp1: 90, cp2: 16, cp3: 'medium' }, outcomeValues: { co1: 7, co2: 4 }, createdAt: _NOW - 8 * DAY - 1200, completedAt: _NOW - 8 * DAY },
+      { id: 'cr2', parameterValues: { cp1: 100, cp2: 12, cp3: 'coarse' }, outcomeValues: { co1: 6, co2: 6 }, createdAt: _NOW - 3 * DAY - 1200, completedAt: _NOW - 3 * DAY },
     ],
   },
   {
@@ -71,6 +74,7 @@ function App() {
   // navigation
   const openExp = (id) => setRoute({ name: 'details', expId: id });
   const back = () => setRoute({ name: 'list' });
+  const openHistory = () => setRoute({ name: 'history', expId: route.expId });
 
   const addExperiment = () => {
     const id = 'exp-' + Date.now();
@@ -100,6 +104,9 @@ function App() {
     setRoute({ name: 'run', expId: current.id });
   };
 
+  // open a single run's details (from history list or best-run shortcut)
+  const openRunDetail = (runId, from) => setRoute({ name: 'runDetail', expId: route.expId, runId, from });
+
   const startRecording = () => {
     const vals = {};
     current.outcomes.forEach(o => { vals[o.id] = midValue(o); });
@@ -113,7 +120,8 @@ function App() {
       setRoute(r => ({ ...r, ratingIndex: r.ratingIndex + 1 }));
     } else {
       // save run
-      const run = { id: 'r' + Date.now(), outcomeValues: { ...ratingValues } };
+      const ts = Math.floor(Date.now() / 1000);
+      const run = { id: 'r' + Date.now(), parameterValues: { ...suggestion }, outcomeValues: { ...ratingValues }, createdAt: ts - 60, completedAt: ts };
       updateExp(current.id, e => ({ ...e, runs: [...e.runs, run] }));
       setRoute({ name: 'details', expId: current.id });
     }
@@ -132,7 +140,21 @@ function App() {
       onAddParam={() => setDrawer({ kind: 'param' })}
       onAddOutput={() => setDrawer({ kind: 'output' })}
       onMenu={() => setDrawer({ kind: 'actions' })}
+      onHistory={() => setRoute({ name: 'history', expId: current.id })}
+      onOpenBest={() => { const id = bestRunId(current); if (id) openRunDetail(id, 'details'); }}
       onRun={runExperiment} />;
+  } else if (route.name === 'history' && current) {
+    screen = <RunHistoryScreen exp={current} onBack={() => setRoute({ name: 'details', expId: current.id })}
+      onOpenRun={(runId) => openRunDetail(runId, 'history')} />;
+  } else if (route.name === 'runDetail' && current) {
+    const run = (current.runs || []).find(r => r.id === route.runId);
+    if (run) {
+      const chrono = (current.runs || []).filter(r => r.outcomeValues)
+        .sort((a, b) => (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0));
+      const num = chrono.findIndex(r => r.id === run.id) + 1;
+      screen = <RunDetailsScreen exp={current} run={run} num={num} isBest={run.id === bestRunId(current)}
+        onBack={() => setRoute({ name: route.from === 'history' ? 'history' : 'details', expId: current.id })} />;
+    }
   } else if (route.name === 'run' && current) {
     screen = <RunSuggestionScreen exp={current} suggestion={suggestion}
       onBack={() => setRoute({ name: 'details', expId: current.id })} onRecord={startRecording} />;

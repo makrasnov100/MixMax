@@ -98,7 +98,7 @@ function ExperimentCard({ exp, onOpen }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
         <MetaBit icon="hash" text={`${params.length} parameter${params.length === 1 ? '' : 's'}`} />
         <MetaBit icon="target" text={`${outcomes.length} outcome${outcomes.length === 1 ? '' : 's'}`} />
-        <MetaBit icon="play" text={`${runs.length} run${runs.length === 1 ? '' : 's'}`} />
+        <MetaBit icon="flask" text={`${runs.length} run${runs.length === 1 ? '' : 's'}`} />
       </div>
       {best && (
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.hairline}`, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -144,7 +144,7 @@ function ExperimentsListScreen({ experiments, onOpen, onAdd }) {
 // ════════════════════════════════════════════════════════
 // 2. EXPERIMENT DETAILS
 // ════════════════════════════════════════════════════════
-function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun, onMenu }) {
+function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun, onMenu, onHistory, onOpenBest }) {
   const params = exp.parameters || [];
   const outcomes = exp.outcomes || [];
   const runs = exp.runs || [];
@@ -165,7 +165,7 @@ function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutpu
       <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <RoundBtn icon="arrowL" onClick={onBack} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Chip tone="soft" icon="flask">{runs.length} run{runs.length === 1 ? '' : 's'} logged</Chip>
+          <RunsPill count={runs.length} onClick={onHistory} />
           <RoundBtn icon="more" onClick={onMenu} />
         </div>
       </div>
@@ -179,13 +179,22 @@ function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutpu
 
       {/* best so far */}
       {best && (
-        <div style={{ margin: '18px 20px 0', background: T.goldTint, borderRadius: T.rCard, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 13 }}>
+        <button onClick={onOpenBest} style={{
+          width: 'calc(100% - 40px)', margin: '18px 20px 0', background: T.goldTint, borderRadius: T.rCard,
+          padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 13, textAlign: 'left',
+          border: 'none', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+          transition: 'transform .12s ease',
+        }}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.99)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
           <Tile icon="trophy" tone="gold" />
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <Eyebrow color={T.goldText}>Best mix so far</Eyebrow>
-            <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink, marginTop: 3 }}>{best}</div>
+            <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{best}</div>
           </div>
-        </div>
+          <Icon name="chevR" size={19} color={T.goldText} stroke={2} />
+        </button>
       )}
 
       {/* parameters */}
@@ -342,6 +351,358 @@ function RatingScreen({ exp, index, value, onChange, onBack, onNext }) {
   );
 }
 
+// ════════════════════════════════════════════════════════
+// 5. RUN HISTORY
+// ════════════════════════════════════════════════════════
+
+// runs pill in the details header — styled to match the round back/menu buttons
+function RunsPill({ count, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: 7, height: 40, padding: '0 12px',
+      borderRadius: 999, cursor: 'pointer',
+      background: T.surface, border: `1px solid ${T.hairline}`,
+      boxShadow: '0 1px 2px rgba(34,31,42,0.05)',
+      transition: 'transform .12s ease', WebkitTapHighlightColor: 'transparent',
+    }}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+      <Icon name="flask" size={17} color={T.gold} stroke={2} />
+      <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 14, color: T.ink, whiteSpace: 'nowrap' }}>{count} run{count === 1 ? '' : 's'}</span>
+      <Icon name="chevR" size={16} color={T.inkFaint} stroke={2.2} />
+    </button>
+  );
+}
+
+// score a single run, mirroring SchemaRun.finalRating (0..1, higher = better)
+function runScore(exp, run) {
+  const outcomes = exp.outcomes || [];
+  const vals = run.outcomeValues || {};
+  let total = 0, count = 0;
+  outcomes.forEach(o => {
+    const v = vals[o.id];
+    if (v == null) return;
+    const lo = o.min != null ? o.min : 0, hi = o.max != null ? o.max : 10;
+    let n = hi > lo ? Math.min(Math.max((v - lo) / (hi - lo), 0), 1) : v;
+    if (o.goal === 'minimize') n = 1 - n;
+    total += n; count++;
+  });
+  return count > 0 ? total / count : 0;
+}
+function bestRunId(exp) {
+  const runs = (exp.runs || []).filter(r => r.outcomeValues);
+  if (!runs.length) return null;
+  let best = null, bs = -Infinity;
+  runs.forEach(r => { const s = runScore(exp, r); if (s > bs) { bs = s; best = r; } });
+  return best ? best.id : null;
+}
+function relTime(sec) {
+  if (!sec) return '';
+  const d = Date.now() / 1000 - sec;
+  if (d < 90) return 'just now';
+  if (d < 3600) return Math.floor(d / 60) + ' min ago';
+  if (d < 86400) { const h = Math.floor(d / 3600); return h + ' hr' + (h > 1 ? 's' : '') + ' ago'; }
+  const days = Math.round(d / 86400);
+  if (days < 7) return days + ' day' + (days > 1 ? 's' : '') + ' ago';
+  if (days < 28) { const w = Math.round(days / 7); return w + ' week' + (w > 1 ? 's' : '') + ' ago'; }
+  const mo = Math.round(days / 30); return mo + ' month' + (mo > 1 ? 's' : '') + ' ago';
+}
+function absStamp(sec) {
+  if (!sec) return '';
+  const dt = new Date(sec * 1000);
+  return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' +
+    dt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+function OutcomeValueChip({ o, value, best }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'baseline', gap: 6,
+      background: best ? 'rgba(255,255,255,0.7)' : T.violetTint, borderRadius: 999, padding: '6px 12px',
+    }}>
+      <span style={{ fontFamily: T.sans, fontSize: 12.5, fontWeight: 500, color: best ? T.goldText : T.violetText }}>{o.name}</span>
+      <span style={{ fontFamily: T.sans, fontSize: 13.5, fontWeight: 700, color: best ? T.goldDeep : T.violetText }}>
+        {fmt(value)}{o.unit ? <span style={{ fontWeight: 500, fontSize: 11.5 }}> {o.unit}</span> : null}
+      </span>
+    </span>
+  );
+}
+
+function MixSummary({ exp, run }) {
+  const params = exp.parameters || [];
+  const pv = run.parameterValues || {};
+  const parts = params.map(p => pv[p.id] != null ? fmtSuggested(p, pv[p.id]) : null).filter(Boolean);
+  if (!parts.length) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 13, paddingTop: 13, borderTop: `1px solid ${T.hairline}` }}>
+      <span style={{ marginTop: 1, flexShrink: 0 }}><Icon name="beaker" size={15} color={T.inkFaint} stroke={1.9} /></span>
+      <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{parts.join('   ·   ')}</span>
+    </div>
+  );
+}
+
+// segmented control to switch how the run list is ordered
+function SortToggle({ value, onChange }) {
+  const opts = [
+    { key: 'recent', label: 'Most recent', icon: 'clock' },
+    { key: 'rated', label: 'Highest rated', icon: 'trophy' },
+  ];
+  return (
+    <div style={{ display: 'flex', gap: 4, background: T.bgAlt, borderRadius: 999, padding: 4 }}>
+      {opts.map(o => {
+        const active = value === o.key;
+        return (
+          <button key={o.key} onClick={() => onChange(o.key)} style={{
+            flex: 1, height: 38, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: active ? T.surface : 'transparent',
+            boxShadow: active ? '0 1px 2px rgba(34,31,42,0.10)' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            fontFamily: T.sans, fontWeight: 600, fontSize: 13.5,
+            color: active ? T.ink : T.inkSoft,
+            transition: 'background .15s ease, color .15s ease, box-shadow .15s ease',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            <Icon name={o.icon} size={15} color={active ? T.gold : T.inkFaint} stroke={2} />
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RunHistoryCard({ exp, run, num, isBest, onOpen }) {
+  const outcomes = exp.outcomes || [];
+  const when = run.completedAt || run.createdAt;
+  const score = runScore(exp, run);
+  return (
+    <button onClick={onOpen} style={{
+      width: '100%', textAlign: 'left', cursor: 'pointer', display: 'block',
+      background: isBest ? T.goldTint : T.surface, borderRadius: T.rCard,
+      border: isBest ? `1.5px solid ${T.gold}` : `1px solid ${T.hairline}`,
+      boxShadow: isBest ? '0 1px 2px rgba(120,90,20,0.12), 0 16px 32px -18px rgba(150,110,30,0.5)' : CARD_SHADOW,
+      padding: '16px 17px', WebkitTapHighlightColor: 'transparent', transition: 'transform .12s ease',
+    }}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.99)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          {isBest ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.gold, borderRadius: 999, padding: '4px 11px 4px 9px', marginBottom: 9 }}>
+              <Icon name="trophy" size={13} color="#fff" stroke={2.2} />
+              <span style={{ fontFamily: T.sans, fontWeight: 700, fontSize: 11, letterSpacing: '0.06em', color: '#fff', textTransform: 'uppercase' }}>Best run</span>
+            </div>
+          ) : (
+            <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 11.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.inkFaint, marginBottom: 6 }}>Run {num}</div>
+          )}
+          <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15.5, color: T.ink }}>{relTime(when)}</div>
+          <div style={{ fontFamily: T.sans, fontSize: 12.5, color: isBest ? T.goldText : T.inkFaint, opacity: isBest ? 0.85 : 1, marginTop: 2 }}>{absStamp(when)}</div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 30, lineHeight: 1, color: isBest ? T.goldDeep : T.ink, letterSpacing: '-0.01em' }}>{fmt(score * 10, 1)}</div>
+          <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: isBest ? T.goldText : T.inkFaint, opacity: isBest ? 0.8 : 1, marginTop: 3 }}>rating</div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 14 }}>
+        {outcomes.map(o => <OutcomeValueChip key={o.id} o={o} value={run.outcomeValues[o.id]} best={isBest} />)}
+      </div>
+      <MixSummary exp={exp} run={run} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 12 }}>
+        <span style={{ fontFamily: T.sans, fontSize: 12.5, fontWeight: 600, color: isBest ? T.goldText : T.inkSoft }}>View details</span>
+        <Icon name="chevR" size={15} color={isBest ? T.goldText : T.inkFaint} stroke={2.2} />
+      </div>
+    </button>
+  );
+}
+
+function RunHistoryScreen({ exp, onBack, onOpenRun }) {
+  const [sort, setSort] = React.useState('recent');
+  const runs = (exp.runs || []).filter(r => r.outcomeValues);
+  const chrono = [...runs].sort((a, b) => (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0));
+  const numberOf = {}; chrono.forEach((r, i) => { numberOf[r.id] = i + 1; });
+  const bestId = bestRunId(exp);
+
+  const ordered = [...runs].sort((a, b) => {
+    if (sort === 'rated') {
+      const d = runScore(exp, b) - runScore(exp, a);
+      if (d !== 0) return d;
+    }
+    return (b.completedAt || b.createdAt || 0) - (a.completedAt || a.createdAt || 0);
+  });
+
+  return (
+    <Screen>
+      <TopPad h={50} />
+      <div style={{ padding: '4px 20px 0' }}>
+        <RoundBtn icon="arrowL" onClick={onBack} />
+      </div>
+      <div style={{ padding: '18px 20px 0' }}>
+        <Eyebrow color={T.gold}>Run history</Eyebrow>
+        <Display size={34} style={{ marginTop: 8 }}>{exp.name}</Display>
+      </div>
+
+      {runs.length === 0 ? (
+        <div style={{ marginTop: 56, textAlign: 'center', padding: '0 34px' }}>
+          <div style={{ display: 'inline-flex' }}><Tile icon="clock" tone="gold" size={64} radius={20} /></div>
+          <div style={{ fontFamily: T.serif, fontSize: 22, color: T.ink, marginTop: 18 }}>No runs yet</div>
+          <div style={{ fontFamily: T.sans, fontSize: 14, color: T.inkSoft, marginTop: 6, lineHeight: 1.5 }}>Run the experiment and record your outcomes — they'll show up here.</div>
+        </div>
+      ) : (
+        <React.Fragment>
+          <div style={{ padding: '22px 20px 0' }}>
+            <SortToggle value={sort} onChange={setSort} />
+          </div>
+          <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {ordered.map(r => <RunHistoryCard key={r.id} exp={exp} run={r} num={numberOf[r.id]} isBest={r.id === bestId} onOpen={() => onOpenRun(r.id)} />)}
+          </div>
+          <div style={{ height: 18 }} />
+        </React.Fragment>
+      )}
+    </Screen>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+// 6. RUN DETAILS
+// ════════════════════════════════════════════════════════
+
+// normalized contribution of every outcome → the final rating (weight-aware)
+function ratingRows(exp, run) {
+  const outcomes = exp.outcomes || [];
+  const ov = run.outcomeValues || {};
+  const weights = outcomes.map(o => (o.weight != null ? o.weight : 1));
+  const wsum = weights.reduce((a, b) => a + b, 0) || 1;
+  const rows = outcomes.map((o, i) => {
+    const v = ov[o.id];
+    const min = o.min != null ? o.min : 0, max = o.max != null ? o.max : 10;
+    let norm = (v != null && max > min) ? Math.min(Math.max((v - min) / (max - min), 0), 1) : 0;
+    if (o.goal === 'minimize') norm = 1 - norm;
+    const weight = weights[i] / wsum;
+    return { o, v, norm, weight, points: weight * norm * 10 };
+  });
+  return { rows, rating: rows.reduce((a, r) => a + r.points, 0) };
+}
+
+// compact, self-explaining rating math: a weight-aware composition bar + rows that sum to the score
+function RatingBreakdown({ exp, run }) {
+  const { rows, rating } = ratingRows(exp, run);
+  return (
+    <div style={{ background: T.surface, borderRadius: T.rCard, border: `1px solid ${T.hairline}`, boxShadow: CARD_SHADOW, overflow: 'hidden' }}>
+      {/* composition bar: segment width = weight, fill = score */}
+      <div style={{ padding: '16px 16px 13px' }}>
+        <div style={{ display: 'flex', gap: 3, height: 16 }}>
+          {rows.map((r, i) => (
+            <div key={i} style={{ flex: r.weight, minWidth: 5, background: T.violetTint, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${r.norm * 100}%`, background: T.violet }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: T.sans, fontSize: 11.5, color: T.inkFaint, fontWeight: 500 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 3, background: T.violet, display: 'inline-block' }} />score
+            <span style={{ width: 9, height: 9, borderRadius: 3, background: T.violetTint, display: 'inline-block', marginLeft: 4 }} />weight
+          </span>
+          <span style={{ fontFamily: T.sans, fontSize: 11.5, color: T.inkFaint, fontWeight: 600 }}>width = weight</span>
+        </div>
+      </div>
+      <Divider />
+      {rows.map((r, i) => {
+        const o = r.o, maxi = o.goal === 'maximize';
+        return (
+          <React.Fragment key={o.id}>
+            {i > 0 && <div style={{ height: 1, background: T.hairline, marginLeft: 16 }} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+              <span style={{ width: 9, height: 9, borderRadius: 999, background: T.violet, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                  <Icon name={maxi ? 'up' : 'down'} size={12} color={T.inkFaint} stroke={2.4} />
+                  <span style={{ fontFamily: T.sans, fontSize: 12, color: T.inkSoft }}>{Math.round(r.weight * 100)}% weight</span>
+                </div>
+              </div>
+              <span style={{ fontFamily: T.sans, fontWeight: 700, fontSize: 13, color: T.violetText, background: T.violetTint, borderRadius: 999, padding: '5px 11px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {fmt(r.v)}{o.unit ? <span style={{ fontWeight: 500, fontSize: 11 }}> {o.unit}</span> : null}
+              </span>
+              <div style={{ width: 44, textAlign: 'right', flexShrink: 0, fontFamily: T.sans, fontWeight: 700, fontSize: 14.5, color: T.goldText }}>+{fmt(r.points, 1)}</div>
+            </div>
+          </React.Fragment>
+        );
+      })}
+      {/* total */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 16px', background: T.goldTint }}>
+        <Icon name="trophy" size={16} color={T.gold} stroke={2} />
+        <span style={{ flex: 1, fontFamily: T.sans, fontWeight: 600, fontSize: 14, color: T.goldText }}>Final rating</span>
+        <span style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 22, color: T.goldDeep, letterSpacing: '-0.01em' }}>{fmt(rating, 1)}</span>
+      </div>
+    </div>
+  );
+}
+
+function RunDetailsScreen({ exp, run, num, isBest, onBack }) {
+  const params = exp.parameters || [];
+  const outcomes = exp.outcomes || [];
+  const pv = run.parameterValues || {};
+  const ov = run.outcomeValues || {};
+  const when = run.completedAt || run.createdAt;
+  const score = runScore(exp, run);
+
+  return (
+    <Screen>
+      <TopPad h={50} />
+      <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <RoundBtn icon="arrowL" onClick={onBack} />
+        {isBest && <Chip tone="gold" icon="trophy">Best run</Chip>}
+      </div>
+
+      <div style={{ padding: '18px 20px 0' }}>
+        <Eyebrow color={T.gold}>Run {num} · {relTime(when)}</Eyebrow>
+        <Display size={34} style={{ marginTop: 8 }}>{exp.name}</Display>
+        <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="clock" size={14} color={T.inkFaint} stroke={2} />
+          {absStamp(when)}
+        </div>
+      </div>
+
+      {/* overall rating hero */}
+      <div style={{
+        margin: '20px 20px 0',
+        background: T.surface,
+        border: `1px solid ${T.hairline}`,
+        boxShadow: CARD_SHADOW,
+        borderRadius: T.rCard, padding: '18px 20px',
+        display: 'flex', alignItems: 'center', gap: 18,
+      }}>
+        <div style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 56, lineHeight: 1, letterSpacing: '-0.02em', color: T.ink }}>{fmt(score * 10, 1)}</div>
+        <div style={{ minWidth: 0 }}>
+          <Eyebrow color={T.inkFaint}>Overall rating</Eyebrow>
+          <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginTop: 4, lineHeight: 1.4 }}>
+            Averaged across {outcomes.length} outcome{outcomes.length === 1 ? '' : 's'}.
+          </div>
+        </div>
+      </div>
+
+      {/* parameters used */}
+      <div style={{ padding: '28px 20px 0' }}>
+        <SectionLabel count={params.length || undefined}>Parameters used</SectionLabel>
+        <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>The exact mix of values you tried.</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+          {params.map(p => <SuggestionCard key={p.id} p={p} value={pv[p.id]} />)}
+        </div>
+      </div>
+
+      {/* rating breakdown */}
+      <div style={{ padding: '26px 20px 0' }}>
+        <SectionLabel count={outcomes.length || undefined}>Rating breakdown</SectionLabel>
+        <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>Each outcome's score, by weight, adds up to the rating.</div>
+        <RatingBreakdown exp={exp} run={run} />
+      </div>
+      <div style={{ height: 8 }} />
+    </Screen>
+  );
+}
+
 // ── helpers ──────────────────────────────────────────────
 function bestOutcomeLabel(exp) {
   const runs = (exp.runs || []).filter(r => r.outcomeValues);
@@ -366,5 +727,5 @@ function bestOutcomeLabel(exp) {
 
 Object.assign(window, {
   ExperimentsListScreen, ExperimentDetailsScreen, RunSuggestionScreen, RatingScreen,
-  suggestValue, bestOutcomeLabel,
+  RunHistoryScreen, RunDetailsScreen, RunsPill, suggestValue, bestOutcomeLabel, runScore, bestRunId,
 });

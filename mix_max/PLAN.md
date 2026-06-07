@@ -1,19 +1,17 @@
 Add general todo items here and plan out prompts as needed
 
 --- MVP ---
-- Delete an expirement w/ confirmation
+- run list with items list
+- pressing on best mix goes to that mix details (reuse the suggested parameters Ui)
 
 - Editing a parameter & output
 - Deleting a parameter & output
-
-- run list with items list
-- pressing on best mix goes to that mix details (reuse the suggested parameters Ui)
 
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
 - Sharing functionality, image generated with my best combo.
 
-- Oboarding, show a user a sample use case step by step
+- boarding, show a user a sample use case step by step
   - create expirement
   - add parameters
   - create runs
