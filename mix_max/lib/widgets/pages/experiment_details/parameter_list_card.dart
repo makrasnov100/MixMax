@@ -27,12 +27,21 @@ class ParameterListCard extends StatelessWidget {
   /// Null leaves the rows inert.
   final ValueChanged<SchemaParameter>? onEdit;
 
+  /// Tapping the empty-state hint (e.g. open the add-parameter drawer).
+  final VoidCallback? onAdd;
+
+  /// Paints the empty-state hint in the danger voice — flags a required but
+  /// missing parameter when "Run experiment" is pressed.
+  final bool emptyError;
+
   const ParameterListCard({
     Key? key,
     required this.parameters,
     this.emptyTitle = 'No parameters yet',
     this.emptyBody = 'Add the knobs you want to tune.',
     this.onEdit,
+    this.onAdd,
+    this.emptyError = false,
   }) : super(key: key);
 
   @override
@@ -42,6 +51,8 @@ class ParameterListCard extends StatelessWidget {
         glyph: MixMaxGlyph.sparkle,
         title: emptyTitle,
         body: emptyBody,
+        error: emptyError,
+        onTap: onAdd,
       );
     }
 

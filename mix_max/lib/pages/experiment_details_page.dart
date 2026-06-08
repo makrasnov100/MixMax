@@ -10,6 +10,7 @@ import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/round_button.dart';
+import 'package:mix_max/widgets/design/atoms/shake.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -50,6 +51,16 @@ class ExperimentDetailsPage extends StatefulWidget {
 
 class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   late SchemaExperiment _experiment;
+
+  /// Set when "Run experiment" is pressed while a required slot is empty — the
+  /// matching empty-state card flips to its red voice until the slot is filled.
+  bool _parametersMissing = false;
+  bool _outcomesMissing = false;
+
+  /// Bumped on each blocked run to re-fire the empty card's shake, even when it
+  /// was already flagged red from a previous press.
+  int _parametersShake = 0;
+  int _outcomesShake = 0;
 
   @override
   void initState() {
@@ -131,7 +142,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     _experiment.markParametersUpdated();
     await _experiment.save();
     if (!mounted) return;
-    setState(() {});
+    setState(() => _parametersMissing = false);
   }
 
   /// Opens the edit drawer for an existing parameter, wired to save edits and
@@ -204,7 +215,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     _experiment.outcomes = [...(_experiment.outcomes ?? []), outcome];
     await _experiment.save();
     if (!mounted) return;
-    setState(() {});
+    setState(() => _outcomesMissing = false);
   }
 
   /// Opens the edit drawer for an existing outcome. Outcome edits don't
@@ -283,7 +294,22 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     );
   }
 
+  /// "Run experiment" handler. The button is always tappable; when a required
+  /// slot is empty we don't navigate — we flip the matching empty-state card to
+  /// its red voice so the user can see (and tap) what's missing.
   Future<void> _runExperiment() async {
+    final parametersMissing = (_experiment.parameters ?? const []).isEmpty;
+    final outcomesMissing = (_experiment.outcomes ?? const []).isEmpty;
+    if (parametersMissing || outcomesMissing) {
+      setState(() {
+        _parametersMissing = parametersMissing;
+        _outcomesMissing = outcomesMissing;
+        if (parametersMissing) _parametersShake++;
+        if (outcomesMissing) _outcomesShake++;
+      });
+      return;
+    }
+
     // The run flow mutates [_experiment] in place (e.g. promoting a new best
     // run); rebuild on return so the "Best mix so far" banner reflects it.
     await Navigation.goTo(
@@ -298,7 +324,6 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   Widget build(BuildContext context) {
     final parameters = _experiment.parameters ?? const [];
     final outcomes = _experiment.outcomes ?? const [];
-    final canRun = parameters.isNotEmpty && outcomes.isNotEmpty;
     final runCount = _experiment.runCount;
     final bestRun = _experiment.bestRun;
     final bestLabel = bestRun == null
@@ -396,9 +421,14 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     fontSize: 13,
                   ),
                   const SizedBox(height: 13),
-                  ParameterListCard(
-                    parameters: parameters,
-                    onEdit: _showEditParameterDrawer,
+                  MixMaxShake(
+                    trigger: _parametersShake,
+                    child: ParameterListCard(
+                      parameters: parameters,
+                      onEdit: _showEditParameterDrawer,
+                      onAdd: _showAddParameterDrawer,
+                      emptyError: _parametersMissing,
+                    ),
                   ),
 
                   // Outcomes.
@@ -413,9 +443,14 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     fontSize: 13,
                   ),
                   const SizedBox(height: 13),
-                  OutcomeListCard(
-                    outcomes: outcomes,
-                    onEdit: _showEditOutcomeDrawer,
+                  MixMaxShake(
+                    trigger: _outcomesShake,
+                    child: OutcomeListCard(
+                      outcomes: outcomes,
+                      onEdit: _showEditOutcomeDrawer,
+                      onAdd: _showAddOutputDrawer,
+                      emptyError: _outcomesMissing,
+                    ),
                   ),
                 ],
               ),
@@ -442,12 +477,11 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     MixMaxButton(
                       label: 'Run experiment',
                       variant: MixMaxButtonVariant.gold,
-                      enabled: canRun,
-                      onPressed: canRun ? _runExperiment : null,
-                      trailing: MixMaxIcon(
+                      onPressed: _runExperiment,
+                      trailing: const MixMaxIcon(
                         MixMaxGlyph.play,
                         size: 20,
-                        color: canRun ? Colors.white : AppColors.inkFaint,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 10),

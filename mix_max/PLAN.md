@@ -1,8 +1,10 @@
-Add general todo items here and plan out prompts as needed
 
 --- MVP ---
-- allow to press run expirment but highlight in red if parameers or outcomes are missing
 - design and implement a way to implement increments in numeric parameters
+
+- delete a run menu same as deleting an expirement
+- allow to re rate a run in the top menu (for later aswell)
+
 - top bar to be sticky when draging down?
 
 - Sharing functionality
@@ -15,7 +17,6 @@ Add general todo items here and plan out prompts as needed
   - added parameters
   - run list 
   - best run 
-
 
 - experiment runs as paid feature with x amount of free runs per account (10)
 - ability to pay for lifetime subscription

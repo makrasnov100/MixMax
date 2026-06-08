@@ -26,12 +26,21 @@ class OutcomeListCard extends StatelessWidget {
   /// Null leaves the rows inert.
   final ValueChanged<SchemaOutcome>? onEdit;
 
+  /// Tapping the empty-state hint (e.g. open the add-outcome drawer).
+  final VoidCallback? onAdd;
+
+  /// Paints the empty-state hint in the danger voice — flags a required but
+  /// missing outcome when "Run experiment" is pressed.
+  final bool emptyError;
+
   const OutcomeListCard({
     Key? key,
     required this.outcomes,
     this.emptyTitle = 'No outcomes yet',
     this.emptyBody = 'Add a result to maximize or minimize.',
     this.onEdit,
+    this.onAdd,
+    this.emptyError = false,
   }) : super(key: key);
 
   @override
@@ -41,6 +50,8 @@ class OutcomeListCard extends StatelessWidget {
         glyph: MixMaxGlyph.target,
         title: emptyTitle,
         body: emptyBody,
+        error: emptyError,
+        onTap: onAdd,
       );
     }
 

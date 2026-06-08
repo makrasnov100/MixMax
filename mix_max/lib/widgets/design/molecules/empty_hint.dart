@@ -11,45 +11,68 @@ import 'package:mix_max/widgets/design/ions/text/label_text.dart';
 /// Source: `screens.jsx` `EmptyHint`. Unlike a [MixMaxCard] it draws a dashed
 /// `hairlineStrong` ring on the warm surface rather than a solid border + shadow,
 /// signalling an empty slot waiting to be filled (e.g. "No parameters yet").
+///
+/// When [error] is set the whole panel switches to a soft red voice — danger
+/// ring, tint fill and type tile — to flag a required-but-missing slot (e.g.
+/// pressing "Run experiment" with no parameters yet). An optional [onTap] makes
+/// the panel itself a tappable affordance (e.g. open the add-parameter drawer).
 class MixMaxEmptyHint extends StatelessWidget {
   final MixMaxGlyph glyph;
   final String title;
   final String body;
+
+  /// When true, paint the panel in the danger voice to flag a missing slot.
+  final bool error;
+
+  /// Tapping the whole panel. Null leaves it inert.
+  final VoidCallback? onTap;
 
   const MixMaxEmptyHint({
     Key? key,
     required this.glyph,
     required this.title,
     required this.body,
+    this.error = false,
+    this.onTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: const _DashedRRectPainter(
-        color: AppColors.hairlineStrong,
+    final panel = CustomPaint(
+      painter: _DashedRRectPainter(
+        color: error ? AppColors.danger : AppColors.hairlineStrong,
         radius: 20, // rCard
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         // Surface fill sits inside the dashed ring (border-box in the design).
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: error ? AppColors.dangerTint : AppColors.surface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
-            MixMaxTile(glyph: glyph, tone: MixMaxTileTone.neutral),
+            MixMaxTile(
+              glyph: glyph,
+              tone: error ? MixMaxTileTone.danger : MixMaxTileTone.neutral,
+            ),
             const SizedBox(width: 13),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LabelText(text: title, fontSize: 14.5, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  LabelText(
+                    text: title,
+                    fontSize: 14.5,
+                    color: error ? AppColors.dangerText : AppColors.ink,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 1),
                   CaptionText(
                     text: body,
+                    color: error ? AppColors.dangerText : AppColors.inkSoft,
                     fontWeight: FontWeight.w400,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -60,6 +83,13 @@ class MixMaxEmptyHint extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    if (onTap == null) return panel;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: panel,
     );
   }
 }
