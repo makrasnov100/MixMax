@@ -82,6 +82,12 @@ function App() {
 
   const current = experiments.find(e => e.id === route.expId);
 
+  // when rescoring an existing run, the rating flow walks that run's own outcome
+  // snapshot (so the sliders match what was measured), not the live outcomes.
+  const ratingRun = (route.name === 'rating' && route.rescoreRunId && current)
+    ? (current.runs || []).find(r => r.id === route.rescoreRunId) : null;
+  const ratingOutcomes = ratingRun ? runOutcomeDefs(current, ratingRun) : (current ? (current.outcomes || []) : []);
+
   const updateExp = (id, fn) => setExperiments(list => list.map(e => e.id === id ? fn(e) : e));
 
   // Stamp the moment the parameter set last changed (add / edit / delete). Runs
@@ -151,6 +157,29 @@ function App() {
   // open a single run's details (from history list or best-run shortcut)
   const openRunDetail = (runId, from) => setRoute({ name: 'runDetail', expId: route.expId, runId, from });
 
+  // ── rescore an existing run — same rating UI, prefilled with its values. The
+  //    "best run" is always derived from scores, so once the new ratings land it
+  //    is recrowned automatically: if this was the best and no longer is, the
+  //    next-highest run becomes best. ──
+  const startRescore = (runId) => {
+    const run = (current.runs || []).find(r => r.id === runId);
+    if (!run) return;
+    const outcomes = runOutcomeDefs(current, run);
+    const vals = {};
+    outcomes.forEach(o => { vals[o.id] = (run.outcomeValues && run.outcomeValues[o.id] != null) ? run.outcomeValues[o.id] : midValue(o); });
+    setRatingValues(vals);
+    setRoute({ name: 'rating', expId: current.id, ratingIndex: 0, rescoreRunId: runId, from: route.from });
+    setDrawer(null);
+  };
+
+  // ── delete a run — drops it from history. Best run recomputes automatically. ──
+  const deleteRun = (runId) => {
+    const from = route.from;
+    updateExp(current.id, e => ({ ...e, runs: (e.runs || []).filter(r => r.id !== runId) }));
+    setDrawer(null);
+    setRoute({ name: from === 'history' ? 'history' : 'details', expId: current.id });
+  };
+
   const startRecording = () => {
     const vals = {};
     current.outcomes.forEach(o => { vals[o.id] = midValue(o); });
@@ -159,9 +188,17 @@ function App() {
   };
 
   const ratingNext = () => {
-    const outcomes = current.outcomes;
+    const outcomes = ratingOutcomes;
     if (route.ratingIndex + 1 < outcomes.length) {
       setRoute(r => ({ ...r, ratingIndex: r.ratingIndex + 1 }));
+    } else if (route.rescoreRunId) {
+      // rescore: overwrite the existing run's outcome values; best recomputes.
+      const runId = route.rescoreRunId;
+      updateExp(current.id, e => ({
+        ...e,
+        runs: (e.runs || []).map(r => r.id === runId ? { ...r, outcomeValues: { ...ratingValues } } : r),
+      }));
+      setRoute({ name: 'runDetail', expId: current.id, runId, from: route.from });
     } else {
       // save run
       const ts = Math.floor(Date.now() / 1000);
@@ -177,8 +214,10 @@ function App() {
     }
   };
   const ratingBack = () => {
-    if (route.ratingIndex === 0) setRoute({ name: 'run', expId: current.id });
-    else setRoute(r => ({ ...r, ratingIndex: r.ratingIndex - 1 }));
+    if (route.ratingIndex === 0) {
+      if (route.rescoreRunId) setRoute({ name: 'runDetail', expId: current.id, runId: route.rescoreRunId, from: route.from });
+      else setRoute({ name: 'run', expId: current.id });
+    } else setRoute(r => ({ ...r, ratingIndex: r.ratingIndex - 1 }));
   };
 
   let screen = null;
@@ -204,15 +243,17 @@ function App() {
       const chrono = (current.runs || []).filter(r => r.outcomeValues)
         .sort((a, b) => (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0));
       const num = chrono.findIndex(r => r.id === run.id) + 1;
-      screen = <RunDetailsScreen exp={current} run={run} num={num} isBest={run.id === bestRunId(current)}
-        onBack={() => setRoute({ name: route.from === 'history' ? 'history' : 'details', expId: current.id })} />;
+      const isBest = run.id === bestRunId(current);
+      screen = <RunDetailsScreen exp={current} run={run} num={num} isBest={isBest}
+        onBack={() => setRoute({ name: route.from === 'history' ? 'history' : 'details', expId: current.id })}
+        onMenu={() => setDrawer({ kind: 'runActions', runId: run.id, num, isBest })} />;
     }
   } else if (route.name === 'run' && current) {
     screen = <RunSuggestionScreen exp={current} suggestion={suggestion}
       onBack={() => setRoute({ name: 'details', expId: current.id })} onRecord={startRecording} />;
   } else if (route.name === 'rating' && current) {
-    const o = current.outcomes[route.ratingIndex];
-    screen = <RatingScreen exp={current} index={route.ratingIndex}
+    const o = ratingOutcomes[route.ratingIndex];
+    screen = <RatingScreen exp={current} index={route.ratingIndex} outcomes={ratingOutcomes} rescore={!!route.rescoreRunId}
       value={ratingValues[o.id] != null ? ratingValues[o.id] : midValue(o)}
       onChange={(v) => setRatingValues(vals => ({ ...vals, [o.id]: v }))}
       onBack={ratingBack} onNext={ratingNext} />;
@@ -253,6 +294,18 @@ function App() {
           onConfirm={() => deleteExperiment(current.id)}
           onClose={() => setDrawer(null)} />
       )}
+      {drawer && drawer.kind === 'runActions' && current && (
+        <RunActionsDrawer num={drawer.num} isBest={drawer.isBest}
+          onRescore={() => startRescore(drawer.runId)}
+          onDelete={() => setDrawer({ kind: 'confirmDelRun', runId: drawer.runId, num: drawer.num, isBest: drawer.isBest })}
+          onClose={() => setDrawer(null)} />
+      )}
+      {drawer && drawer.kind === 'confirmDelRun' && current && (() => {
+        const run = (current.runs || []).find(r => r.id === drawer.runId);
+        return run ? <ConfirmDeleteRunDrawer exp={current} run={run} num={drawer.num} isBest={drawer.isBest}
+          onConfirm={() => deleteRun(drawer.runId)}
+          onClose={() => setDrawer({ kind: 'runActions', runId: drawer.runId, num: drawer.num, isBest: drawer.isBest })} /> : null;
+      })()}
     </div>
   );
 }

@@ -68,7 +68,7 @@ class BayesianOptimizationService {
             .map((r) => _encodeParameters(parameters, r.parameterValues!))
             .toList();
     final y = validRuns
-        .map((r) => r.outcomes != null ? r.finalRating() : r.finalRating(outcomes))
+        .map((r) => r.outcomes != null ? r.computeFinalRating() : r.computeFinalRating(outcomes))
         .toList();
 
     final gp = _GaussianProcess(

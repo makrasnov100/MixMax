@@ -6,38 +6,37 @@ import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/title_text.dart';
 import 'package:mix_max/widgets/design/molecules/action_row.dart';
 
-/// The "Manage this experiment" actions drawer for the Experiment Details page.
+/// The "Manage this run" actions drawer for the Run Details page.
 ///
-/// Source: `design_app/drawers.jsx` `ExperimentActionsDrawer` (+ `DrawerShell`):
-/// a [MixMaxDrawerContainer] surface with a centered serif title (the
-/// experiment name) and soft subtitle, then a stack of [_ActionRow]s — "Rename
-/// experiment" and the danger-toned "Delete experiment".
+/// Source: `design_app/drawers.jsx` `RunActionsDrawer` (+ `DrawerShell`): a
+/// [MixMaxDrawerContainer] surface with a centered serif title ("Run N") and
+/// soft subtitle, then the violet "Rescore run" and danger "Delete run"
+/// [MixMaxActionRow]s.
 ///
 /// Present it with `showModalBottomSheet(backgroundColor: transparent,
-/// isScrollControlled: true)`. The drawer pops itself before invoking [onRename]
-/// or [onDelete] so the caller can immediately open the follow-up drawer.
-class ExperimentActionsDrawer extends StatelessWidget {
-  /// The experiment name, shown as the drawer title.
-  final String? experimentName;
+/// isScrollControlled: true)`. The drawer pops itself before invoking [onRescore]
+/// or [onDelete] so the caller can immediately open the follow-up flow.
+class RunActionsDrawer extends StatelessWidget {
+  /// The run's chronological number, shown as the drawer title. Null falls back
+  /// to "this run" when the caller doesn't know the position.
+  final int? number;
 
-  /// Opens the rename flow.
-  final VoidCallback onRename;
+  /// Opens the rescore flow.
+  final VoidCallback onRescore;
 
   /// Opens the destructive confirm-delete flow.
   final VoidCallback onDelete;
 
-  const ExperimentActionsDrawer({
+  const RunActionsDrawer({
     super.key,
-    required this.experimentName,
-    required this.onRename,
+    required this.number,
+    required this.onRescore,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final name = experimentName?.isNotEmpty == true
-        ? experimentName!
-        : 'Untitled experiment';
+    final title = number != null ? 'Run $number' : 'This run';
 
     return MixMaxDrawerContainer(
       child: Column(
@@ -49,15 +48,13 @@ class ExperimentActionsDrawer extends StatelessWidget {
             child: Column(
               children: [
                 TitleText(
-                  text: name,
+                  text: title,
                   fontSize: 25,
                   textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
                 const CaptionText(
-                  text: 'Manage this experiment',
+                  text: 'Manage this run',
                   fontSize: 13.5,
                   textAlign: TextAlign.center,
                 ),
@@ -72,21 +69,21 @@ class ExperimentActionsDrawer extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 MixMaxActionRow(
-                  glyph: MixMaxGlyph.edit,
-                  tone: MixMaxTileTone.neutral,
-                  label: 'Rename experiment',
-                  sublabel: 'Change its title',
+                  glyph: MixMaxGlyph.target,
+                  tone: MixMaxTileTone.violet,
+                  label: 'Rescore run',
+                  sublabel: 'Adjust the outcome ratings',
                   onTap: () {
                     Navigator.of(context).pop();
-                    onRename();
+                    onRescore();
                   },
                 ),
                 const SizedBox(height: 10),
                 MixMaxActionRow(
                   glyph: MixMaxGlyph.trash,
                   tone: MixMaxTileTone.danger,
-                  label: 'Delete experiment',
-                  sublabel: 'Remove it and all its data',
+                  label: 'Delete run',
+                  sublabel: 'Remove it from your history',
                   danger: true,
                   onTap: () {
                     Navigator.of(context).pop();

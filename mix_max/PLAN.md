@@ -1,10 +1,5 @@
 
 --- MVP ---
-- delete a run menu same as deleting an expirement
-- allow to re rate a run in the top menu (for later aswell)
-
-- top bar to be sticky when draging down?
-
 - Sharing functionality
   - in expirement menu
   - in expirement details next to best run

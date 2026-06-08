@@ -38,6 +38,13 @@ class SchemaRun {
   /// Seconds since Unix epoch when all outcomes were recorded.
   int? completedAt;
 
+  /// The run's combined 0–1 rating ([computeFinalRating]) frozen onto the
+  /// document when it is recorded or rescored. Persisting it lets the highest
+  /// scoring run be found with a single indexed query (e.g. to re-crown the
+  /// best run after a delete) instead of loading and re-scoring every run.
+  /// Null for legacy runs written before this field existed.
+  double? finalRating;
+
   SchemaRun({
     required this.id,
     this.experimentId,
@@ -48,6 +55,7 @@ class SchemaRun {
     this.outcomes,
     this.createdAt,
     this.completedAt,
+    this.finalRating,
   });
 
   SchemaRun.unknown({
@@ -60,6 +68,7 @@ class SchemaRun {
     this.outcomes,
     this.createdAt,
     this.completedAt,
+    this.finalRating,
   });
 
   bool isValid() => id.isNotEmpty;
@@ -77,7 +86,11 @@ class SchemaRun {
   /// and then flipped when its goal is to minimise. Outcomes without usable
   /// bounds fall back to their raw value. The contributing outcomes are then
   /// averaged. Returns 0.0 when none have a recorded value.
-  double finalRating([List<SchemaOutcome>? outcomesOverride]) {
+  ///
+  /// This recomputes live from the run's values; the persisted [finalRating]
+  /// field is a frozen copy of this result, written when the run is recorded or
+  /// rescored so it can be queried/indexed without loading every run.
+  double computeFinalRating([List<SchemaOutcome>? outcomesOverride]) {
     final ranked = outcomesOverride ?? outcomes ?? const [];
     final values = outcomeValues;
     if (values == null) return 0.0;

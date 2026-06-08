@@ -22,6 +22,7 @@ SchemaRun _$SchemaRunFromJson(Map<String, dynamic> json) => SchemaRun(
           .toList(),
       createdAt: (json['createdAt'] as num?)?.toInt(),
       completedAt: (json['completedAt'] as num?)?.toInt(),
+      finalRating: (json['finalRating'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$SchemaRunToJson(SchemaRun instance) {
@@ -44,5 +45,6 @@ Map<String, dynamic> _$SchemaRunToJson(SchemaRun instance) {
   writeNotNull('outcomes', instance.outcomes?.map((e) => e.toJson()).toList());
   writeNotNull('createdAt', instance.createdAt);
   writeNotNull('completedAt', instance.completedAt);
+  writeNotNull('finalRating', instance.finalRating);
   return val;
 }

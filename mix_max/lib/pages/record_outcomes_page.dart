@@ -28,14 +28,25 @@ enum _RecordPhase { recording, saving, error }
 /// "Next outcome" button advances through the outcomes; on the last one "Save
 /// run" writes the measured values, marks the run complete, and returns to the
 /// experiment details.
+///
+/// In [rescore] mode the run is already complete: the same flow re-opens with
+/// each step seeded from the run's recorded value, walks the run's own outcome
+/// snapshot (so it rescores exactly what was measured), and on the last step
+/// saves the new ratings back in place — leaving the run count untouched and
+/// returning to the Run Details page it was launched from.
 class RecordOutcomesPage extends StatefulWidget {
   final SchemaExperiment experiment;
   final SchemaRun run;
+
+  /// When true, edit an already-recorded run's outcome ratings instead of
+  /// recording a fresh run.
+  final bool rescore;
 
   const RecordOutcomesPage({
     super.key,
     required this.experiment,
     required this.run,
+    this.rescore = false,
   });
 
   @override
@@ -49,11 +60,28 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
   final Map<String, double> _outcomeValues = {};
   int _currentOutcomeIndex = 0;
 
+  /// The outcomes being rated. A rescore walks the run's own captured snapshot
+  /// (what it was actually measured with); a fresh run uses the experiment's
+  /// current outcomes.
+  List<SchemaOutcome> get _outcomes => widget.rescore
+      ? (widget.run.outcomes ?? widget.experiment.outcomes ?? const [])
+      : (widget.experiment.outcomes ?? const []);
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed a rescore with the run's existing ratings so each step opens on the
+    // value it currently holds.
+    if (widget.rescore) {
+      final existing = widget.run.outcomeValues;
+      if (existing != null) _outcomeValues.addAll(existing);
+    }
+  }
+
   void _onOutcomeValueSubmitted(SchemaOutcome outcome, double value) {
     _outcomeValues[outcome.id] = value;
 
-    final outcomes = widget.experiment.outcomes ?? [];
-    if (_currentOutcomeIndex + 1 >= outcomes.length) {
+    if (_currentOutcomeIndex + 1 >= _outcomes.length) {
       _saveRun();
       return;
     }
@@ -73,16 +101,26 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
       return;
     }
 
+    // A rescore only abandons unsaved edits to an existing run; a fresh run is
+    // discarded entirely (its suggested values and ratings).
     final discard = await ConfirmDrawer.show(
       context,
-      title: 'Discard this run?',
-      subtitle: "Suggested values and any outcomes won't be saved.",
+      title: widget.rescore ? 'Discard changes?' : 'Discard this run?',
+      subtitle: widget.rescore
+          ? "Your new ratings won't be saved."
+          : "Suggested values and any outcomes won't be saved.",
       confirmLabel: 'Discard',
       cancelLabel: 'Keep rating',
     );
     if (!discard) return;
 
     if (!mounted) return;
+    if (widget.rescore) {
+      // Back to the Run Details page this rescore was launched from. Imperative
+      // pop (not maybePop) so [PopScope] doesn't re-route into this handler.
+      Navigator.of(context).pop();
+      return;
+    }
     Navigator.of(context).popUntil(
       (route) => route.settings.name == Destination.experimentDetails.name,
     );
@@ -96,9 +134,29 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
 
     final run = widget.run;
     run.outcomeValues = Map<String, double>.from(_outcomeValues);
-    run.completedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    // Freeze the combined rating onto the document so the highest scoring run
+    // can be found by an indexed query (e.g. to re-crown the best run later).
+    run.finalRating = run.computeFinalRating();
 
     try {
+      if (widget.rescore) {
+        await DatabaseService.runsRef
+            .doc(run.id)
+            .set(run, SetOptions(merge: true));
+
+        // Re-evaluate the cached best run against the new rating.
+        await widget.experiment.applyRescoredRun(run);
+
+        if (!mounted) return;
+        // Back to the Run Details page this rescore was launched from. Use an
+        // imperative pop (not maybePop) so the [PopScope] below doesn't treat
+        // this as a blocked back gesture and re-prompt to discard changes.
+        Navigator.of(context).pop();
+        return;
+      }
+
+      run.completedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
       await DatabaseService.runsRef
           .doc(run.id)
           .set(run, SetOptions(merge: true));
@@ -114,7 +172,9 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
       if (!mounted) return;
       setState(() {
         _phase = _RecordPhase.recording;
-        _errorMessage = 'Could not save run. Please try again.';
+        _errorMessage = widget.rescore
+            ? 'Could not save changes. Please try again.'
+            : 'Could not save run. Please try again.';
       });
     }
   }
@@ -135,19 +195,19 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
         body: ColoredBox(
           color: AppColors.bg,
           child: switch (_phase) {
-            _RecordPhase.saving => const _StatusView(message: 'Saving run…'),
+            _RecordPhase.saving => _StatusView(
+              message: widget.rescore ? 'Saving changes…' : 'Saving run…',
+            ),
             _RecordPhase.error => _ErrorView(
               message: _errorMessage ?? 'Something went wrong.',
               onRetry: () => setState(() => _phase = _RecordPhase.recording),
             ),
             _RecordPhase.recording => _RecordingView(
-              experiment: widget.experiment,
+              outcomes: _outcomes,
+              rescore: widget.rescore,
               currentIndex: _currentOutcomeIndex,
               existingValue:
-                  _outcomeValues[widget
-                      .experiment
-                      .outcomes![_currentOutcomeIndex]
-                      .id],
+                  _outcomeValues[_outcomes[_currentOutcomeIndex].id],
               errorMessage: _errorMessage,
               onSubmit: _onOutcomeValueSubmitted,
               onBack: _handleBackRequest,
@@ -164,7 +224,8 @@ class _RecordOutcomesPageState extends State<RecordOutcomesPage> {
 /// either a [MixMaxSliderField] (bounded outcome) or a number field (unbounded)
 /// over a sticky next/save footer.
 class _RecordingView extends StatefulWidget {
-  final SchemaExperiment experiment;
+  final List<SchemaOutcome> outcomes;
+  final bool rescore;
   final int currentIndex;
   final double? existingValue;
   final String? errorMessage;
@@ -172,7 +233,8 @@ class _RecordingView extends StatefulWidget {
   final VoidCallback onBack;
 
   const _RecordingView({
-    required this.experiment,
+    required this.outcomes,
+    required this.rescore,
     required this.currentIndex,
     required this.existingValue,
     required this.errorMessage,
@@ -188,8 +250,7 @@ class _RecordingViewState extends State<_RecordingView> {
   late TextEditingController _textController;
   late double _sliderValue;
 
-  SchemaOutcome get _outcome =>
-      widget.experiment.outcomes![widget.currentIndex];
+  SchemaOutcome get _outcome => widget.outcomes[widget.currentIndex];
 
   bool get _hasBounds =>
       _outcome.min != null &&
@@ -262,7 +323,7 @@ class _RecordingViewState extends State<_RecordingView> {
 
   @override
   Widget build(BuildContext context) {
-    final outcomes = widget.experiment.outcomes ?? [];
+    final outcomes = widget.outcomes;
     final isLast = widget.currentIndex == outcomes.length - 1;
     final canSubmit =
         _hasBounds
@@ -295,7 +356,8 @@ class _RecordingViewState extends State<_RecordingView> {
                   const Spacer(),
                   CaptionText(
                     text:
-                        'Outcome ${widget.currentIndex + 1} of ${outcomes.length}',
+                        '${widget.rescore ? 'Rescore · ' : ''}Outcome '
+                        '${widget.currentIndex + 1} of ${outcomes.length}',
                   ),
                 ],
               ),
@@ -373,7 +435,9 @@ class _RecordingViewState extends State<_RecordingView> {
               ),
             ),
             child: MixMaxButton(
-              label: isLast ? 'Save run' : 'Next outcome',
+              label: isLast
+                  ? (widget.rescore ? 'Save changes' : 'Save run')
+                  : 'Next outcome',
               variant:
                   isLast ? MixMaxButtonVariant.gold : MixMaxButtonVariant.ink,
               enabled: canSubmit,

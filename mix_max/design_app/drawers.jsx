@@ -492,6 +492,52 @@ function ConfirmDeleteDrawer({ exp, onConfirm, onClose }) {
   );
 }
 
+// ── 5b. Run actions sheet ────────────────────────────────
+function RunActionsDrawer({ num, isBest, onRescore, onDelete, onClose }) {
+  return (
+    <DrawerShell title={`Run ${num}`} subtitle="Manage this run" onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 18 }}>
+        <ActionRow icon="target" tone="violet" label="Rescore run" sublabel="Adjust the outcome ratings" onClick={onRescore} />
+        <ActionRow icon="trash" tone="danger" danger label="Delete run" sublabel="Remove it from your history" onClick={onDelete} />
+      </div>
+    </DrawerShell>
+  );
+}
+
+// ── 5c. Confirm delete of a run (destructive) ────────────
+function ConfirmDeleteRunDrawer({ exp, run, num, isBest, onConfirm, onClose }) {
+  const outcomes = runOutcomeDefs(exp, run);
+  const ov = run.outcomeValues || {};
+  const bits = outcomes
+    .filter(o => ov[o.id] != null)
+    .map(o => `${o.name} ${fmt(ov[o.id])}${o.unit ? ' ' + o.unit : ''}`);
+  return (
+    <DrawerShell onClose={onClose}
+      title={<span>Delete <span style={{ fontStyle: 'italic' }}>Run {num}</span>?</span>}
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn label="Delete run" icon="trash" variant="danger" onClick={onConfirm} />
+          <Btn label="Keep it" variant="ghost" onClick={onClose} />
+        </div>
+      }>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 4 }}>
+        <Tile icon="trash" tone="danger" size={56} radius={18} stroke={2} />
+        <div style={{ fontFamily: T.sans, fontSize: 14.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 16, maxWidth: 312 }}>
+          {isBest
+            ? <span>This run is your current best. Deleting it removes it for good, and Mix Max will crown the next-highest run as best. This can’t be undone.</span>
+            : <span>This permanently removes this run from your history. This can’t be undone.</span>}
+        </div>
+        {bits.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 18 }}>
+            {bits.map((b, i) => <Chip key={i} tone="soft">{b}</Chip>)}
+          </div>
+        )}
+      </div>
+      <div style={{ height: 8 }} />
+    </DrawerShell>
+  );
+}
+
 // ── 6. Confirm delete of a parameter / outcome ───────────
 // No "outdated" concept anymore: every past run keeps its own snapshot, so
 // deleting just removes the item going forward. Incompatible runs stay in
@@ -520,4 +566,4 @@ function ConfirmDeleteItemDrawer({ target = 'parameter', runCount = 0, onConfirm
   );
 }
 
-Object.assign(window, { DrawerShell, NameDrawer, ParameterDrawer, OutcomeDrawer, AddParameterDrawer, AddOutputDrawer, ConfirmDeleteItemDrawer, Segmented, TextInput, ExperimentActionsDrawer, ConfirmDeleteDrawer });
+Object.assign(window, { DrawerShell, NameDrawer, ParameterDrawer, OutcomeDrawer, AddParameterDrawer, AddOutputDrawer, ConfirmDeleteItemDrawer, Segmented, TextInput, ExperimentActionsDrawer, ConfirmDeleteDrawer, RunActionsDrawer, ConfirmDeleteRunDrawer });

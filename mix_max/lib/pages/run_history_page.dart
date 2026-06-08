@@ -98,8 +98,8 @@ class _RunHistoryPageState extends State<RunHistoryPage> {
   /// Opens the Run Details page for [run], carrying its chronological [number]
   /// and whether it is the experiment's best run so the details header matches
   /// the card the user tapped.
-  void _openRun(SchemaRun run, int number, bool isBest) {
-    Navigation.goTo(
+  Future<void> _openRun(SchemaRun run, int number, bool isBest) async {
+    await Navigation.goTo(
       context: context,
       page: RunDetailsPage(
         experiment: widget.experiment,
@@ -108,6 +108,10 @@ class _RunHistoryPageState extends State<RunHistoryPage> {
         isBest: isBest,
       ),
     );
+    // The run may have been rescored or deleted on the details page; reload so
+    // the list, ordering and best-run highlight reflect the change.
+    if (!mounted) return;
+    _load();
   }
 
   @override
@@ -245,8 +249,8 @@ class _ReadyView extends StatelessWidget {
   /// falling back to the experiment's current outcomes for legacy runs.
   double _scoreOf(SchemaRun r) =>
       r.outcomes != null
-          ? r.finalRating()
-          : r.finalRating(experiment.outcomes ?? const []);
+          ? r.computeFinalRating()
+          : r.computeFinalRating(experiment.outcomes ?? const []);
 }
 
 /// The "no runs yet" placeholder (source: `screens.jsx` `RunHistoryScreen`

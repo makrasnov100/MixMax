@@ -51,8 +51,8 @@ class RunHistoryCard extends StatelessWidget {
     final outcomes = run.outcomes ?? experiment.outcomes ?? const [];
     final when = run.completedAt ?? run.createdAt;
     final score = (run.outcomes != null
-            ? run.finalRating()
-            : run.finalRating(experiment.outcomes ?? const [])) *
+            ? run.computeFinalRating()
+            : run.computeFinalRating(experiment.outcomes ?? const [])) *
         10;
     final mix = _mixSummary();
 

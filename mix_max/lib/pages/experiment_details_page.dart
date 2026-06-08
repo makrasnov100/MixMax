@@ -290,11 +290,15 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   /// Opens the cached best run's details. The full run list isn't loaded here,
   /// so the run's chronological number is unknown — the details header falls
   /// back to the "Best run" kicker.
-  void _openBestRun(SchemaRun run) {
-    Navigation.goTo(
+  Future<void> _openBestRun(SchemaRun run) async {
+    await Navigation.goTo(
       context: context,
       page: RunDetailsPage(experiment: _experiment, run: run, isBest: true),
     );
+    // A rescore or delete there mutates [_experiment] in place (run count and
+    // cached best run); rebuild so the banner and pill reflect it.
+    if (!mounted) return;
+    setState(() {});
   }
 
   /// "Run experiment" handler. The button is always tappable; when a required

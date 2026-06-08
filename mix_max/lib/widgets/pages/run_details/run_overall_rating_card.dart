@@ -30,8 +30,8 @@ class RunOverallRatingCard extends StatelessWidget {
     // experiment's current outcomes for legacy runs without one.
     final outcomes = run.outcomes ?? experiment.outcomes ?? const [];
     final rating = (run.outcomes != null
-            ? run.finalRating()
-            : run.finalRating(experiment.outcomes ?? const [])) *
+            ? run.computeFinalRating()
+            : run.computeFinalRating(experiment.outcomes ?? const [])) *
         10;
     final count = outcomes.length;
 

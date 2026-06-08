@@ -98,8 +98,8 @@ class RatingBreakdownCard extends StatelessWidget {
     // number shown by the hero card and run-history list, scored against the
     // run's own outcome snapshot.
     final rating = (run.outcomes != null
-            ? run.finalRating()
-            : run.finalRating(experiment.outcomes ?? const [])) *
+            ? run.computeFinalRating()
+            : run.computeFinalRating(experiment.outcomes ?? const [])) *
         10;
     final measured = rows.where((r) => r.hasValue).toList();
 

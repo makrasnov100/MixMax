@@ -334,18 +334,19 @@ function SliderRow({ o, value, onChange }) {
   );
 }
 
-function RatingScreen({ exp, index, value, onChange, onBack, onNext }) {
-  const outcomes = exp.outcomes || [];
+function RatingScreen({ exp, index, value, onChange, onBack, onNext, outcomes: outcomesProp, rescore }) {
+  const outcomes = outcomesProp || exp.outcomes || [];
   const o = outcomes[index];
   const isLast = index === outcomes.length - 1;
   const maxi = o.goal === 'maximize';
+  const saveLabel = rescore ? 'Save changes' : 'Save run';
   return (
-    <Screen footer={<Btn label={isLast ? 'Save run' : 'Next outcome'} iconR={isLast ? 'check' : 'arrowR'} variant={isLast ? 'gold' : 'ink'} onClick={onNext} />}>
+    <Screen footer={<Btn label={isLast ? saveLabel : 'Next outcome'} iconR={isLast ? 'check' : 'arrowR'} variant={isLast ? 'gold' : 'ink'} onClick={onNext} />}>
       <TopPad h={50} />
       <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', gap: 14 }}>
         <RoundBtn icon="arrowL" onClick={onBack} />
         <ProgressDots total={outcomes.length} index={index} />
-        <span style={{ fontFamily: T.sans, fontSize: 13.5, color: T.inkSoft, fontWeight: 500, marginLeft: 'auto', whiteSpace: 'nowrap' }}>Outcome {index + 1} of {outcomes.length}</span>
+        <span style={{ fontFamily: T.sans, fontSize: 13.5, color: T.inkSoft, fontWeight: 500, marginLeft: 'auto', whiteSpace: 'nowrap' }}>{rescore ? 'Rescore · ' : ''}{index + 1} of {outcomes.length}</span>
       </div>
 
       <div style={{ padding: '30px 20px 0', textAlign: 'center' }}>
@@ -669,7 +670,7 @@ function RatingBreakdown({ exp, run }) {
   );
 }
 
-function RunDetailsScreen({ exp, run, num, isBest, onBack }) {
+function RunDetailsScreen({ exp, run, num, isBest, onBack, onMenu }) {
   const params = runParamDefs(exp, run);
   const outcomes = runOutcomeDefs(exp, run);
   const pv = run.parameterValues || {};
@@ -682,7 +683,10 @@ function RunDetailsScreen({ exp, run, num, isBest, onBack }) {
       <TopPad h={50} />
       <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <RoundBtn icon="arrowL" onClick={onBack} />
-        {isBest && <Chip tone="gold" icon="trophy">Best run</Chip>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {isBest && <Chip tone="gold" icon="trophy">Best run</Chip>}
+          {onMenu && <RoundBtn icon="more" onClick={onMenu} />}
+        </div>
       </div>
 
       <div style={{ padding: '18px 20px 0' }}>
