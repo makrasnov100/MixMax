@@ -157,12 +157,53 @@ function NameDrawer({ initial = '', title = 'Name your experiment', onSave, onCl
 
 // ── 2. Add parameter ─────────────────────────────────────
 const PARAM_PRESETS = [
-  { title: 'Amount', hint: 'grams', icon: 'bag', tone: 'sage', set: { name: 'Amount', type: 'number', unit: 'g', min: 0, max: 100 } },
-  { title: 'Time', hint: 'minutes', icon: 'timer', tone: 'sage', set: { name: 'Time', type: 'duration', unit: 'minutes', min: 1, max: 10 } },
-  { title: 'Temperature', hint: '°C', icon: 'ruler', tone: 'sage', set: { name: 'Temperature', type: 'number', unit: '°C', min: 0, max: 100 } },
+  { title: 'Amount', hint: 'grams', icon: 'bag', tone: 'sage', set: { name: 'Amount', type: 'number', unit: 'g', min: 0, max: 100, increment: 1 } },
+  { title: 'Time', hint: 'minutes', icon: 'timer', tone: 'sage', set: { name: 'Time', type: 'duration', unit: 'minutes', min: 1, max: 10, increment: 0.5 } },
+  { title: 'Temperature', hint: '°C', icon: 'ruler', tone: 'sage', set: { name: 'Temperature', type: 'number', unit: '°C', min: 0, max: 100, increment: 1 } },
   { title: 'On / Off', hint: 'a yes-no knob', icon: 'toggle', tone: 'sage', set: { name: '', type: 'toggle' } },
   { title: 'Pick one', hint: 'from a list', icon: 'list', tone: 'sage', set: { name: '', type: 'choice' } },
 ];
+
+// Optional granularity for number / duration parameters. Mix Max only ever
+// suggests values that land on this grid (min + k×increment), so a whole-number
+// increment effectively makes the parameter integers-only. Left blank = smooth
+// (any value within range).
+const INCREMENT_PRESETS = [
+  { value: 1, label: '1', note: 'whole' },
+  { value: 0.5, label: '0.5' },
+  { value: 0.1, label: '0.1' },
+  { value: 0.01, label: '0.01' },
+];
+
+function IncrementField({ value, onChange }) {
+  const num = value !== '' && !isNaN(Number(value)) ? Number(value) : null;
+  const valid = num != null && num > 0;
+  const pill = (active) => ({
+    height: 42, padding: '0 15px', borderRadius: T.rField, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    background: active ? T.ink : T.surface, color: active ? '#fff' : T.ink,
+    border: `1.5px solid ${active ? T.ink : T.hairline}`,
+    fontFamily: T.sans, fontWeight: 600, fontSize: 15,
+    transition: 'all .14s', WebkitTapHighlightColor: 'transparent',
+  });
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {INCREMENT_PRESETS.map(opt => {
+          const active = valid && num === opt.value;
+          return (
+            <button key={opt.value} onClick={() => onChange(active ? '' : String(opt.value))} style={pill(active)}>
+              {opt.label}
+              {opt.note && <span style={{ fontWeight: 500, fontSize: 12, opacity: active ? 0.8 : 0.6 }}>{opt.note}</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ height: 10 }} />
+      <TextInput value={value} onChange={onChange} placeholder="Or type a custom step" type="number" />
+    </div>
+  );
+}
 
 function ChipEditor({ items, setItems, placeholder }) {
   const [draft, setDraft] = useState('');
@@ -200,8 +241,13 @@ function ParameterDrawer({ initial, onSave, onDelete, onClose }) {
   const [unit, setUnit] = useState(initial?.unit || '');
   const [min, setMin] = useState(initial?.min != null ? String(initial.min) : '');
   const [max, setMax] = useState(initial?.max != null ? String(initial.max) : '');
+  const [increment, setIncrement] = useState(initial?.increment != null ? String(initial.increment) : '');
   const [options, setOptions] = useState(initial?.options || []);
   const [items, setItems] = useState(initial?.items || []);
+  // toggle: custom on/off state labels + a default-state preview
+  const [onLabel, setOnLabel] = useState(initial?.onLabel || '');
+  const [offLabel, setOffLabel] = useState(initial?.offLabel || '');
+  const [toggleOn, setToggleOn] = useState(true);
 
   const applyPreset = (p) => {
     const s = p.set;
@@ -210,6 +256,7 @@ function ParameterDrawer({ initial, onSave, onDelete, onClose }) {
     setUnit(s.unit || '');
     setMin(s.min !== undefined ? String(s.min) : '');
     setMax(s.max !== undefined ? String(s.max) : '');
+    setIncrement(s.increment !== undefined ? String(s.increment) : '');
   };
 
   const ranged = type === 'number' || type === 'duration';
@@ -220,8 +267,11 @@ function ParameterDrawer({ initial, onSave, onDelete, onClose }) {
     unit: ranged && unit.trim() ? unit.trim() : undefined,
     min: ranged && min !== '' ? Number(min) : undefined,
     max: ranged && max !== '' ? Number(max) : undefined,
+    increment: ranged && increment !== '' && Number(increment) > 0 ? Number(increment) : undefined,
     options: type === 'choice' ? options : undefined,
     items: type === 'order' ? items : undefined,
+    onLabel: type === 'toggle' && onLabel.trim() ? onLabel.trim() : undefined,
+    offLabel: type === 'toggle' && offLabel.trim() ? offLabel.trim() : undefined,
   });
 
   return (
@@ -265,12 +315,30 @@ function ParameterDrawer({ initial, onSave, onDelete, onClose }) {
             <TextInput value={min} onChange={setMin} placeholder="Min" type="number" align="left" />
             <TextInput value={max} onChange={setMax} placeholder="Max" type="number" align="left" />
           </TwoCol>
+          <SubHead>Increment</SubHead>
+          <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkFaint, margin: '-3px 0 11px' }}>How finely it's tuned. Set a whole number for integers only.</div>
+          <IncrementField value={increment} onChange={setIncrement} min={min} />
         </div>
       )}
       {type === 'toggle' && (
-        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12, background: T.surface, border: `1px solid ${T.hairline}`, borderRadius: T.rField, padding: '14px 16px' }}>
-          <MiniSwitch on />
-          <div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.inkSoft }}>No range needed — it's simply on or off.</div>
+        <div style={{ marginTop: 16 }}>
+          <button onClick={() => setToggleOn(v => !v)} style={{
+            width: '100%', textAlign: 'left', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: T.surface, border: `1px solid ${T.hairline}`, borderRadius: T.rField, padding: '14px 16px',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            <MiniSwitch on={toggleOn} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink }}>{toggleOn ? (onLabel.trim() || 'On') : (offLabel.trim() || 'Off')}</div>
+              <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginTop: 2 }}>No range needed — it's simply on or off.</div>
+            </div>
+          </button>
+          <SubHead>State labels (optional)</SubHead>
+          <TwoCol>
+            <TextInput value={onLabel} onChange={setOnLabel} placeholder="On" maxLength={24} />
+            <TextInput value={offLabel} onChange={setOffLabel} placeholder="Off" maxLength={24} />
+          </TwoCol>
         </div>
       )}
       {type === 'choice' && (<div style={{ marginTop: 6 }}><SubHead>Options</SubHead><ChipEditor items={options} setItems={setOptions} placeholder="Add an option" /></div>)}
@@ -346,7 +414,7 @@ function OutcomeDrawer({ initial, onSave, onDelete, onClose }) {
       <div style={{ height: 10 }} />
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <div style={{ flex: 1 }}><TextInput value={unit} onChange={setUnit} placeholder="Unit (optional)" /></div>
-        <div style={{ flex: 1 }}><TextInput value={step} onChange={setStep} placeholder="Step" type="number" /></div>
+        <div style={{ flex: 1 }}><TextInput value={step} onChange={setStep} placeholder="Interval" type="number" /></div>
       </div>
       <div style={{ height: 6 }} />
     </DrawerShell>

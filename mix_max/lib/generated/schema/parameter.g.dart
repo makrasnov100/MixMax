@@ -14,6 +14,7 @@ SchemaParameter _$SchemaParameterFromJson(Map<String, dynamic> json) =>
       unit: json['unit'] as String?,
       min: (json['min'] as num?)?.toDouble(),
       max: (json['max'] as num?)?.toDouble(),
+      increment: (json['increment'] as num?)?.toDouble(),
       options:
           (json['options'] as List<dynamic>?)?.map((e) => e as String).toList(),
       items:
@@ -38,6 +39,7 @@ Map<String, dynamic> _$SchemaParameterToJson(SchemaParameter instance) {
   writeNotNull('unit', instance.unit);
   writeNotNull('min', instance.min);
   writeNotNull('max', instance.max);
+  writeNotNull('increment', instance.increment);
   writeNotNull('options', instance.options);
   writeNotNull('items', instance.items);
   writeNotNull('onLabel', instance.onLabel);

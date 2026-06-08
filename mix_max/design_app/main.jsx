@@ -7,9 +7,9 @@ const SEED = [
   {
     id: 'best-tea', name: 'Best Tea',
     parameters: [
-      { id: 'p1', name: 'Ounces of water', type: 'number', unit: 'oz', min: 10, max: 12 },
-      { id: 'p2', name: 'Steep time', type: 'duration', unit: 'minutes', min: 1, max: 10 },
-      { id: 'p3', name: 'Squeeze bag after steeping', type: 'toggle' },
+      { id: 'p1', name: 'Ounces of water', type: 'number', unit: 'oz', min: 10, max: 12, increment: 0.5 },
+      { id: 'p2', name: 'Steep time', type: 'duration', unit: 'minutes', min: 1, max: 10, increment: 0.5 },
+      { id: 'p3', name: 'Squeeze bag after steeping', type: 'toggle', onLabel: 'Squeeze', offLabel: 'Leave' },
       { id: 'p4', name: 'Sweetener', type: 'choice', options: ['honey', 'sugar', 'none'] },
     ],
     outcomes: [
@@ -26,8 +26,8 @@ const SEED = [
   {
     id: 'cold-brew', name: 'House Cold Brew',
     parameters: [
-      { id: 'cp1', name: 'Coffee grounds', type: 'number', unit: 'g', min: 60, max: 120 },
-      { id: 'cp2', name: 'Brew time', type: 'duration', unit: 'hours', min: 8, max: 24 },
+      { id: 'cp1', name: 'Coffee grounds', type: 'number', unit: 'g', min: 60, max: 120, increment: 5 },
+      { id: 'cp2', name: 'Brew time', type: 'duration', unit: 'hours', min: 8, max: 24, increment: 1 },
       { id: 'cp3', name: 'Grind', type: 'choice', options: ['coarse', 'medium', 'fine'] },
     ],
     outcomes: [
@@ -42,8 +42,8 @@ const SEED = [
   {
     id: 'run-routine', name: 'Pre-Run Routine',
     parameters: [
-      { id: 'rp1', name: 'Warm-up', type: 'duration', unit: 'minutes', min: 0, max: 20 },
-      { id: 'rp2', name: 'Caffeine', type: 'toggle' },
+      { id: 'rp1', name: 'Warm-up', type: 'duration', unit: 'minutes', min: 0, max: 20, increment: 1 },
+      { id: 'rp2', name: 'Caffeine', type: 'toggle', onLabel: 'Yes', offLabel: 'No' },
     ],
     outcomes: [
       { id: 'ro1', name: 'energy', min: 1, max: 10, step: 1, goal: 'maximize' },
@@ -84,6 +84,13 @@ function App() {
 
   const updateExp = (id, fn) => setExperiments(list => list.map(e => e.id === id ? fn(e) : e));
 
+  // Stamp the moment the parameter set last changed (add / edit / delete). Runs
+  // recorded before this moment used a different parameter set, so the optimizer
+  // ignores them when tuning the next run — decided purely by this timestamp,
+  // not a per-run compatibility check. Editing OUTCOMES does not stamp it, since
+  // every run keeps its own outcome snapshot.
+  const stampParams = (e) => ({ ...e, lastParametersUpdatedAt: Math.floor(Date.now() / 1000) });
+
   // navigation
   const openExp = (id) => setRoute({ name: 'details', expId: id });
   const back = () => setRoute({ name: 'list' });
@@ -107,7 +114,7 @@ function App() {
     setDrawer(null);
     setRoute({ name: 'list' });
   };
-  const saveParam = (param) => { updateExp(route.expId, e => ({ ...e, parameters: [...e.parameters, param] })); setDrawer(null); };
+  const saveParam = (param) => { updateExp(route.expId, e => stampParams({ ...e, parameters: [...e.parameters, param] })); setDrawer(null); };
   const saveOutput = (out) => { updateExp(route.expId, e => ({ ...e, outcomes: [...e.outcomes, out] })); setDrawer(null); };
 
   // every recorded run is kept & shown now — nothing is ever "outdated".
@@ -115,7 +122,7 @@ function App() {
 
   // ── edit a parameter / outcome — ALL fields are editable. (A parameter's
   //    TYPE is the one thing locked once created; the drawer enforces that.) ──
-  const saveParamEdit = (edited) => { updateExp(current.id, e => ({ ...e, parameters: e.parameters.map(p => p.id === edited.id ? edited : p) })); setDrawer(null); };
+  const saveParamEdit = (edited) => { updateExp(current.id, e => stampParams({ ...e, parameters: e.parameters.map(p => p.id === edited.id ? edited : p) })); setDrawer(null); };
   const saveOutcomeEdit = (edited) => { updateExp(current.id, e => ({ ...e, outcomes: e.outcomes.map(o => o.id === edited.id ? edited : o) })); setDrawer(null); };
 
   // ── delete a parameter / outcome — past runs keep their own snapshot, so
@@ -126,7 +133,7 @@ function App() {
   const confirmDelItem = () => {
     const { target, id } = drawer;
     updateExp(current.id, e => target === 'parameter'
-      ? ({ ...e, parameters: e.parameters.filter(x => x.id !== id) })
+      ? stampParams({ ...e, parameters: e.parameters.filter(x => x.id !== id) })
       : ({ ...e, outcomes: e.outcomes.filter(x => x.id !== id) }));
     setDrawer(null);
   };

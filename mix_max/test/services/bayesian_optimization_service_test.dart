@@ -334,6 +334,92 @@ void main() {
       expect(suggestion['o'], unorderedEquals(['x', 'y']));
     });
   });
+
+  group('BayesianOptimizationService — increment snapping', () {
+    // A value lands on the grid when (v - min) is a whole multiple of the step.
+    void expectOnGrid(num value, {required double min, required double step}) {
+      final k = (value - min) / step;
+      expect(
+        (k - k.roundToDouble()).abs(),
+        lessThan(1e-6),
+        reason: '$value is not on the min $min + k×$step grid',
+      );
+    }
+
+    test('cold-start suggestion snaps to the increment grid', () {
+      final param = SchemaParameter(
+        id: 'x',
+        type: ParameterType.number,
+        min: 0,
+        max: 10,
+        increment: 0.5,
+      );
+      final experiment = _experimentWithSingleParam(param);
+
+      // No past runs → uniform-random fallback path. Sample repeatedly since
+      // the draw is random.
+      for (int i = 0; i < 50; i++) {
+        final s = BayesianOptimizationService.suggestNextParameters(
+          experiment: experiment,
+          pastRuns: const [],
+        );
+        final v = s['x'] as double;
+        expect(v, inInclusiveRange(0.0, 10.0));
+        expectOnGrid(v, min: 0, step: 0.5);
+      }
+    });
+
+    test('GP-path suggestion snaps to a whole-number (integers-only) grid', () {
+      final param = SchemaParameter(
+        id: 'x',
+        type: ParameterType.number,
+        min: 0,
+        max: 100,
+        increment: 1,
+      );
+      final experiment = _experimentWithSingleParam(param);
+
+      // Two recorded runs cross the GP threshold, so suggestions come from the
+      // decode path rather than the cold-start fallback.
+      final runs = _runBoLoop(
+        experiment: experiment,
+        evaluate: (pv) => _gaussianScore(pv['x'] as double, 60, sigma: 15),
+        numIterations: 20,
+      );
+
+      for (final r in runs) {
+        final v = r.parameterValues!['x'] as double;
+        expect(v, inInclusiveRange(0.0, 100.0));
+        expectOnGrid(v, min: 0, step: 1);
+        expect(v, equals(v.roundToDouble()), reason: 'should be a whole number');
+      }
+    });
+
+    test('no increment leaves the value smooth (off-grid allowed)', () {
+      final param = SchemaParameter(
+        id: 'x',
+        type: ParameterType.number,
+        min: 0,
+        max: 1,
+      );
+      final experiment = _experimentWithSingleParam(param);
+
+      var sawFractional = false;
+      for (int i = 0; i < 50 && !sawFractional; i++) {
+        final s = BayesianOptimizationService.suggestNextParameters(
+          experiment: experiment,
+          pastRuns: const [],
+        );
+        final v = s['x'] as double;
+        if ((v - v.roundToDouble()).abs() > 1e-6) sawFractional = true;
+      }
+      expect(
+        sawFractional,
+        isTrue,
+        reason: 'without an increment, values should not be grid-locked',
+      );
+    });
+  });
 }
 
 // ─── Test helpers ──────────────────────────────────────────────────────────

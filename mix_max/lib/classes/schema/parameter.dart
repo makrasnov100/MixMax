@@ -14,6 +14,11 @@ class SchemaParameter {
   double? min;
   double? max;
 
+  // number / duration — optional granularity. Mix Max only ever suggests values
+  // that land on the grid (min + k×increment), so a whole-number increment makes
+  // the parameter integers-only. Null means smooth (any value within range).
+  double? increment;
+
   // choice
   List<String>? options;
 
@@ -32,6 +37,7 @@ class SchemaParameter {
     this.unit,
     this.min,
     this.max,
+    this.increment,
     this.options,
     this.items,
     this.onLabel,
@@ -45,6 +51,7 @@ class SchemaParameter {
     this.unit,
     this.min,
     this.max,
+    this.increment,
     this.options,
     this.items,
     this.onLabel,
@@ -62,6 +69,20 @@ class SchemaParameter {
   /// The label to show for the off state — the custom one if set, else 'Off'.
   String get resolvedOffLabel =>
       offLabel?.trim().isNotEmpty == true ? offLabel!.trim() : defaultOffLabel;
+
+  /// Snaps [value] to the increment grid (min + k×increment) when a positive
+  /// [increment] is set, clamped to [min] / [max]; returns [value] unchanged
+  /// otherwise. Mirrors `screens.jsx` `suggestValue`.
+  double snapToIncrement(double value) {
+    final step = increment;
+    if (step == null || step <= 0) return value;
+    final lo = min ?? 0.0;
+    final snapped = lo + ((value - lo) / step).round() * step;
+    var result = double.parse(snapped.toStringAsFixed(6));
+    if (result < lo) result = lo;
+    if (max != null && result > max!) result = max!;
+    return result;
+  }
 
   bool isValid() {
     return id.isNotEmpty;

@@ -15,6 +15,7 @@ import 'package:mix_max/widgets/design/ions/text/title_text.dart';
 import 'package:mix_max/widgets/design/molecules/multi_option_adder.dart';
 import 'package:mix_max/widgets/design/molecules/param_type_picker.dart';
 import 'package:mix_max/widgets/design/molecules/quick_add_card.dart';
+import 'package:mix_max/widgets/pages/experiment_details/increment_field.dart';
 import 'package:mix_max/widgets/pages/experiment_details/toggle_field.dart';
 
 /// The "Add a parameter" / "Edit parameter" bottom drawer.
@@ -70,6 +71,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   final _unitController = TextEditingController();
   final _minController = TextEditingController();
   final _maxController = TextEditingController();
+  final _incrementController = TextEditingController();
   final _onLabelController = TextEditingController();
   final _offLabelController = TextEditingController();
 
@@ -87,6 +89,8 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     super.initState();
     _prefillFromInitial();
     _nameController.addListener(_onChanged);
+    // Keep the [IncrementField] active-pill state in sync as the step is typed.
+    _incrementController.addListener(_onChanged);
     // Keep the [ToggleField] preview in sync as custom labels are typed.
     _onLabelController.addListener(_onChanged);
     _offLabelController.addListener(_onChanged);
@@ -101,6 +105,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     _unitController.text = p.unit ?? '';
     _minController.text = _fmtBound(p.min);
     _maxController.text = _fmtBound(p.max);
+    _incrementController.text = _fmtBound(p.increment);
     _options = List.of(p.options ?? const []);
     _items = List.of(p.items ?? const []);
     _onLabelController.text = p.onLabel ?? '';
@@ -121,6 +126,9 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     _unitController.dispose();
     _minController.dispose();
     _maxController.dispose();
+    _incrementController
+      ..removeListener(_onChanged)
+      ..dispose();
     _onLabelController
       ..removeListener(_onChanged)
       ..dispose();
@@ -135,6 +143,12 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   /// number / duration carry a unit and an optional min/max range.
   bool get _isRanged =>
       _type == ParameterType.number || _type == ParameterType.duration;
+
+  /// The typed increment, or null when blank / non-positive (a smooth range).
+  double? get _parsedIncrement {
+    final v = double.tryParse(_incrementController.text.trim());
+    return (v != null && v > 0) ? v : null;
+  }
 
   bool get _canSave {
     if (_nameController.text.trim().isEmpty) return false;
@@ -153,6 +167,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
       _unitController.text = preset.unit ?? '';
       _minController.text = preset.min?.toString() ?? '';
       _maxController.text = preset.max?.toString() ?? '';
+      _incrementController.text = preset.increment?.toString() ?? '';
     });
   }
 
@@ -171,6 +186,8 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
       unit: _isRanged && unit.isNotEmpty ? unit : null,
       min: _isRanged ? double.tryParse(_minController.text.trim()) : null,
       max: _isRanged ? double.tryParse(_maxController.text.trim()) : null,
+      // Only a positive step is meaningful; anything else is a smooth range.
+      increment: _isRanged ? _parsedIncrement : null,
       options: _type == ParameterType.choice ? List.of(_options) : null,
       items: _type == ParameterType.order ? List.of(_items) : null,
       // Only persist a custom label; null falls back to the 'On'/'Off' defaults.
@@ -311,6 +328,24 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
                 const SizedBox(width: 10),
                 Expanded(child: _numberField(_maxController, 'Max')),
               ],
+            ),
+          ),
+          _subHead('Increment'),
+          _hpad(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 11),
+              child: CaptionText(
+                text:
+                    "How finely it's tuned. Set a whole number for integers only.",
+                fontSize: 12.5,
+                color: AppColors.inkFaint,
+              ),
+            ),
+          ),
+          _hpad(
+            IncrementField(
+              controller: _incrementController,
+              onChanged: (_) => _onChanged(),
             ),
           ),
         ];
@@ -515,6 +550,7 @@ class _ParamPreset {
   final String? unit;
   final num? min;
   final num? max;
+  final num? increment;
 
   const _ParamPreset({
     required this.title,
@@ -525,6 +561,7 @@ class _ParamPreset {
     this.unit,
     this.min,
     this.max,
+    this.increment,
   });
 }
 
@@ -538,6 +575,7 @@ const List<_ParamPreset> _presets = [
     unit: 'g',
     min: 0,
     max: 100,
+    increment: 1,
   ),
   _ParamPreset(
     title: 'Time',
@@ -548,6 +586,7 @@ const List<_ParamPreset> _presets = [
     unit: 'minutes',
     min: 1,
     max: 10,
+    increment: 0.5,
   ),
   _ParamPreset(
     title: 'Temperature',
@@ -558,5 +597,6 @@ const List<_ParamPreset> _presets = [
     unit: '°F',
     min: 32,
     max: 212,
+    increment: 1,
   ),
 ];

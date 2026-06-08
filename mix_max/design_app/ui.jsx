@@ -168,7 +168,7 @@ function Chip({ children, tone = 'soft', icon, onClose, style }) {
 
 // ── Small data visuals ───────────────────────────────────
 // compact range: [min] ——— [max] with optional unit
-function RangePips({ min, max, unit }) {
+function RangePips({ min, max, unit, step }) {
   const cap = (txt) => (
     <span style={{
       fontFamily: T.sans, fontWeight: 600, fontSize: 13, color: T.ink,
@@ -185,6 +185,9 @@ function RangePips({ min, max, unit }) {
       </span>
       {cap(fmt(max))}
       {unit && <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkFaint, fontWeight: 500 }}>{unit}</span>}
+      {step != null && step > 0 && (
+        <span style={{ fontFamily: T.sans, fontSize: 12, color: T.inkFaint, fontWeight: 500, whiteSpace: 'nowrap' }}>· step {fmt(step)}</span>
+      )}
     </div>
   );
 }

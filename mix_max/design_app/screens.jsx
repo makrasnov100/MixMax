@@ -10,7 +10,7 @@ function ParamValue({ p }) {
   if (p.type === 'toggle') return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
       <MiniSwitch on />
-      <span style={{ fontFamily: T.sans, fontSize: 13, color: T.inkFaint, fontWeight: 500, whiteSpace: 'nowrap' }}>on / off</span>
+      <span style={{ fontFamily: T.sans, fontSize: 13, color: T.inkFaint, fontWeight: 500, whiteSpace: 'nowrap' }}>{onLabelOf(p)} / {offLabelOf(p)}</span>
     </div>
   );
   if (p.type === 'choice') return <OptionPreview options={p.options || []} />;
@@ -46,7 +46,7 @@ function ParamRow({ p, onEdit }) {
 
 function OutcomeRow({ o, onEdit }) {
   const [press, setPress] = React.useState(false);
-  const meta = [o.unit, (o.min != null && o.max != null) ? `${fmt(o.min)}–${fmt(o.max)}` : null, o.step ? `step ${fmt(o.step)}` : null].filter(Boolean).join('  ·  ');
+  const meta = [o.unit, (o.min != null && o.max != null) ? `${fmt(o.min)}–${fmt(o.max)}` : null, o.step ? `interval ${fmt(o.step)}` : null].filter(Boolean).join('  ·  ');
   const maxi = o.goal === 'maximize';
   return (
     <button onClick={onEdit}
@@ -236,10 +236,17 @@ function suggestValue(p) {
   if (p.type === 'choice') return (p.options || ['—'])[Math.floor(Math.random() * (p.options || ['—']).length)];
   if (p.type === 'order') return p.items || [];
   const min = p.min != null ? p.min : 0, max = p.max != null ? p.max : 10;
-  return min + Math.random() * (max - min);
+  const raw = min + Math.random() * (max - min);
+  // snap to the increment grid (min + k×increment) when one is set, so the
+  // suggestion respects the chosen granularity / integers-only.
+  if (p.increment && p.increment > 0) {
+    const snapped = min + Math.round((raw - min) / p.increment) * p.increment;
+    return Math.min(Math.max(Number(snapped.toFixed(6)), min), max);
+  }
+  return raw;
 }
 function fmtSuggested(p, v) {
-  if (p.type === 'toggle') return v ? 'On' : 'Off';
+  if (p.type === 'toggle') return v ? onLabelOf(p) : offLabelOf(p);
   if (p.type === 'choice') return String(v);
   if (p.type === 'order') return (v || []).join('  →  ');
   const s = fmt(Number(v), 3);
@@ -260,6 +267,7 @@ function SuggestionCard({ p, value }) {
 
 function RunSuggestionScreen({ exp, suggestion, onBack, onRecord }) {
   const params = exp.parameters || [];
+  const tuneN = tunableRuns(exp).length;
   return (
     <Screen footer={<Btn label="Record outcomes" iconR="arrowR" variant="ink" onClick={onRecord} />}>
       <TopPad h={50} />
@@ -275,7 +283,9 @@ function RunSuggestionScreen({ exp, suggestion, onBack, onRecord }) {
       <div style={{ margin: '16px 20px 0', display: 'flex', alignItems: 'center', gap: 11, background: T.goldTint, borderRadius: 14, padding: '12px 14px' }}>
         <Icon name="spark2" size={19} color={T.gold} stroke={1.9} />
         <div style={{ fontFamily: T.sans, fontSize: 13, color: T.goldText, lineHeight: 1.4 }}>
-          Tuned from your past runs to learn the most this time.
+          {tuneN >= 2
+            ? `Tuned from your ${tuneN} most recent runs to learn the most this time.`
+            : 'Exploring new ground — record a couple of runs and Mix Max starts tuning.'}
         </div>
       </div>
 
@@ -402,7 +412,10 @@ function runScore(exp, run) {
   return count > 0 ? total / count : 0;
 }
 function bestRunId(exp) {
-  const runs = compatibleRuns(exp);
+  // Best run is crowned across ALL recorded runs, so it never resets when the
+  // parameters change — a leading mix recorded earlier stays the best until a
+  // higher-scoring run beats it.
+  const runs = recordedRuns(exp);
   if (!runs.length) return null;
   let best = null, bs = -Infinity;
   runs.forEach(r => { const s = runScore(exp, r); if (s > bs) { bs = s; best = r; } });
@@ -483,7 +496,7 @@ function SortToggle({ value, onChange }) {
   );
 }
 
-function RunHistoryCard({ exp, run, num, isBest, compatible = true, onOpen }) {
+function RunHistoryCard({ exp, run, num, isBest, onOpen }) {
   const outcomes = runOutcomeDefs(exp, run);
   const when = run.completedAt || run.createdAt;
   const score = runScore(exp, run);
@@ -510,12 +523,6 @@ function RunHistoryCard({ exp, run, num, isBest, compatible = true, onOpen }) {
           )}
           <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15.5, color: T.ink }}>{relTime(when)}</div>
           <div style={{ fontFamily: T.sans, fontSize: 12.5, color: isBest ? T.goldText : T.inkFaint, opacity: isBest ? 0.85 : 1, marginTop: 2 }}>{absStamp(when)}</div>
-          {!compatible && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 9, background: T.bgAlt, borderRadius: 999, padding: '4px 10px' }}>
-              <Icon name="info" size={12} color={T.inkFaint} stroke={2} />
-              <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 11.5, color: T.inkSoft }}>Not used in tuning</span>
-            </div>
-          )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 30, lineHeight: 1, color: isBest ? T.goldDeep : T.ink, letterSpacing: '-0.01em' }}>{fmt(score * 10, 1)}</div>
@@ -540,7 +547,6 @@ function RunHistoryScreen({ exp, onBack, onOpenRun }) {
   const chrono = [...runs].sort((a, b) => (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0));
   const numberOf = {}; chrono.forEach((r, i) => { numberOf[r.id] = i + 1; });
   const bestId = bestRunId(exp);
-  const incompatibleCount = runs.filter(r => !isCompatibleRun(exp, r)).length;
 
   const ordered = [...runs].sort((a, b) => {
     if (sort === 'rated') {
@@ -577,18 +583,8 @@ function RunHistoryScreen({ exp, onBack, onOpenRun }) {
           <div style={{ padding: '22px 20px 0' }}>
             <SortToggle value={sort} onChange={setSort} />
           </div>
-          {incompatibleCount > 0 && (
-            <div style={{ padding: '16px 20px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: T.bgAlt, borderRadius: 14, padding: '12px 14px' }}>
-                <span style={{ marginTop: 1 }}><Icon name="info" size={16} color={T.inkSoft} stroke={1.9} /></span>
-                <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>
-                  {incompatibleCount} run{incompatibleCount === 1 ? ' was' : 's were'} recorded with a different set of parameters or outcomes. {incompatibleCount === 1 ? "It's" : "They're"} still here to review, but won't tune what to try next.
-                </span>
-              </div>
-            </div>
-          )}
           <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {ordered.map(r => <RunHistoryCard key={r.id} exp={exp} run={r} num={numberOf[r.id]} isBest={r.id === bestId} compatible={isCompatibleRun(exp, r)} onOpen={() => onOpenRun(r.id)} />)}
+            {ordered.map(r => <RunHistoryCard key={r.id} exp={exp} run={r} num={numberOf[r.id]} isBest={r.id === bestId} onOpen={() => onOpenRun(r.id)} />)}
           </div>
           <div style={{ height: 18 }} />
         </React.Fragment>
@@ -680,16 +676,13 @@ function RunDetailsScreen({ exp, run, num, isBest, onBack }) {
   const ov = run.outcomeValues || {};
   const when = run.completedAt || run.createdAt;
   const score = runScore(exp, run);
-  const compatible = isCompatibleRun(exp, run);
 
   return (
     <Screen>
       <TopPad h={50} />
       <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <RoundBtn icon="arrowL" onClick={onBack} />
-        {isBest
-          ? <Chip tone="gold" icon="trophy">Best run</Chip>
-          : (!compatible && <Chip tone="soft" icon="info">Not used in tuning</Chip>)}
+        {isBest && <Chip tone="gold" icon="trophy">Best run</Chip>}
       </div>
 
       <div style={{ padding: '18px 20px 0' }}>
@@ -749,18 +742,21 @@ function recordedRuns(exp) { return (exp.runs || []).filter(r => r.outcomeValues
 function runParamDefs(exp, run) { return (run && run.params) || exp.parameters || []; }
 function runOutcomeDefs(exp, run) { return (run && run.outcomes) || exp.outcomes || []; }
 
-// a run is compatible with the CURRENT setup when it has a value for exactly
-// the current set of parameters and outcomes. Only compatible runs are used to
-// tune the next run and to crown the best mix — but every run is still shown.
-function isCompatibleRun(exp, run) {
-  const ids = arr => (arr || []).map(x => x.id).sort().join('|');
-  const keys = obj => Object.keys(obj || {}).sort().join('|');
-  return ids(exp.parameters) === keys(run.parameterValues) && ids(exp.outcomes) === keys(run.outcomeValues);
+// a run only tunes the next suggested run when it was recorded AFTER the
+// parameters were last changed — decided purely by timestamp, not a per-run
+// parameter/outcome compatibility check. A null stamp means the parameters were
+// never edited, so every run still tunes. (Every run is shown either way; this
+// only governs what the optimizer learns from.)
+function isRunTunable(exp, run) {
+  const updated = exp.lastParametersUpdatedAt;
+  if (updated == null) return true;
+  const when = run.createdAt != null ? run.createdAt : (run.completedAt || 0);
+  return when >= updated;
 }
-function compatibleRuns(exp) { return recordedRuns(exp).filter(r => isCompatibleRun(exp, r)); }
+function tunableRuns(exp) { return recordedRuns(exp).filter(r => isRunTunable(exp, r)); }
 
 function bestOutcomeLabel(exp) {
-  const runs = compatibleRuns(exp);
+  const runs = recordedRuns(exp);
   const outcomes = exp.outcomes || [];
   if (runs.length === 0 || outcomes.length === 0) return null;
   // score = sum of normalized outcomes (respecting goal); pick best run
@@ -783,5 +779,5 @@ function bestOutcomeLabel(exp) {
 Object.assign(window, {
   ExperimentsListScreen, ExperimentDetailsScreen, RunSuggestionScreen, RatingScreen,
   RunHistoryScreen, RunDetailsScreen, RunsPill, suggestValue, bestOutcomeLabel, runScore, bestRunId,
-  recordedRuns, compatibleRuns, isCompatibleRun, runParamDefs, runOutcomeDefs,
+  recordedRuns, tunableRuns, isRunTunable, runParamDefs, runOutcomeDefs,
 });

@@ -198,7 +198,9 @@ class BayesianOptimizationService {
           final v = features[cursor++].clamp(0.0, 1.0);
           final lo = param.min ?? 0.0;
           final hi = param.max ?? 1.0;
-          result[param.id] = lo + v * (hi - lo);
+          // Snap to the parameter's increment grid so the suggestion respects
+          // its chosen granularity / integers-only.
+          result[param.id] = param.snapToIncrement(lo + v * (hi - lo));
 
         case ParameterType.toggle:
           result[param.id] = features[cursor++] >= 0.5;
@@ -266,7 +268,8 @@ class BayesianOptimizationService {
         case ParameterType.duration:
           final lo = param.min ?? 0.0;
           final hi = param.max ?? 1.0;
-          result[param.id] = lo + rng.nextDouble() * (hi - lo);
+          result[param.id] =
+              param.snapToIncrement(lo + rng.nextDouble() * (hi - lo));
 
         case ParameterType.toggle:
           result[param.id] = rng.nextBool();

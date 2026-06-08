@@ -71,4 +71,15 @@ function fmt(v, dp) {
   return r === Math.trunc(r) ? String(Math.trunc(r)) : String(r);
 }
 
-Object.assign(window, { T, CARD_SHADOW, BTN_SHADOW, PARAM_TYPES, fmt });
+// toggle-state labels: the parameter's custom on/off labels, falling back to
+// the 'On' / 'Off' defaults when none is set.
+function onLabelOf(p) {
+  const v = p && p.onLabel != null ? String(p.onLabel).trim() : '';
+  return v || 'On';
+}
+function offLabelOf(p) {
+  const v = p && p.offLabel != null ? String(p.offLabel).trim() : '';
+  return v || 'Off';
+}
+
+Object.assign(window, { T, CARD_SHADOW, BTN_SHADOW, PARAM_TYPES, fmt, onLabelOf, offLabelOf });
