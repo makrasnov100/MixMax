@@ -19,7 +19,7 @@ import 'package:mix_max/widgets/design/molecules/segmented.dart';
 /// Composed from the design system: the [MixMaxDrawerContainer] shell, a centered
 /// serif header, a violet "Quick add" row of [MixMaxQuickAddCard] presets, a name
 /// [MixMaxTextInput], a [MixMaxSegmented] goal selector (Minimize / Maximize), a
-/// two-column min/max scale, a unit + step row, and a pinned ink "Save outcome"
+/// two-column min/max scale, a unit + increment row, and a pinned ink "Save outcome"
 /// footer that stays disabled until a name is entered.
 ///
 /// Present it with `showModalBottomSheet(backgroundColor: transparent,
@@ -40,10 +40,10 @@ class AddOutputDrawer extends StatefulWidget {
 class _AddOutputDrawerState extends State<AddOutputDrawer> {
   final _nameController = TextEditingController();
   final _unitController = TextEditingController();
-  // Seed the scale with the design's defaults (a 1–10, step-1 scale).
+  // Seed the scale with the design's defaults (a 1–10, increment-1 scale).
   final _minController = TextEditingController(text: '1');
   final _maxController = TextEditingController(text: '10');
-  final _stepController = TextEditingController(text: '1');
+  final _incrementController = TextEditingController(text: '1');
 
   OutcomeGoal _goal = OutcomeGoal.maximize;
 
@@ -61,7 +61,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
     _unitController.dispose();
     _minController.dispose();
     _maxController.dispose();
-    _stepController.dispose();
+    _incrementController.dispose();
     super.dispose();
   }
 
@@ -77,14 +77,14 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
       _goal = preset.goal;
       _minController.text = preset.min.toString();
       _maxController.text = preset.max.toString();
-      _stepController.text = preset.step.toString();
+      _incrementController.text = preset.increment.toString();
     });
   }
 
   void _save() {
     if (!_canSave) return;
     final unit = _unitController.text.trim();
-    final step = double.tryParse(_stepController.text.trim());
+    final increment = double.tryParse(_incrementController.text.trim());
 
     final outcome = SchemaOutcome(
       id: DatabaseService.experimentsRef.doc().id,
@@ -92,8 +92,8 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
       unit: unit.isEmpty ? null : unit,
       min: double.tryParse(_minController.text.trim()),
       max: double.tryParse(_maxController.text.trim()),
-      // Default to a step of 1 when blank or non-positive.
-      step: (step != null && step > 0) ? step : 1.0,
+      // Default to an increment of 1 when blank or non-positive.
+      step: (increment != null && increment > 0) ? increment : 1.0,
       goal: _goal,
     );
 
@@ -202,7 +202,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Expanded(child: _numberField(_stepController, 'Step')),
+                Expanded(child: _numberField(_incrementController, 'Increment')),
               ],
             ),
           ),
@@ -285,7 +285,7 @@ class _OutcomePreset {
   final String? unit;
   final num min;
   final num max;
-  final num step;
+  final num increment;
   final OutcomeGoal goal;
 
   const _OutcomePreset({
@@ -295,7 +295,7 @@ class _OutcomePreset {
     this.unit,
     required this.min,
     required this.max,
-    required this.step,
+    required this.increment,
     required this.goal,
   });
 }
@@ -307,7 +307,7 @@ const List<_OutcomePreset> _presets = [
     glyph: MixMaxGlyph.spark2,
     min: 1,
     max: 10,
-    step: 1,
+    increment: 1,
     goal: OutcomeGoal.maximize,
   ),
   _OutcomePreset(
@@ -316,7 +316,7 @@ const List<_OutcomePreset> _presets = [
     glyph: MixMaxGlyph.trophy,
     min: 1,
     max: 5,
-    step: 1,
+    increment: 1,
     goal: OutcomeGoal.maximize,
   ),
   _OutcomePreset(
@@ -326,7 +326,7 @@ const List<_OutcomePreset> _presets = [
     unit: '%',
     min: 0,
     max: 100,
-    step: 1,
+    increment: 1,
     goal: OutcomeGoal.maximize,
   ),
   _OutcomePreset(
@@ -336,7 +336,7 @@ const List<_OutcomePreset> _presets = [
     unit: 'min',
     min: 0,
     max: 60,
-    step: 1,
+    increment: 1,
     goal: OutcomeGoal.minimize,
   ),
 ];

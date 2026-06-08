@@ -86,7 +86,10 @@ class _SuggestedValue extends StatelessWidget {
           children: [
             MiniSwitch(on: on),
             const SizedBox(width: 11),
-            DisplayText(text: on ? 'On' : 'Off', fontSize: 22),
+            DisplayText(
+              text: on ? parameter.resolvedOnLabel : parameter.resolvedOffLabel,
+              fontSize: 22,
+            ),
           ],
         );
 

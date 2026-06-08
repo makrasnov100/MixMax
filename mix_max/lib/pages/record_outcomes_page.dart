@@ -199,17 +199,17 @@ class _RecordingViewState extends State<_RecordingView> {
   double get _sliderMin => _outcome.min ?? 0.0;
   double get _sliderMax => _outcome.max ?? 1.0;
 
-  double get _step {
+  double get _increment {
     final raw = _outcome.step;
     if (raw == null || raw <= 0) return 1.0;
     return raw;
   }
 
-  double _snapToStep(double v) {
+  double _snapToIncrement(double v) {
     final range = _sliderMax - _sliderMin;
     if (range <= 0) return _sliderMin;
-    final steps = ((v - _sliderMin) / _step).round();
-    final snapped = _sliderMin + steps * _step;
+    final increments = ((v - _sliderMin) / _increment).round();
+    final snapped = _sliderMin + increments * _increment;
     return snapped.clamp(_sliderMin, _sliderMax);
   }
 
@@ -232,7 +232,7 @@ class _RecordingViewState extends State<_RecordingView> {
     if (_hasBounds) {
       final mid = (_sliderMin + _sliderMax) / 2;
       final raw = (initial ?? mid).clamp(_sliderMin, _sliderMax);
-      _sliderValue = _snapToStep(raw);
+      _sliderValue = _snapToIncrement(raw);
     } else {
       _sliderValue = _sliderMin;
     }
@@ -251,7 +251,7 @@ class _RecordingViewState extends State<_RecordingView> {
     if (_hasBounds) {
       // The slider always holds a valid value (it opens at the midpoint), so a
       // bounded outcome is submittable as-is — no need to drag it first.
-      widget.onSubmit(_outcome, _snapToStep(_sliderValue));
+      widget.onSubmit(_outcome, _snapToIncrement(_sliderValue));
       return;
     }
 
@@ -332,9 +332,9 @@ class _RecordingViewState extends State<_RecordingView> {
                   value: _sliderValue,
                   min: _sliderMin,
                   max: _sliderMax,
-                  step: _step,
+                  increment: _increment,
                   onChanged: (v) {
-                    setState(() => _sliderValue = _snapToStep(v));
+                    setState(() => _sliderValue = _snapToIncrement(v));
                   },
                 ),
               ] else

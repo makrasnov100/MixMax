@@ -8,15 +8,15 @@ import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 /// rating slider as it appears on the outcome screen.
 ///
 /// Source: `screens.jsx` `SliderRow`. Below the track sit the formatted [min]
-/// and [max] at the two ends. Snapping follows [step]: the slider divides the
-/// range into `(max - min) / step` evenly spaced stops.
+/// and [max] at the two ends. Snapping follows [increment]: the slider divides
+/// the range into `(max - min) / increment` evenly spaced stops.
 class MixMaxSliderField extends StatelessWidget {
   final double value;
   final double min;
   final double max;
 
   /// Increment the thumb snaps to. Non-positive values fall back to 1.
-  final double step;
+  final double increment;
 
   final ValueChanged<double>? onChanged;
 
@@ -25,14 +25,14 @@ class MixMaxSliderField extends StatelessWidget {
     required this.value,
     required this.min,
     required this.max,
-    this.step = 1,
+    this.increment = 1,
     this.onChanged,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final range = max - min;
-    final s = step > 0 ? step : 1.0;
+    final s = increment > 0 ? increment : 1.0;
     final divisions = range > 0 ? (range / s).round().clamp(1, 10000) : null;
 
     return Column(

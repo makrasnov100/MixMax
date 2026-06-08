@@ -20,6 +20,11 @@ class SchemaParameter {
   // order
   List<String>? items;
 
+  // toggle — custom names for the on / off states. Null means use the
+  // [defaultOnLabel] / [defaultOffLabel] fallbacks.
+  String? onLabel;
+  String? offLabel;
+
   SchemaParameter({
     required this.id,
     this.name,
@@ -29,6 +34,8 @@ class SchemaParameter {
     this.max,
     this.options,
     this.items,
+    this.onLabel,
+    this.offLabel,
   });
 
   SchemaParameter.unknown({
@@ -40,7 +47,21 @@ class SchemaParameter {
     this.max,
     this.options,
     this.items,
+    this.onLabel,
+    this.offLabel,
   });
+
+  /// Fallbacks shown when no custom toggle label is set.
+  static const String defaultOnLabel = 'On';
+  static const String defaultOffLabel = 'Off';
+
+  /// The label to show for the on state — the custom one if set, else 'On'.
+  String get resolvedOnLabel =>
+      onLabel?.trim().isNotEmpty == true ? onLabel!.trim() : defaultOnLabel;
+
+  /// The label to show for the off state — the custom one if set, else 'Off'.
+  String get resolvedOffLabel =>
+      offLabel?.trim().isNotEmpty == true ? offLabel!.trim() : defaultOffLabel;
 
   bool isValid() {
     return id.isNotEmpty;

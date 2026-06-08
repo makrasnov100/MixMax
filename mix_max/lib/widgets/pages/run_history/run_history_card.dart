@@ -367,7 +367,7 @@ class _OutcomeValueChip extends StatelessWidget {
 String _formatParamValue(SchemaParameter p, dynamic v) {
   switch (p.type) {
     case ParameterType.toggle:
-      return v == true ? 'On' : 'Off';
+      return v == true ? p.resolvedOnLabel : p.resolvedOffLabel;
     case ParameterType.choice:
       return v.toString();
     case ParameterType.order:

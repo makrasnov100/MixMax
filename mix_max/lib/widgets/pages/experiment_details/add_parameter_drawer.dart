@@ -31,6 +31,9 @@ import 'package:mix_max/widgets/pages/experiment_details/toggle_field.dart';
 class AddParameterDrawer extends StatefulWidget {
   static const int maxNameLength = 50;
 
+  /// Cap for a custom toggle state label (e.g. "Decaf" / "Regular").
+  static const int maxToggleLabelLength = 24;
+
   /// Called with the assembled parameter when the user saves.
   final ValueChanged<SchemaParameter> onSave;
 
@@ -45,19 +48,23 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   final _unitController = TextEditingController();
   final _minController = TextEditingController();
   final _maxController = TextEditingController();
+  final _onLabelController = TextEditingController();
+  final _offLabelController = TextEditingController();
 
   ParameterType _type = ParameterType.number;
   List<String> _options = [];
   List<String> _items = [];
 
-  // The toggle's default state. There's no schema field for it yet, so it
-  // drives only the live preview in the [ToggleField] and isn't persisted.
+  // The toggle's default state — drives the live preview in the [ToggleField].
   bool _toggleOn = true;
 
   @override
   void initState() {
     super.initState();
     _nameController.addListener(_onChanged);
+    // Keep the [ToggleField] preview in sync as custom labels are typed.
+    _onLabelController.addListener(_onChanged);
+    _offLabelController.addListener(_onChanged);
   }
 
   @override
@@ -68,6 +75,12 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     _unitController.dispose();
     _minController.dispose();
     _maxController.dispose();
+    _onLabelController
+      ..removeListener(_onChanged)
+      ..dispose();
+    _offLabelController
+      ..removeListener(_onChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -101,6 +114,9 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     if (!_canSave) return;
     final name = _nameController.text.trim();
     final unit = _unitController.text.trim();
+    final isToggle = _type == ParameterType.toggle;
+    final onLabel = _onLabelController.text.trim();
+    final offLabel = _offLabelController.text.trim();
 
     final parameter = SchemaParameter(
       id: DatabaseService.experimentsRef.doc().id,
@@ -111,6 +127,9 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
       max: _isRanged ? double.tryParse(_maxController.text.trim()) : null,
       options: _type == ParameterType.choice ? List.of(_options) : null,
       items: _type == ParameterType.order ? List.of(_items) : null,
+      // Only persist a custom label; null falls back to the 'On'/'Off' defaults.
+      onLabel: isToggle && onLabel.isNotEmpty ? onLabel : null,
+      offLabel: isToggle && offLabel.isNotEmpty ? offLabel : null,
     );
 
     widget.onSave(parameter);
@@ -244,12 +263,31 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
         ];
 
       case ParameterType.toggle:
+        final onLabel = _onLabelController.text.trim();
+        final offLabel = _offLabelController.text.trim();
         return [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: ToggleField(
               value: _toggleOn,
               onChanged: (v) => setState(() => _toggleOn = v),
+              onLabel:
+                  onLabel.isNotEmpty ? onLabel : SchemaParameter.defaultOnLabel,
+              offLabel: offLabel.isNotEmpty
+                  ? offLabel
+                  : SchemaParameter.defaultOffLabel,
+            ),
+          ),
+
+          _subHead('State labels (optional)'),
+          _hpad(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _labelField(_onLabelController, 'On')),
+                const SizedBox(width: 10),
+                Expanded(child: _labelField(_offLabelController, 'Off')),
+              ],
             ),
           ),
         ];
@@ -278,6 +316,17 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
           ),
         ];
     }
+  }
+
+  // A custom toggle-state label input. The placeholder shows the default that
+  // applies when left blank ('On' / 'Off').
+  Widget _labelField(TextEditingController controller, String placeholder) {
+    return MixMaxTextInput(
+      controller: controller,
+      placeholder: placeholder,
+      maxLength: AddParameterDrawer.maxToggleLabelLength,
+      keyboardType: TextInputType.text,
+    );
   }
 
   Widget _numberField(TextEditingController controller, String placeholder) {

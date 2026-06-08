@@ -8,7 +8,7 @@ import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/label_text.dart';
 
 /// One outcome row on the Experiment Details page — a violet target glyph, the
-/// outcome's name, a meta line of its range/step, and a goal chip.
+/// outcome's name, a meta line of its range/increment, and a goal chip.
 ///
 /// Source: `screens.jsx` `OutcomeRow`. Like [ParameterDisplay] it is built to
 /// live inside its group card ([OutcomeListCard]) and so carries only the
@@ -60,14 +60,14 @@ class OutcomeDisplay extends StatelessWidget {
     );
   }
 
-  /// `unit · min–max · step N`, dropping any part that isn't set. Mirrors the
-  /// JS `[unit, min–max, step].filter(Boolean).join('  ·  ')`.
+  /// `unit · min–max · increment N`, dropping any part that isn't set. Mirrors
+  /// the JS `[unit, min–max, increment].filter(Boolean).join('  ·  ')`.
   String _metaLabel(SchemaOutcome o) {
     final parts = <String>[
       if (o.unit?.isNotEmpty == true) o.unit!,
       if (o.min != null && o.max != null)
         '${MixMaxFormat.number(o.min)}–${MixMaxFormat.number(o.max)}',
-      if (o.step != null) 'step ${MixMaxFormat.number(o.step)}',
+      if (o.step != null) 'increment ${MixMaxFormat.number(o.step)}',
     ];
     return parts.join('  ·  ');
   }

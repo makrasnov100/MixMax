@@ -6,21 +6,31 @@ Add general todo items here and plan out prompts as needed
 - Creating a parameter & output
   - when changing anything but name state that the runs will become outdated and best run will be reset
 
-- check step is supported? any better way to represent it?
-- Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
+- design and implement a way to implment increments in numeric parameters
+- allow to press run expirment but highlight in red if parameers or outcomes are missing
+
+- off/on label inputs
+- rename step in outcome to increments
 
 - weighted outcome priority (pie chart?)
 
-- Sharing functionality, image generated with my best combo.
+- Sharing functionality
+  - in expirement menu
+  - in expirement details next to best run
+  - in run details
 
-- boarding, show a user a sample use case step by step
+- Onboarding, show a user a sample use case step by step
   - create expirement
-  - add parameters
-  - create runs
-  - find the best parameters
+  - added parameters
+  - run list 
+  - best run 
+
+- top bar to be sticky when draging down?
 
 - experiment runs as paid feature with x amount of free runs per account (10)
 - ability to pay for lifetime subscription
+
+- Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
 --- Publishing ---
 

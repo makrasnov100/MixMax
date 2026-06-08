@@ -80,10 +80,13 @@ class _ParameterValue extends StatelessWidget {
       case ParameterType.toggle:
         return Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            MiniSwitch(on: true),
-            SizedBox(width: 9),
-            CaptionText(text: 'on / off', color: AppColors.inkFaint),
+          children: [
+            const MiniSwitch(on: true),
+            const SizedBox(width: 9),
+            CaptionText(
+              text: '${p.resolvedOnLabel} / ${p.resolvedOffLabel}',
+              color: AppColors.inkFaint,
+            ),
           ],
         );
 
