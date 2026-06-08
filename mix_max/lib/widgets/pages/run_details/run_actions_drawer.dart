@@ -10,16 +10,20 @@ import 'package:mix_max/widgets/design/molecules/action_row.dart';
 ///
 /// Source: `design_app/drawers.jsx` `RunActionsDrawer` (+ `DrawerShell`): a
 /// [MixMaxDrawerContainer] surface with a centered serif title ("Run N") and
-/// soft subtitle, then the violet "Rescore run" and danger "Delete run"
-/// [MixMaxActionRow]s.
+/// soft subtitle, then the gold "Share run", violet "Rescore run" and danger
+/// "Delete run" [MixMaxActionRow]s.
 ///
 /// Present it with `showModalBottomSheet(backgroundColor: transparent,
-/// isScrollControlled: true)`. The drawer pops itself before invoking [onRescore]
-/// or [onDelete] so the caller can immediately open the follow-up flow.
+/// isScrollControlled: true)`. The drawer pops itself before invoking [onShare],
+/// [onRescore] or [onDelete] so the caller can immediately open the follow-up
+/// flow.
 class RunActionsDrawer extends StatelessWidget {
   /// The run's chronological number, shown as the drawer title. Null falls back
   /// to "this run" when the caller doesn't know the position.
   final int? number;
+
+  /// Opens the share flow (renders the run as a shareable image).
+  final VoidCallback onShare;
 
   /// Opens the rescore flow.
   final VoidCallback onRescore;
@@ -30,6 +34,7 @@ class RunActionsDrawer extends StatelessWidget {
   const RunActionsDrawer({
     super.key,
     required this.number,
+    required this.onShare,
     required this.onRescore,
     required this.onDelete,
   });
@@ -68,6 +73,17 @@ class RunActionsDrawer extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                MixMaxActionRow(
+                  glyph: MixMaxGlyph.share,
+                  tone: MixMaxTileTone.gold,
+                  label: 'Share run',
+                  sublabel: 'Save its mix & ratings as an image',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onShare();
+                  },
+                ),
+                const SizedBox(height: 10),
                 MixMaxActionRow(
                   glyph: MixMaxGlyph.target,
                   tone: MixMaxTileTone.violet,

@@ -26,6 +26,7 @@ import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart'
 import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/rename_experiment_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/runs_pill.dart';
+import 'package:mix_max/widgets/pages/share/share_run_launcher.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
 
@@ -78,9 +79,23 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
       builder:
           (_) => ExperimentActionsDrawer(
             experimentName: _experiment.name,
+            canShareBest: _experiment.bestRun != null,
+            onShareBest: _shareBestRun,
             onRename: _showRenameDrawer,
             onDelete: _showConfirmDeleteDrawer,
           ),
+    );
+  }
+
+  /// Captures the experiment's cached best run as a shareable image and opens
+  /// the native share sheet. Only invoked when a best run exists.
+  void _shareBestRun() {
+    final best = _experiment.bestRun;
+    if (best == null) return;
+    RunShareLauncher.launch(
+      context: context,
+      experiment: _experiment,
+      run: best,
     );
   }
 

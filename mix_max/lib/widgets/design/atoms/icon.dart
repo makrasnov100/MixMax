@@ -39,6 +39,7 @@ enum MixMaxGlyph {
   more,
   alert,
   lock,
+  share,
 }
 
 /// Asset basename per glyph. Kept explicit (rather than derived from `.name`)
@@ -76,6 +77,7 @@ const Map<MixMaxGlyph, String> _glyphAsset = {
   MixMaxGlyph.more: 'more',
   MixMaxGlyph.alert: 'alert',
   MixMaxGlyph.lock: 'lock',
+  MixMaxGlyph.share: 'share',
 };
 
 /// A single line icon, sized square and tinted to one color.

@@ -11,17 +11,19 @@
   - run list 
   - best run 
 
-- experiment runs as paid feature with x amount of free runs per account (10)
-- ability to pay for lifetime subscription
-
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
 --- Publishing ---
 
-- Simple icon, Simple screnshots, simple ASO, simple listings, simple website additions
+- Simple icon, Simple screnshots, simple ASO, simple listings,
+- privacy policy and terms of use on main ebsite, simple site no downnlaod links
 - Attempt to publish on both stores (paid app)
 
 --- Updates ---
+- experiment runs as paid feature with x amount of free runs per account (10)
+- ability to pay for lifetime access or buy packs of runs as one time puchase
+- local saving of the results (sembast or other)
+- sign in to save results
 - weighted outcome priority (pie chart?)
 - better usage of previous runs after a parameter was updated
 - editing suggested paramers befre recording updates

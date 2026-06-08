@@ -39,6 +39,12 @@ dependencies:
   http: ^1.2.0
   url_launcher: ^6.3.1
   package_info_plus: ^8.1.4
+  screenshot: ^3.0.0
+  # Pinned below 12: share_plus 12+ bundles androidx.core 1.16.0 which demands
+  # Android Gradle plugin 8.6+, while this project is on AGP 8.3. 11.x keeps the
+  # same SharePlus.instance.share(ShareParams) API on androidx.core 1.13.1.
+  share_plus: ">=11.0.0 <12.0.0"
+  path_provider: ^2.1.5
 
   ### [App Specific] ###
   # NOTE: add unique packages here (categorize by main feature)

@@ -1,0 +1,134 @@
+/* ── Mix Max — Share Card ("Quiet Instrument") ───────────── */
+:root{
+  --bg:#FBF7F0; --bgAlt:#F4EEE3; --surface:#FFFFFF; --surfaceSoft:#FBF8F2;
+  --ink:#221F2A; --inkSoft:#6E6A75; --inkFaint:#A9A4AE;
+  --hairline:#ECE6DA; --hairlineStrong:#E0D9CB;
+  --gold:#B5872B; --goldDeep:#8A6519; --goldTint:#F4EBD4; --goldText:#7C5C16;
+  --sage:#6E8A63; --sageTint:#E9EFE3; --sageText:#4C6743;
+  --violet:#7E719A; --violetTint:#ECE7F2; --violetText:#5A4E78;
+  --serif:"Newsreader", Georgia, serif;
+  --sans:"Schibsted Grotesk", system-ui, sans-serif;
+}
+
+/* ── the shareable image ──────────────────────────────── */
+.mmcard{
+  width:436px;
+  background:var(--surface);
+  border:1px solid var(--hairline);
+  border-radius:28px;
+  box-shadow:0 1px 2px rgba(34,31,42,0.05), 0 40px 80px -36px rgba(34,31,42,0.40);
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  position:relative;
+  font-family:var(--sans);
+}
+/* faint signature watermark in the corner */
+.mmcard::after{
+  content:""; position:absolute; right:-60px; top:-60px;
+  width:220px; height:220px; border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, rgba(181,135,43,0.07), rgba(181,135,43,0) 70%);
+  pointer-events:none;
+}
+
+.mmcard .pad{ padding:0 30px; }
+.mmcard .eyebrow{ font-family:var(--sans); font-weight:600; font-size:11.5px; letter-spacing:0.14em; text-transform:uppercase; }
+
+/* top band */
+.mmcard .head{ display:flex; align-items:center; justify-content:space-between; padding-top:28px; }
+.mmcard .badge{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--gold); border-radius:999px; padding:5px 12px 5px 10px;
+}
+.mmcard .badge span{ font-family:var(--sans); font-weight:700; font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; color:#fff; white-space:nowrap; }
+.mmcard .badge.neutral{ background:var(--bgAlt); }
+.mmcard .badge.neutral span{ color:var(--inkSoft); }
+.mmcard .title{ font-family:var(--serif); font-weight:500; font-size:48px; line-height:1.0; letter-spacing:-0.02em; color:var(--ink); margin:16px 0 0; }
+
+/* rating panel — number + label only (compact) */
+.mmcard .rating{
+  margin:22px 30px 0; background:var(--goldTint); border-radius:20px;
+  padding:16px 24px; display:flex; align-items:center; gap:18px;
+}
+.mmcard .ratingNum{ font-family:var(--serif); font-weight:500; font-size:62px; line-height:0.86; letter-spacing:-0.02em; color:var(--goldDeep); }
+.mmcard .ratingNum em{ font-style:normal; font-size:25px; color:var(--goldText); margin-left:2px; }
+.mmcard .ratingLabel{ display:flex; flex-direction:column; gap:5px; }
+.mmcard .ratingLabel .star{ display:flex; align-items:center; gap:6px; font-family:var(--sans); font-size:11.5px; font-weight:600; color:var(--goldText); white-space:nowrap; }
+
+/* section label */
+.mmcard .section{ display:flex; align-items:baseline; gap:9px; }
+.mmcard .section .lbl{ font-family:var(--serif); font-style:italic; font-weight:500; font-size:21px; color:var(--ink); white-space:nowrap; }
+.mmcard .section .cnt{ font-family:var(--sans); font-size:13px; font-weight:600; color:var(--inkFaint); }
+.mmcard .sub{ font-family:var(--sans); font-size:12.5px; color:var(--inkSoft); margin-top:3px; }
+
+/* ── parameter grid — compact two-column chips ─────────── */
+.mmcard .mixgrid{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;
+}
+.mmcard .pchip{
+  background:var(--surfaceSoft); border:1px solid var(--hairline); border-radius:13px;
+  padding:11px 14px; min-width:0; display:flex; flex-direction:column;
+}
+.mmcard .pchip.span2{ grid-column:1 / -1; }
+.mmcard .pchip .ptop{ display:flex; align-items:center; gap:8px; }
+.mmcard .pchip .pic{
+  width:24px; height:24px; border-radius:8px; background:var(--sageTint);
+  flex-shrink:0; display:flex; align-items:center; justify-content:center;
+}
+.mmcard .pchip .pname{
+  flex:1 1 auto; min-width:0;
+  font-family:var(--sans); font-size:12px; font-weight:600; color:var(--inkSoft);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  letter-spacing:0.005em;
+}
+.mmcard .pchip .pval{
+  font-family:var(--serif); font-weight:500; font-size:21px; line-height:1.1;
+  letter-spacing:-0.01em; color:var(--ink); margin-top:8px;
+  overflow:hidden; text-overflow:ellipsis;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+.mmcard .pchip .pval u{ text-decoration:none; font-family:var(--sans); font-size:11.5px; font-weight:500; color:var(--inkSoft); margin-left:3px; }
+
+/* ── parameter list — ultra-compact, used for 5+ parameters ─ */
+.mmcard .mixlist{
+  display:grid; grid-template-columns:1fr 1fr;
+  column-gap:28px; margin-top:12px;
+}
+.mmcard .lrow{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 0; border-top:1px solid var(--hairline); min-width:0;
+}
+.mmcard .lrow .lic{
+  width:19px; height:19px; border-radius:6px; background:var(--sageTint);
+  flex-shrink:0; display:flex; align-items:center; justify-content:center;
+}
+.mmcard .lrow .ln{
+  flex:1 1 auto; min-width:0;
+  font-family:var(--sans); font-size:13px; font-weight:600; color:var(--inkSoft);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.mmcard .lrow .lv{
+  flex-shrink:0; max-width:52%;
+  font-family:var(--serif); font-weight:500; font-size:16.5px; letter-spacing:-0.01em; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.mmcard .lrow .lv u{ text-decoration:none; font-family:var(--sans); font-size:10.5px; font-weight:500; color:var(--inkSoft); margin-left:2px; }
+
+/* outcome rows */
+.mmcard .orows{ display:flex; flex-direction:column; gap:13px; margin-top:15px; }
+.mmcard .orow{ display:flex; align-items:center; gap:14px; }
+.mmcard .oname{ width:104px; flex-shrink:0; font-family:var(--sans); font-weight:600; font-size:15px; color:var(--ink); }
+.mmcard .otrack{ flex:1; height:9px; border-radius:999px; background:var(--violetTint); overflow:hidden; }
+.mmcard .otrack > i{ display:block; height:100%; border-radius:999px; background:var(--violet); }
+.mmcard .oval{ flex-shrink:0; min-width:52px; text-align:right; font-family:var(--sans); }
+.mmcard .oval b{ font-weight:700; font-size:16px; color:var(--violetText); }
+.mmcard .oval s{ text-decoration:none; font-weight:500; font-size:12px; color:var(--inkFaint); }
+
+/* footer */
+.mmcard .foot{
+  margin:26px 0 0; padding:18px 30px 24px; border-top:1px solid var(--hairline);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.mmcard .foot .left{ display:flex; align-items:center; gap:9px; }
+.mmcard .foot .wd{ font-family:var(--sans); font-size:13px; color:var(--inkSoft); }
+.mmcard .foot .brand{ font-family:var(--sans); font-weight:600; font-size:13px; color:var(--ink); letter-spacing:0.01em; white-space:nowrap; flex-shrink:0; padding-left:14px; }
+.mmcard .foot .brand b{ color:var(--gold); }

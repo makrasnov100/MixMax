@@ -10,15 +10,25 @@ import 'package:mix_max/widgets/design/molecules/action_row.dart';
 ///
 /// Source: `design_app/drawers.jsx` `ExperimentActionsDrawer` (+ `DrawerShell`):
 /// a [MixMaxDrawerContainer] surface with a centered serif title (the
-/// experiment name) and soft subtitle, then a stack of [_ActionRow]s — "Rename
+/// experiment name) and soft subtitle, then a stack of [MixMaxActionRow]s — an
+/// optional gold "Share best run" (shown when [canShareBest]), "Rename
 /// experiment" and the danger-toned "Delete experiment".
 ///
 /// Present it with `showModalBottomSheet(backgroundColor: transparent,
-/// isScrollControlled: true)`. The drawer pops itself before invoking [onRename]
-/// or [onDelete] so the caller can immediately open the follow-up drawer.
+/// isScrollControlled: true)`. The drawer pops itself before invoking
+/// [onShareBest], [onRename] or [onDelete] so the caller can immediately open
+/// the follow-up drawer.
 class ExperimentActionsDrawer extends StatelessWidget {
   /// The experiment name, shown as the drawer title.
   final String? experimentName;
+
+  /// Whether the experiment has a best run to share. Shows the "Share best run"
+  /// row only when a winning run exists (mirrors the design's `hasRuns` check).
+  final bool canShareBest;
+
+  /// Opens the share flow for the experiment's best run. Only reachable when
+  /// [canShareBest] is true.
+  final VoidCallback onShareBest;
 
   /// Opens the rename flow.
   final VoidCallback onRename;
@@ -29,6 +39,8 @@ class ExperimentActionsDrawer extends StatelessWidget {
   const ExperimentActionsDrawer({
     super.key,
     required this.experimentName,
+    this.canShareBest = false,
+    required this.onShareBest,
     required this.onRename,
     required this.onDelete,
   });
@@ -71,6 +83,19 @@ class ExperimentActionsDrawer extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (canShareBest) ...[
+                  MixMaxActionRow(
+                    glyph: MixMaxGlyph.share,
+                    tone: MixMaxTileTone.gold,
+                    label: 'Share best run',
+                    sublabel: 'Save its mix & ratings as an image',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onShareBest();
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 MixMaxActionRow(
                   glyph: MixMaxGlyph.edit,
                   tone: MixMaxTileTone.neutral,

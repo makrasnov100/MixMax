@@ -17,6 +17,7 @@ import 'package:mix_max/widgets/pages/run_details/confirm_delete_run_drawer.dart
 import 'package:mix_max/widgets/pages/run_details/rating_breakdown_card.dart';
 import 'package:mix_max/widgets/pages/run_details/run_actions_drawer.dart';
 import 'package:mix_max/widgets/pages/run_details/run_overall_rating_card.dart';
+import 'package:mix_max/widgets/pages/share/share_run_launcher.dart';
 import 'package:mix_max/widgets/pages/suggested_run/suggestion_card.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
@@ -76,11 +77,22 @@ class _RunDetailsPageState extends State<RunDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => RunActionsDrawer(
-        number: widget.number,
-        onRescore: _rescore,
-        onDelete: _showConfirmDelete,
-      ),
+      builder:
+          (_) => RunActionsDrawer(
+            number: widget.number,
+            onShare: _share,
+            onRescore: _rescore,
+            onDelete: _showConfirmDelete,
+          ),
+    );
+  }
+
+  /// Captures this run as a shareable image and opens the native share sheet.
+  void _share() {
+    RunShareLauncher.launch(
+      context: context,
+      experiment: _experiment,
+      run: _run,
     );
   }
 
@@ -106,13 +118,14 @@ class _RunDetailsPageState extends State<RunDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => ConfirmDeleteRunDrawer(
-        experiment: _experiment,
-        run: _run,
-        number: widget.number,
-        isBest: _isBest,
-        onConfirm: _delete,
-      ),
+      builder:
+          (_) => ConfirmDeleteRunDrawer(
+            experiment: _experiment,
+            run: _run,
+            number: widget.number,
+            isBest: _isBest,
+            onConfirm: _delete,
+          ),
     );
   }
 
@@ -249,9 +262,10 @@ class _RunDetailsPageState extends State<RunDetailsPage> {
   /// just the relative time when no number is available.
   String _eyebrow(int? when) {
     final rel = MixMaxTimeFormat.relative(when);
-    final lead = widget.number != null
-        ? 'Run ${widget.number}'
-        : (_isBest ? 'Best run' : null);
+    final lead =
+        widget.number != null
+            ? 'Run ${widget.number}'
+            : (_isBest ? 'Best run' : null);
     if (lead == null) return rel;
     return rel.isEmpty ? lead : '$lead · $rel';
   }

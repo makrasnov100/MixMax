@@ -448,10 +448,12 @@ function ActionRow({ icon, tone = 'neutral', label, sublabel, danger, onClick })
   );
 }
 
-function ExperimentActionsDrawer({ exp, onRename, onDelete, onClose }) {
+function ExperimentActionsDrawer({ exp, onRename, onShareBest, onDelete, onClose }) {
+  const hasRuns = (exp.runs || []).filter(r => r.outcomeValues).length > 0;
   return (
     <DrawerShell title={exp.name || 'Untitled experiment'} subtitle="Manage this experiment" onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 18 }}>
+        {hasRuns && <ActionRow icon="share" tone="gold" label="Share best run" sublabel="Save its mix & ratings as an image" onClick={onShareBest} />}
         <ActionRow icon="edit" tone="neutral" label="Rename experiment" sublabel="Change its title" onClick={onRename} />
         <ActionRow icon="trash" tone="danger" danger label="Delete experiment" sublabel="Remove it and all its data" onClick={onDelete} />
       </div>
@@ -493,10 +495,11 @@ function ConfirmDeleteDrawer({ exp, onConfirm, onClose }) {
 }
 
 // ── 5b. Run actions sheet ────────────────────────────────
-function RunActionsDrawer({ num, isBest, onRescore, onDelete, onClose }) {
+function RunActionsDrawer({ num, isBest, onShare, onRescore, onDelete, onClose }) {
   return (
     <DrawerShell title={`Run ${num}`} subtitle="Manage this run" onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 18 }}>
+        <ActionRow icon="share" tone="gold" label="Share run" sublabel="Save its mix & ratings as an image" onClick={onShare} />
         <ActionRow icon="target" tone="violet" label="Rescore run" sublabel="Adjust the outcome ratings" onClick={onRescore} />
         <ActionRow icon="trash" tone="danger" danger label="Delete run" sublabel="Remove it from your history" onClick={onDelete} />
       </div>

@@ -157,6 +157,47 @@ function App() {
   // open a single run's details (from history list or best-run shortcut)
   const openRunDetail = (runId, from) => setRoute({ name: 'runDetail', expId: route.expId, runId, from });
 
+  // ── share a run — package its mix + ratings and open the shareable card
+  //    (a separate page the app turns into an image). Works for any run; the
+  //    "Share best run" entry just feeds it the crowned run. ──
+  const shareRun = (runId) => {
+    const run = (current.runs || []).find(r => r.id === runId);
+    if (!run) return;
+    const params = runParamDefs(current, run);
+    const outcomes = runOutcomeDefs(current, run);
+    const pv = run.parameterValues || {};
+    const ov = run.outcomeValues || {};
+    const chrono = (current.runs || []).filter(r => r.outcomeValues)
+      .sort((a, b) => (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0));
+    const num = chrono.findIndex(r => r.id === run.id) + 1;
+    const when = run.completedAt || run.createdAt;
+    const dateStr = when ? new Date(when * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+    const mix = params.map(p => {
+      const v = pv[p.id];
+      let value, unit;
+      if (p.type === 'toggle') value = v ? onLabelOf(p) : offLabelOf(p);
+      else if (p.type === 'choice') value = v != null ? String(v) : '—';
+      else if (p.type === 'order') value = (v || []).join(' → ');
+      else { value = v != null ? fmt(Number(v), 3) : '—'; unit = p.unit; }
+      return { icon: PARAM_TYPES[p.type].icon, name: p.name, value: value == null || value === '' ? '—' : String(value), unit };
+    });
+    const outs = outcomes.map(o => ({ name: o.name, value: ov[o.id], min: o.min != null ? o.min : 0, max: o.max != null ? o.max : 10 }));
+    const ranked = [...chrono].sort((a, b) => runScore(current, b) - runScore(current, a));
+    const rank = ranked.findIndex(r => r.id === run.id) + 1;
+    const data = {
+      experiment: current.name || 'Untitled experiment',
+      meta: `Run ${num}${dateStr ? ' · ' + dateStr : ''}`,
+      rating: Number((runScore(current, run) * 10).toFixed(1)),
+      bestOf: chrono.length,
+      isBest: run.id === bestRunId(current),
+      num, rank,
+      mix, outcomes: outs,
+    };
+    try { localStorage.setItem('mm_share_run', JSON.stringify(data)); } catch (e) {}
+    setDrawer(null);
+    window.open('Share Run.html', '_blank');
+  };
+
   // ── rescore an existing run — same rating UI, prefilled with its values. The
   //    "best run" is always derived from scores, so once the new ratings land it
   //    is recrowned automatically: if this was the best and no longer is, the
@@ -286,6 +327,7 @@ function App() {
       {drawer && drawer.kind === 'actions' && current && (
         <ExperimentActionsDrawer exp={current}
           onRename={() => setDrawer({ kind: 'name' })}
+          onShareBest={() => { const id = bestRunId(current); if (id) shareRun(id); }}
           onDelete={() => setDrawer({ kind: 'confirmDelete' })}
           onClose={() => setDrawer(null)} />
       )}
@@ -296,6 +338,7 @@ function App() {
       )}
       {drawer && drawer.kind === 'runActions' && current && (
         <RunActionsDrawer num={drawer.num} isBest={drawer.isBest}
+          onShare={() => shareRun(drawer.runId)}
           onRescore={() => startRescore(drawer.runId)}
           onDelete={() => setDrawer({ kind: 'confirmDelRun', runId: drawer.runId, num: drawer.num, isBest: drawer.isBest })}
           onClose={() => setDrawer(null)} />
