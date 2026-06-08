@@ -1,10 +1,5 @@
 
 --- MVP ---
-- Sharing functionality
-  - in expirement menu
-  - in expirement details next to best run
-  - in run details
-
 - Onboarding, show a user a sample use case step by step
   - create expirement
   - added parameters
