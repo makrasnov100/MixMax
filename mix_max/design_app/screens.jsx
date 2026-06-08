@@ -27,30 +27,40 @@ function GroupCard({ children }) {
 }
 function Divider() { return <div style={{ height: 1, background: T.hairline, marginLeft: 70 }} />; }
 
-function ParamRow({ p }) {
+function ParamRow({ p, onEdit }) {
+  const [press, setPress] = React.useState(false);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 16px' }}>
+    <button onClick={onEdit}
+      onMouseDown={() => setPress(true)} onMouseUp={() => setPress(false)} onMouseLeave={() => setPress(false)}
+      style={{ width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
+        background: press ? T.bgAlt : 'transparent', WebkitTapHighlightColor: 'transparent', transition: 'background .12s',
+        display: 'flex', alignItems: 'center', gap: 14, padding: '15px 16px' }}>
       <Tile icon={PARAM_TYPES[p.type].icon} tone="sage" />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 16, color: T.ink, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
         <ParamValue p={p} />
       </div>
-    </div>
+    </button>
   );
 }
 
-function OutcomeRow({ o }) {
+function OutcomeRow({ o, onEdit }) {
+  const [press, setPress] = React.useState(false);
   const meta = [o.unit, (o.min != null && o.max != null) ? `${fmt(o.min)}–${fmt(o.max)}` : null, o.step ? `step ${fmt(o.step)}` : null].filter(Boolean).join('  ·  ');
   const maxi = o.goal === 'maximize';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 16px' }}>
+    <button onClick={onEdit}
+      onMouseDown={() => setPress(true)} onMouseUp={() => setPress(false)} onMouseLeave={() => setPress(false)}
+      style={{ width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
+        background: press ? T.bgAlt : 'transparent', WebkitTapHighlightColor: 'transparent', transition: 'background .12s',
+        display: 'flex', alignItems: 'center', gap: 14, padding: '15px 16px' }}>
       <Tile icon="target" tone="violet" />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 16, color: T.ink, marginBottom: 3 }}>{o.name}</div>
         <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft }}>{meta}</div>
       </div>
       <Chip tone={maxi ? 'gold' : 'violet'} icon={maxi ? 'up' : 'down'}>{maxi ? 'maximize' : 'minimize'}</Chip>
-    </div>
+    </button>
   );
 }
 
@@ -72,7 +82,7 @@ function EmptyHint({ icon, title, body }) {
 function ExperimentCard({ exp, onOpen }) {
   const params = exp.parameters || [];
   const outcomes = exp.outcomes || [];
-  const runs = exp.runs || [];
+  const runs = recordedRuns(exp);
   const best = bestOutcomeLabel(exp);
   return (
     <button onClick={onOpen} style={{
@@ -144,10 +154,10 @@ function ExperimentsListScreen({ experiments, onOpen, onAdd }) {
 // ════════════════════════════════════════════════════════
 // 2. EXPERIMENT DETAILS
 // ════════════════════════════════════════════════════════
-function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun, onMenu, onHistory, onOpenBest }) {
+function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun, onMenu, onHistory, onOpenBest, onEditParam, onEditOutput }) {
   const params = exp.parameters || [];
   const outcomes = exp.outcomes || [];
-  const runs = exp.runs || [];
+  const runs = recordedRuns(exp);
   const canRun = params.length > 0 && outcomes.length > 0;
   const best = bestOutcomeLabel(exp);
 
@@ -173,7 +183,6 @@ function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutpu
       <div style={{ padding: '18px 20px 0' }}>
         <button onClick={onRename} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left' }}>
           <Display size={36}>{exp.name || 'Untitled experiment'}</Display>
-          <span style={{ marginTop: 8 }}><Icon name="edit" size={19} color={T.inkFaint} stroke={1.9} /></span>
         </button>
       </div>
 
@@ -203,7 +212,7 @@ function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutpu
         <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>The knobs Mix Max tunes for you.</div>
         {params.length === 0
           ? <EmptyHint icon="sparkle" title="No parameters yet" body="Add the knobs you want to tune." />
-          : <GroupCard>{params.map((p, i) => <React.Fragment key={p.id}>{i > 0 && <Divider />}<ParamRow p={p} /></React.Fragment>)}</GroupCard>}
+          : <GroupCard>{params.map((p, i) => <React.Fragment key={p.id}>{i > 0 && <Divider />}<ParamRow p={p} onEdit={() => onEditParam(p.id)} /></React.Fragment>)}</GroupCard>}
       </div>
 
       {/* outcomes */}
@@ -212,7 +221,7 @@ function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutpu
         <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>What you measure to score each run.</div>
         {outcomes.length === 0
           ? <EmptyHint icon="target" title="No outcomes yet" body="Add a result to maximize or minimize." />
-          : <GroupCard>{outcomes.map((o, i) => <React.Fragment key={o.id}>{i > 0 && <Divider />}<OutcomeRow o={o} /></React.Fragment>)}</GroupCard>}
+          : <GroupCard>{outcomes.map((o, i) => <React.Fragment key={o.id}>{i > 0 && <Divider />}<OutcomeRow o={o} onEdit={() => onEditOutput(o.id)} /></React.Fragment>)}</GroupCard>}
       </div>
       <div style={{ height: 8 }} />
     </Screen>
@@ -375,9 +384,11 @@ function RunsPill({ count, onClick }) {
   );
 }
 
-// score a single run, mirroring SchemaRun.finalRating (0..1, higher = better)
+// score a single run, mirroring SchemaRun.finalRating (0..1, higher = better).
+// scored against the run's own snapshot of outcomes so its rating reflects what
+// was actually measured, even if outcomes were later changed or removed.
 function runScore(exp, run) {
-  const outcomes = exp.outcomes || [];
+  const outcomes = runOutcomeDefs(exp, run);
   const vals = run.outcomeValues || {};
   let total = 0, count = 0;
   outcomes.forEach(o => {
@@ -391,7 +402,7 @@ function runScore(exp, run) {
   return count > 0 ? total / count : 0;
 }
 function bestRunId(exp) {
-  const runs = (exp.runs || []).filter(r => r.outcomeValues);
+  const runs = compatibleRuns(exp);
   if (!runs.length) return null;
   let best = null, bs = -Infinity;
   runs.forEach(r => { const s = runScore(exp, r); if (s > bs) { bs = s; best = r; } });
@@ -430,7 +441,7 @@ function OutcomeValueChip({ o, value, best }) {
 }
 
 function MixSummary({ exp, run }) {
-  const params = exp.parameters || [];
+  const params = runParamDefs(exp, run);
   const pv = run.parameterValues || {};
   const parts = params.map(p => pv[p.id] != null ? fmtSuggested(p, pv[p.id]) : null).filter(Boolean);
   if (!parts.length) return null;
@@ -472,8 +483,8 @@ function SortToggle({ value, onChange }) {
   );
 }
 
-function RunHistoryCard({ exp, run, num, isBest, onOpen }) {
-  const outcomes = exp.outcomes || [];
+function RunHistoryCard({ exp, run, num, isBest, compatible = true, onOpen }) {
+  const outcomes = runOutcomeDefs(exp, run);
   const when = run.completedAt || run.createdAt;
   const score = runScore(exp, run);
   return (
@@ -499,6 +510,12 @@ function RunHistoryCard({ exp, run, num, isBest, onOpen }) {
           )}
           <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15.5, color: T.ink }}>{relTime(when)}</div>
           <div style={{ fontFamily: T.sans, fontSize: 12.5, color: isBest ? T.goldText : T.inkFaint, opacity: isBest ? 0.85 : 1, marginTop: 2 }}>{absStamp(when)}</div>
+          {!compatible && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 9, background: T.bgAlt, borderRadius: 999, padding: '4px 10px' }}>
+              <Icon name="info" size={12} color={T.inkFaint} stroke={2} />
+              <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 11.5, color: T.inkSoft }}>Not used in tuning</span>
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 30, lineHeight: 1, color: isBest ? T.goldDeep : T.ink, letterSpacing: '-0.01em' }}>{fmt(score * 10, 1)}</div>
@@ -519,10 +536,11 @@ function RunHistoryCard({ exp, run, num, isBest, onOpen }) {
 
 function RunHistoryScreen({ exp, onBack, onOpenRun }) {
   const [sort, setSort] = React.useState('recent');
-  const runs = (exp.runs || []).filter(r => r.outcomeValues);
+  const runs = recordedRuns(exp);
   const chrono = [...runs].sort((a, b) => (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0));
   const numberOf = {}; chrono.forEach((r, i) => { numberOf[r.id] = i + 1; });
   const bestId = bestRunId(exp);
+  const incompatibleCount = runs.filter(r => !isCompatibleRun(exp, r)).length;
 
   const ordered = [...runs].sort((a, b) => {
     if (sort === 'rated') {
@@ -544,18 +562,33 @@ function RunHistoryScreen({ exp, onBack, onOpenRun }) {
       </div>
 
       {runs.length === 0 ? (
-        <div style={{ marginTop: 56, textAlign: 'center', padding: '0 34px' }}>
-          <div style={{ display: 'inline-flex' }}><Tile icon="clock" tone="gold" size={64} radius={20} /></div>
-          <div style={{ fontFamily: T.serif, fontSize: 22, color: T.ink, marginTop: 18 }}>No runs yet</div>
-          <div style={{ fontFamily: T.sans, fontSize: 14, color: T.inkSoft, marginTop: 6, lineHeight: 1.5 }}>Run the experiment and record your outcomes — they'll show up here.</div>
+        <div style={{ padding: '0 20px' }}>
+          <div style={{ marginTop: 48, textAlign: 'center', padding: '0 14px' }}>
+            <div style={{ display: 'inline-flex' }}><Tile icon="clock" tone="gold" size={64} radius={20} /></div>
+            <div style={{ fontFamily: T.serif, fontSize: 22, color: T.ink, marginTop: 18 }}>No runs yet</div>
+            <div style={{ fontFamily: T.sans, fontSize: 14, color: T.inkSoft, marginTop: 6, lineHeight: 1.5 }}>
+              Run the experiment and record your outcomes — they'll show up here.
+            </div>
+          </div>
+          <div style={{ height: 18 }} />
         </div>
       ) : (
         <React.Fragment>
           <div style={{ padding: '22px 20px 0' }}>
             <SortToggle value={sort} onChange={setSort} />
           </div>
+          {incompatibleCount > 0 && (
+            <div style={{ padding: '16px 20px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: T.bgAlt, borderRadius: 14, padding: '12px 14px' }}>
+                <span style={{ marginTop: 1 }}><Icon name="info" size={16} color={T.inkSoft} stroke={1.9} /></span>
+                <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>
+                  {incompatibleCount} run{incompatibleCount === 1 ? ' was' : 's were'} recorded with a different set of parameters or outcomes. {incompatibleCount === 1 ? "It's" : "They're"} still here to review, but won't tune what to try next.
+                </span>
+              </div>
+            </div>
+          )}
           <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {ordered.map(r => <RunHistoryCard key={r.id} exp={exp} run={r} num={numberOf[r.id]} isBest={r.id === bestId} onOpen={() => onOpenRun(r.id)} />)}
+            {ordered.map(r => <RunHistoryCard key={r.id} exp={exp} run={r} num={numberOf[r.id]} isBest={r.id === bestId} compatible={isCompatibleRun(exp, r)} onOpen={() => onOpenRun(r.id)} />)}
           </div>
           <div style={{ height: 18 }} />
         </React.Fragment>
@@ -570,7 +603,7 @@ function RunHistoryScreen({ exp, onBack, onOpenRun }) {
 
 // normalized contribution of every outcome → the final rating (weight-aware)
 function ratingRows(exp, run) {
-  const outcomes = exp.outcomes || [];
+  const outcomes = runOutcomeDefs(exp, run);
   const ov = run.outcomeValues || {};
   const weights = outcomes.map(o => (o.weight != null ? o.weight : 1));
   const wsum = weights.reduce((a, b) => a + b, 0) || 1;
@@ -641,19 +674,22 @@ function RatingBreakdown({ exp, run }) {
 }
 
 function RunDetailsScreen({ exp, run, num, isBest, onBack }) {
-  const params = exp.parameters || [];
-  const outcomes = exp.outcomes || [];
+  const params = runParamDefs(exp, run);
+  const outcomes = runOutcomeDefs(exp, run);
   const pv = run.parameterValues || {};
   const ov = run.outcomeValues || {};
   const when = run.completedAt || run.createdAt;
   const score = runScore(exp, run);
+  const compatible = isCompatibleRun(exp, run);
 
   return (
     <Screen>
       <TopPad h={50} />
       <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <RoundBtn icon="arrowL" onClick={onBack} />
-        {isBest && <Chip tone="gold" icon="trophy">Best run</Chip>}
+        {isBest
+          ? <Chip tone="gold" icon="trophy">Best run</Chip>
+          : (!compatible && <Chip tone="soft" icon="info">Not used in tuning</Chip>)}
       </div>
 
       <div style={{ padding: '18px 20px 0' }}>
@@ -704,8 +740,27 @@ function RunDetailsScreen({ exp, run, num, isBest, onBack }) {
 }
 
 // ── helpers ──────────────────────────────────────────────
+// every recorded run (all are kept & shown — nothing is "outdated").
+function recordedRuns(exp) { return (exp.runs || []).filter(r => r.outcomeValues); }
+
+// the param / outcome definitions to render a run by — its own snapshot if it
+// has one (so it renders correctly even after later edits / deletes), else the
+// experiment's current setup.
+function runParamDefs(exp, run) { return (run && run.params) || exp.parameters || []; }
+function runOutcomeDefs(exp, run) { return (run && run.outcomes) || exp.outcomes || []; }
+
+// a run is compatible with the CURRENT setup when it has a value for exactly
+// the current set of parameters and outcomes. Only compatible runs are used to
+// tune the next run and to crown the best mix — but every run is still shown.
+function isCompatibleRun(exp, run) {
+  const ids = arr => (arr || []).map(x => x.id).sort().join('|');
+  const keys = obj => Object.keys(obj || {}).sort().join('|');
+  return ids(exp.parameters) === keys(run.parameterValues) && ids(exp.outcomes) === keys(run.outcomeValues);
+}
+function compatibleRuns(exp) { return recordedRuns(exp).filter(r => isCompatibleRun(exp, r)); }
+
 function bestOutcomeLabel(exp) {
-  const runs = (exp.runs || []).filter(r => r.outcomeValues);
+  const runs = compatibleRuns(exp);
   const outcomes = exp.outcomes || [];
   if (runs.length === 0 || outcomes.length === 0) return null;
   // score = sum of normalized outcomes (respecting goal); pick best run
@@ -728,4 +783,5 @@ function bestOutcomeLabel(exp) {
 Object.assign(window, {
   ExperimentsListScreen, ExperimentDetailsScreen, RunSuggestionScreen, RatingScreen,
   RunHistoryScreen, RunDetailsScreen, RunsPill, suggestValue, bestOutcomeLabel, runScore, bestRunId,
+  recordedRuns, compatibleRuns, isCompatibleRun, runParamDefs, runOutcomeDefs,
 });

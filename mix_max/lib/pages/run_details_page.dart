@@ -50,8 +50,10 @@ class RunDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final params = experiment.parameters ?? const [];
-    final outcomes = experiment.outcomes ?? const [];
+    // Read the run from its own captured snapshot (point-in-time parameters and
+    // outcomes), falling back to the experiment's current setup for legacy runs.
+    final params = run.parameters ?? experiment.parameters ?? const [];
+    final outcomes = run.outcomes ?? experiment.outcomes ?? const [];
     final values = run.parameterValues ?? const <String, dynamic>{};
     final when = run.completedAt ?? run.createdAt;
     final name = experiment.name?.isNotEmpty == true

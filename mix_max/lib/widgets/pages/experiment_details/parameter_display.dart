@@ -25,11 +25,15 @@ import 'package:mix_max/widgets/design/molecules/range_pips.dart';
 class ParameterDisplay extends StatelessWidget {
   final SchemaParameter parameter;
 
-  const ParameterDisplay({Key? key, required this.parameter}) : super(key: key);
+  /// Tapping the row opens its edit drawer. Null leaves the row inert.
+  final VoidCallback? onTap;
+
+  const ParameterDisplay({Key? key, required this.parameter, this.onTap})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -54,6 +58,17 @@ class ParameterDisplay extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return row;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: AppColors.bgAlt,
+        highlightColor: AppColors.bgAlt,
+        child: row,
       ),
     );
   }

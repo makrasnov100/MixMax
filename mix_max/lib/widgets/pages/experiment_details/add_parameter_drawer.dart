@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
+import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/drawer_container.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/inputs/text_input.dart';
+import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/eyebrow_text.dart';
+import 'package:mix_max/widgets/design/ions/text/label_text.dart';
 import 'package:mix_max/widgets/design/ions/text/title_text.dart';
 import 'package:mix_max/widgets/design/molecules/multi_option_adder.dart';
 import 'package:mix_max/widgets/design/molecules/param_type_picker.dart';
 import 'package:mix_max/widgets/design/molecules/quick_add_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/toggle_field.dart';
 
-/// The "Add a parameter" bottom drawer.
+/// The "Add a parameter" / "Edit parameter" bottom drawer.
 ///
-/// Source: `design_app/drawers.jsx` `AddParameterDrawer` (+ `DrawerShell`).
+/// Source: `design_app/drawers.jsx` `ParameterDrawer` (+ `DrawerShell`).
 /// Composed entirely from the design system: the [MixMaxDrawerContainer] shell,
 /// a centered serif header, a "Quick add" row of [MixMaxQuickAddCard] presets, a
 /// name [MixMaxTextInput], the [MixMaxParamTypePicker] value-kind selector, and a
@@ -25,19 +28,38 @@ import 'package:mix_max/widgets/pages/experiment_details/toggle_field.dart';
 /// options / order steps. A pinned ink "Save parameter" footer stays disabled
 /// until the form is valid.
 ///
+/// Passing [initial] switches the drawer to edit mode: the form is prefilled,
+/// the quick-add row is hidden, the parameter's type is locked (shown as a
+/// fixed tile rather than the picker, since changing a type would invalidate
+/// every recorded value), and the footer gains a "Delete parameter" action that
+/// calls [onDelete].
+///
 /// Present it with `showModalBottomSheet(backgroundColor: transparent,
 /// isScrollControlled: true)`. Nothing is persisted here — [onSave] fires with a
-/// freshly-id'd [SchemaParameter] and the sheet pops; the caller does the write.
+/// [SchemaParameter] and the sheet pops; the caller does the write.
 class AddParameterDrawer extends StatefulWidget {
   static const int maxNameLength = 50;
 
   /// Cap for a custom toggle state label (e.g. "Decaf" / "Regular").
   static const int maxToggleLabelLength = 24;
 
-  /// Called with the assembled parameter when the user saves.
+  /// Called with the assembled parameter when the user saves. In edit mode the
+  /// parameter keeps [SchemaParameter.id] of [initial].
   final ValueChanged<SchemaParameter> onSave;
 
-  const AddParameterDrawer({super.key, required this.onSave});
+  /// The parameter being edited, or null to create a new one.
+  final SchemaParameter? initial;
+
+  /// Called when the user taps "Delete parameter" (edit mode only). The sheet
+  /// pops first; the caller shows the confirmation and does the removal.
+  final VoidCallback? onDelete;
+
+  const AddParameterDrawer({
+    super.key,
+    required this.onSave,
+    this.initial,
+    this.onDelete,
+  });
 
   @override
   State<AddParameterDrawer> createState() => _AddParameterDrawerState();
@@ -58,13 +80,37 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   // The toggle's default state — drives the live preview in the [ToggleField].
   bool _toggleOn = true;
 
+  bool get _isEdit => widget.initial != null;
+
   @override
   void initState() {
     super.initState();
+    _prefillFromInitial();
     _nameController.addListener(_onChanged);
     // Keep the [ToggleField] preview in sync as custom labels are typed.
     _onLabelController.addListener(_onChanged);
     _offLabelController.addListener(_onChanged);
+  }
+
+  /// Seeds the form from [AddParameterDrawer.initial] when editing.
+  void _prefillFromInitial() {
+    final p = widget.initial;
+    if (p == null) return;
+    _nameController.text = p.name ?? '';
+    _type = p.type ?? ParameterType.number;
+    _unitController.text = p.unit ?? '';
+    _minController.text = _fmtBound(p.min);
+    _maxController.text = _fmtBound(p.max);
+    _options = List.of(p.options ?? const []);
+    _items = List.of(p.items ?? const []);
+    _onLabelController.text = p.onLabel ?? '';
+    _offLabelController.text = p.offLabel ?? '';
+  }
+
+  /// Formats a stored bound for an editable field, dropping a trailing `.0`.
+  static String _fmtBound(double? v) {
+    if (v == null) return '';
+    return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
   }
 
   @override
@@ -119,7 +165,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     final offLabel = _offLabelController.text.trim();
 
     final parameter = SchemaParameter(
-      id: DatabaseService.experimentsRef.doc().id,
+      id: widget.initial?.id ?? DatabaseService.experimentsRef.doc().id,
       name: name,
       type: _type,
       unit: _isRanged && unit.isNotEmpty ? unit : null,
@@ -155,17 +201,17 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
 
   // Centered serif title + soft subtitle. DrawerShell padding '14px 24px 4px'.
   Widget _header() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 14, 24, 4),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
       child: Column(
         children: [
           TitleText(
-            text: 'Add a parameter',
+            text: _isEdit ? 'Edit parameter' : 'Add a parameter',
             fontSize: 25,
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 3),
-          CaptionText(
+          const SizedBox(height: 3),
+          const CaptionText(
             text: 'A knob Mix Max will learn to tune',
             fontSize: 13.5,
             textAlign: TextAlign.center,
@@ -182,10 +228,13 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _subHead('Quick add', topGap: 12),
-          _quickAddRow(),
+          // Quick add is for new parameters only — editing keeps the type.
+          if (!_isEdit) ...[
+            _subHead('Quick add', topGap: 12),
+            _quickAddRow(),
+          ],
 
-          _subHead('Name'),
+          _subHead('Name', topGap: _isEdit ? 12 : 18),
           _hpad(
             MixMaxTextInput(
               controller: _nameController,
@@ -196,17 +245,21 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
           ),
 
           _subHead('What kind of value?'),
-          _hpad(MixMaxParamTypePicker(value: _type, onChanged: _selectType)),
-          _hpad(
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: CaptionText(
-                text: MixMaxParamTypePicker.metaFor(_type).blurb,
-                fontSize: 12.5,
-                color: AppColors.inkFaint,
+          if (_isEdit)
+            _hpad(_LockedTypeTile(type: _type))
+          else ...[
+            _hpad(MixMaxParamTypePicker(value: _type, onChanged: _selectType)),
+            _hpad(
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: CaptionText(
+                  text: MixMaxParamTypePicker.metaFor(_type).blurb,
+                  fontSize: 12.5,
+                  color: AppColors.inkFaint,
+                ),
               ),
             ),
-          ),
+          ],
 
           ..._disclosure(),
         ],
@@ -340,22 +393,47 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     );
   }
 
-  // Pinned ink "Save parameter" action. DrawerShell footer padding '10px 24px 26px'.
+  // Pinned footer. Create mode shows a single ink "Save parameter"; edit mode
+  // shows "Save changes" over a ghost "Delete parameter".
+  // DrawerShell footer padding '10px 24px 26px'.
   Widget _footer() {
     final enabled = _canSave;
+    final save = MixMaxButton(
+      label: _isEdit ? 'Save changes' : 'Save parameter',
+      variant: MixMaxButtonVariant.ink,
+      enabled: enabled,
+      onPressed: _save,
+      trailing: MixMaxIcon(
+        MixMaxGlyph.check,
+        size: 20,
+        color: enabled ? Colors.white : AppColors.inkFaint,
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
-      child: MixMaxButton(
-        label: 'Save parameter',
-        variant: MixMaxButtonVariant.ink,
-        enabled: enabled,
-        onPressed: _save,
-        trailing: MixMaxIcon(
-          MixMaxGlyph.check,
-          size: 20,
-          color: enabled ? Colors.white : AppColors.inkFaint,
-        ),
-      ),
+      child: _isEdit
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                save,
+                const SizedBox(height: 10),
+                MixMaxButton(
+                  label: 'Delete parameter',
+                  variant: MixMaxButtonVariant.ghost,
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onDelete?.call();
+                  },
+                  leading: const MixMaxIcon(
+                    MixMaxGlyph.trash,
+                    size: 20,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+              ],
+            )
+          : save,
     );
   }
 
@@ -370,6 +448,56 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
         padding: EdgeInsets.fromLTRB(24, topGap, 24, 9),
         child: EyebrowText(text: text, color: AppColors.inkFaint),
       );
+}
+
+/// The locked "type stays fixed" tile shown in place of the type picker when
+/// editing a parameter — its glyph, label, a note, and a soft "Fixed" lock chip.
+///
+/// Source: `drawers.jsx` `ParameterDrawer` edit branch.
+class _LockedTypeTile extends StatelessWidget {
+  final ParameterType type;
+
+  const _LockedTypeTile({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = MixMaxParamTypePicker.metaFor(type);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSoft,
+        border: Border.all(color: AppColors.hairline, width: 1),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          MixMaxTile(glyph: meta.glyph, tone: MixMaxTileTone.sage, size: 40),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LabelText(text: meta.label, fontSize: 15),
+                const SizedBox(height: 1),
+                const CaptionText(
+                  text: 'Type stays fixed once created',
+                  fontSize: 12.5,
+                  color: AppColors.inkFaint,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const MixMaxChip(
+            label: 'Fixed',
+            tone: MixMaxChipTone.soft,
+            icon: MixMaxGlyph.lock,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A "Quick add" preset — the card metadata plus the values it seeds.

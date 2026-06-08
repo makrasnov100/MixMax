@@ -19,6 +19,7 @@ import 'package:mix_max/widgets/pages/experiment_details/add_output_drawer.dart'
 import 'package:mix_max/widgets/pages/experiment_details/add_parameter_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/best_mix_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/confirm_delete_experiment_drawer.dart';
+import 'package:mix_max/widgets/pages/experiment_details/confirm_delete_item_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/experiment_actions_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
@@ -123,8 +124,68 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     );
   }
 
+  /// Adds a brand-new parameter. Stamps the parameter-update time so runs
+  /// recorded before this change stop tuning the next suggested run.
   Future<void> _saveParameter(SchemaParameter parameter) async {
     _experiment.parameters = [...(_experiment.parameters ?? []), parameter];
+    _experiment.markParametersUpdated();
+    await _experiment.save();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  /// Opens the edit drawer for an existing parameter, wired to save edits and
+  /// to request deletion.
+  void _showEditParameterDrawer(SchemaParameter parameter) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => AddParameterDrawer(
+        initial: parameter,
+        onSave: _saveParameterEdit,
+        onDelete: () => _requestDeleteParameter(parameter),
+      ),
+    );
+  }
+
+  /// Persists an edited parameter (matched by id) and stamps the
+  /// parameter-update time, since changing a parameter invalidates earlier runs.
+  Future<void> _saveParameterEdit(SchemaParameter edited) async {
+    final list = [...(_experiment.parameters ?? <SchemaParameter>[])];
+    final index = list.indexWhere((p) => p.id == edited.id);
+    if (index >= 0) {
+      list[index] = edited;
+    } else {
+      list.add(edited);
+    }
+    _experiment.parameters = list;
+    _experiment.markParametersUpdated();
+    await _experiment.save();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  /// Confirms deletion of [parameter]. "Keep it" returns to its edit drawer.
+  void _requestDeleteParameter(SchemaParameter parameter) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => ConfirmDeleteItemDrawer(
+        target: DeleteItemTarget.parameter,
+        runCount: _experiment.runCount,
+        onConfirm: () => _deleteParameter(parameter),
+        onClose: () => _showEditParameterDrawer(parameter),
+      ),
+    );
+  }
+
+  Future<void> _deleteParameter(SchemaParameter parameter) async {
+    _experiment.parameters = (_experiment.parameters ?? [])
+        .where((p) => p.id != parameter.id)
+        .toList();
+    _experiment.markParametersUpdated();
     await _experiment.save();
     if (!mounted) return;
     setState(() {});
@@ -141,6 +202,60 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
 
   Future<void> _saveOutcome(SchemaOutcome outcome) async {
     _experiment.outcomes = [...(_experiment.outcomes ?? []), outcome];
+    await _experiment.save();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  /// Opens the edit drawer for an existing outcome. Outcome edits don't
+  /// invalidate past runs (each run keeps its own outcome snapshot), so no
+  /// parameter-update stamp is needed.
+  void _showEditOutcomeDrawer(SchemaOutcome outcome) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => AddOutputDrawer(
+        initial: outcome,
+        onSave: _saveOutcomeEdit,
+        onDelete: () => _requestDeleteOutcome(outcome),
+      ),
+    );
+  }
+
+  Future<void> _saveOutcomeEdit(SchemaOutcome edited) async {
+    final list = [...(_experiment.outcomes ?? <SchemaOutcome>[])];
+    final index = list.indexWhere((o) => o.id == edited.id);
+    if (index >= 0) {
+      list[index] = edited;
+    } else {
+      list.add(edited);
+    }
+    _experiment.outcomes = list;
+    await _experiment.save();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  /// Confirms deletion of [outcome]. "Keep it" returns to its edit drawer.
+  void _requestDeleteOutcome(SchemaOutcome outcome) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => ConfirmDeleteItemDrawer(
+        target: DeleteItemTarget.outcome,
+        runCount: _experiment.runCount,
+        onConfirm: () => _deleteOutcome(outcome),
+        onClose: () => _showEditOutcomeDrawer(outcome),
+      ),
+    );
+  }
+
+  Future<void> _deleteOutcome(SchemaOutcome outcome) async {
+    _experiment.outcomes = (_experiment.outcomes ?? [])
+        .where((o) => o.id != outcome.id)
+        .toList();
     await _experiment.save();
     if (!mounted) return;
     setState(() {});
@@ -186,8 +301,9 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     final canRun = parameters.isNotEmpty && outcomes.isNotEmpty;
     final runCount = _experiment.runCount;
     final bestRun = _experiment.bestRun;
-    final bestLabel =
-        bestRun == null ? null : BestMixCard.labelFor(outcomes, bestRun);
+    final bestLabel = bestRun == null
+        ? null
+        : BestMixCard.labelFor(bestRun.outcomes ?? outcomes, bestRun);
     final name =
         _experiment.name?.isNotEmpty == true
             ? _experiment.name!
@@ -280,7 +396,10 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     fontSize: 13,
                   ),
                   const SizedBox(height: 13),
-                  ParameterListCard(parameters: parameters),
+                  ParameterListCard(
+                    parameters: parameters,
+                    onEdit: _showEditParameterDrawer,
+                  ),
 
                   // Outcomes.
                   const SizedBox(height: 24),
@@ -294,7 +413,10 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     fontSize: 13,
                   ),
                   const SizedBox(height: 13),
-                  OutcomeListCard(outcomes: outcomes),
+                  OutcomeListCard(
+                    outcomes: outcomes,
+                    onEdit: _showEditOutcomeDrawer,
+                  ),
                 ],
               ),
             ),

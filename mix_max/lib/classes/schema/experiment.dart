@@ -27,6 +27,13 @@ class SchemaExperiment {
   /// Seconds since Unix epoch.
   int? createdAt;
 
+  /// Seconds since Unix epoch of the last time this experiment's parameter set
+  /// changed in a way that invalidates earlier runs (a parameter added, edited
+  /// or deleted). Runs generated before this moment used a different parameter
+  /// set, so the optimizer ignores them when suggesting the next run. Null when
+  /// the parameters have never been edited.
+  int? lastParametersUpdatedAt;
+
   SchemaExperiment({
     required this.id,
     this.userId,
@@ -36,6 +43,7 @@ class SchemaExperiment {
     this.bestRun,
     this.runCount = 0,
     this.createdAt,
+    this.lastParametersUpdatedAt,
   });
 
   SchemaExperiment.unknown({
@@ -47,10 +55,18 @@ class SchemaExperiment {
     this.bestRun,
     this.runCount = 0,
     this.createdAt,
+    this.lastParametersUpdatedAt,
   });
 
   bool isValid() {
     return id.isNotEmpty;
+  }
+
+  /// Stamps [lastParametersUpdatedAt] with the current time. Call whenever the
+  /// parameter set changes (add / edit / delete) so runs recorded against the
+  /// previous set stop tuning the next suggested run.
+  void markParametersUpdated() {
+    lastParametersUpdatedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   }
 
   /// Records a freshly completed [run]: increments [runCount], promotes it to
@@ -80,15 +96,14 @@ class SchemaExperiment {
   /// Promotes [run] to [bestRun] when it scores higher than the run already
   /// stored (or when none is stored yet), duplicating it onto this experiment.
   ///
-  /// Ratings are compared with [SchemaRun.finalRating] against this
-  /// experiment's [outcomes] (higher is better). Returns true when [bestRun]
-  /// changed — the signal for the caller to persist the experiment.
+  /// Each run is scored with [SchemaRun.finalRating] against its own outcome
+  /// snapshot (higher is better), so the comparison honours the outcomes each
+  /// run was actually measured with. Returns true when [bestRun] changed — the
+  /// signal for the caller to persist the experiment.
   bool updateBestRun(SchemaRun run) {
     final current = bestRun;
-    final ranked = outcomes ?? const [];
 
-    if (current != null &&
-        run.finalRating(ranked) <= current.finalRating(ranked)) {
+    if (current != null && run.finalRating() <= current.finalRating()) {
       return false;
     }
 

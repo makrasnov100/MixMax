@@ -3,6 +3,7 @@ import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/label_text.dart';
@@ -17,7 +18,11 @@ import 'package:mix_max/widgets/design/ions/text/label_text.dart';
 class OutcomeDisplay extends StatelessWidget {
   final SchemaOutcome outcome;
 
-  const OutcomeDisplay({Key? key, required this.outcome}) : super(key: key);
+  /// Tapping the row opens its edit drawer. Null leaves the row inert.
+  final VoidCallback? onTap;
+
+  const OutcomeDisplay({Key? key, required this.outcome, this.onTap})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +30,7 @@ class OutcomeDisplay extends StatelessWidget {
     final maximize = o.goal == OutcomeGoal.maximize;
     final meta = _metaLabel(o);
 
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -56,6 +61,17 @@ class OutcomeDisplay extends StatelessWidget {
             icon: maximize ? MixMaxGlyph.up : MixMaxGlyph.down,
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return row;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: AppColors.bgAlt,
+        highlightColor: AppColors.bgAlt,
+        child: row,
       ),
     );
   }

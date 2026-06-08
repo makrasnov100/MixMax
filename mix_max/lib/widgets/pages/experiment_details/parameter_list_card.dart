@@ -23,11 +23,16 @@ class ParameterListCard extends StatelessWidget {
   /// Empty-state nudge. Defaults to the design's copy.
   final String emptyBody;
 
+  /// Called with a parameter when its row is tapped — opens its edit drawer.
+  /// Null leaves the rows inert.
+  final ValueChanged<SchemaParameter>? onEdit;
+
   const ParameterListCard({
     Key? key,
     required this.parameters,
     this.emptyTitle = 'No parameters yet',
     this.emptyBody = 'Add the knobs you want to tune.',
+    this.onEdit,
   }) : super(key: key);
 
   @override
@@ -48,7 +53,10 @@ class ParameterListCard extends StatelessWidget {
         children: [
           for (var i = 0; i < parameters.length; i++) ...[
             if (i > 0) const _RowDivider(),
-            ParameterDisplay(parameter: parameters[i]),
+            ParameterDisplay(
+              parameter: parameters[i],
+              onTap: onEdit == null ? null : () => onEdit!(parameters[i]),
+            ),
           ],
         ],
       ),

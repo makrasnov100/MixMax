@@ -13,25 +13,42 @@ import 'package:mix_max/widgets/design/ions/text/title_text.dart';
 import 'package:mix_max/widgets/design/molecules/quick_add_card.dart';
 import 'package:mix_max/widgets/design/molecules/segmented.dart';
 
-/// The "Add an outcome" bottom drawer.
+/// The "Add an outcome" / "Edit outcome" bottom drawer.
 ///
-/// Source: `design_app/drawers.jsx` `AddOutputDrawer` (+ `DrawerShell`).
+/// Source: `design_app/drawers.jsx` `OutcomeDrawer` (+ `DrawerShell`).
 /// Composed from the design system: the [MixMaxDrawerContainer] shell, a centered
 /// serif header, a violet "Quick add" row of [MixMaxQuickAddCard] presets, a name
 /// [MixMaxTextInput], a [MixMaxSegmented] goal selector (Minimize / Maximize), a
 /// two-column min/max scale, a unit + increment row, and a pinned ink "Save outcome"
 /// footer that stays disabled until a name is entered.
 ///
+/// Passing [initial] switches the drawer to edit mode: the form is prefilled,
+/// the quick-add row is hidden, and the footer gains a "Delete outcome" action
+/// that calls [onDelete].
+///
 /// Present it with `showModalBottomSheet(backgroundColor: transparent,
 /// isScrollControlled: true)`. Nothing is persisted here — [onSave] fires with a
-/// freshly-id'd [SchemaOutcome] and the sheet pops; the caller does the write.
+/// [SchemaOutcome] and the sheet pops; the caller does the write.
 class AddOutputDrawer extends StatefulWidget {
   static const int maxNameLength = 50;
 
-  /// Called with the assembled outcome when the user saves.
+  /// Called with the assembled outcome when the user saves. In edit mode the
+  /// outcome keeps [SchemaOutcome.id] of [initial].
   final ValueChanged<SchemaOutcome> onSave;
 
-  const AddOutputDrawer({super.key, required this.onSave});
+  /// The outcome being edited, or null to create a new one.
+  final SchemaOutcome? initial;
+
+  /// Called when the user taps "Delete outcome" (edit mode only). The sheet
+  /// pops first; the caller shows the confirmation and does the removal.
+  final VoidCallback? onDelete;
+
+  const AddOutputDrawer({
+    super.key,
+    required this.onSave,
+    this.initial,
+    this.onDelete,
+  });
 
   @override
   State<AddOutputDrawer> createState() => _AddOutputDrawerState();
@@ -47,10 +64,31 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
 
   OutcomeGoal _goal = OutcomeGoal.maximize;
 
+  bool get _isEdit => widget.initial != null;
+
   @override
   void initState() {
     super.initState();
+    _prefillFromInitial();
     _nameController.addListener(_onChanged);
+  }
+
+  /// Seeds the form from [AddOutputDrawer.initial] when editing.
+  void _prefillFromInitial() {
+    final o = widget.initial;
+    if (o == null) return;
+    _nameController.text = o.name ?? '';
+    _unitController.text = o.unit ?? '';
+    _goal = o.goal ?? OutcomeGoal.maximize;
+    if (o.min != null) _minController.text = _fmtBound(o.min);
+    if (o.max != null) _maxController.text = _fmtBound(o.max);
+    if (o.step != null) _incrementController.text = _fmtBound(o.step);
+  }
+
+  /// Formats a stored bound for an editable field, dropping a trailing `.0`.
+  static String _fmtBound(double? v) {
+    if (v == null) return '';
+    return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
   }
 
   @override
@@ -87,7 +125,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
     final increment = double.tryParse(_incrementController.text.trim());
 
     final outcome = SchemaOutcome(
-      id: DatabaseService.experimentsRef.doc().id,
+      id: widget.initial?.id ?? DatabaseService.experimentsRef.doc().id,
       name: _nameController.text.trim(),
       unit: unit.isEmpty ? null : unit,
       min: double.tryParse(_minController.text.trim()),
@@ -120,17 +158,17 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
 
   // Centered serif title + soft subtitle. DrawerShell padding '14px 24px 4px'.
   Widget _header() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 14, 24, 4),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
       child: Column(
         children: [
           TitleText(
-            text: 'Add an outcome',
+            text: _isEdit ? 'Edit outcome' : 'Add an outcome',
             fontSize: 25,
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 3),
-          CaptionText(
+          const SizedBox(height: 3),
+          const CaptionText(
             text: "What you'll measure after each run",
             fontSize: 13.5,
             textAlign: TextAlign.center,
@@ -147,10 +185,13 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _subHead('Quick add', topGap: 12),
-          _quickAddRow(),
+          // Quick add is for new outcomes only.
+          if (!_isEdit) ...[
+            _subHead('Quick add', topGap: 12),
+            _quickAddRow(),
+          ],
 
-          _subHead('Name'),
+          _subHead('Name', topGap: _isEdit ? 12 : 18),
           _hpad(
             MixMaxTextInput(
               controller: _nameController,
@@ -245,22 +286,47 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
     );
   }
 
-  // Pinned ink "Save outcome" action. DrawerShell footer padding '10px 24px 26px'.
+  // Pinned footer. Create mode shows a single ink "Save outcome"; edit mode
+  // shows "Save changes" over a ghost "Delete outcome".
+  // DrawerShell footer padding '10px 24px 26px'.
   Widget _footer() {
     final enabled = _canSave;
+    final save = MixMaxButton(
+      label: _isEdit ? 'Save changes' : 'Save outcome',
+      variant: MixMaxButtonVariant.ink,
+      enabled: enabled,
+      onPressed: _save,
+      trailing: MixMaxIcon(
+        MixMaxGlyph.check,
+        size: 20,
+        color: enabled ? Colors.white : AppColors.inkFaint,
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
-      child: MixMaxButton(
-        label: 'Save outcome',
-        variant: MixMaxButtonVariant.ink,
-        enabled: enabled,
-        onPressed: _save,
-        trailing: MixMaxIcon(
-          MixMaxGlyph.check,
-          size: 20,
-          color: enabled ? Colors.white : AppColors.inkFaint,
-        ),
-      ),
+      child: _isEdit
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                save,
+                const SizedBox(height: 10),
+                MixMaxButton(
+                  label: 'Delete outcome',
+                  variant: MixMaxButtonVariant.ghost,
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onDelete?.call();
+                  },
+                  leading: const MixMaxIcon(
+                    MixMaxGlyph.trash,
+                    size: 20,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+              ],
+            )
+          : save,
     );
   }
 

@@ -46,9 +46,14 @@ class RunHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outcomes = experiment.outcomes ?? const [];
+    // Render the run from its own captured snapshot, falling back to the
+    // experiment's current setup for legacy runs that never stored one.
+    final outcomes = run.outcomes ?? experiment.outcomes ?? const [];
     final when = run.completedAt ?? run.createdAt;
-    final score = run.finalRating(outcomes) * 10;
+    final score = (run.outcomes != null
+            ? run.finalRating()
+            : run.finalRating(experiment.outcomes ?? const [])) *
+        10;
     final mix = _mixSummary();
 
     return GestureDetector(
@@ -246,7 +251,7 @@ class RunHistoryCard extends StatelessWidget {
   /// by middots. Mirrors `screens.jsx` `MixSummary` / `fmtSuggested`. Returns
   /// null when no parameter values are present (the design hides the row).
   String? _mixSummary() {
-    final params = experiment.parameters ?? const [];
+    final params = run.parameters ?? experiment.parameters ?? const [];
     final values = run.parameterValues ?? const {};
     final parts = <String>[];
     for (final p in params) {

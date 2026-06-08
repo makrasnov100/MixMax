@@ -156,7 +156,6 @@ class _ReadyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outcomes = experiment.outcomes ?? const [];
     final name = experiment.name?.isNotEmpty == true
         ? experiment.name!
         : 'Untitled experiment';
@@ -169,11 +168,11 @@ class _ReadyView extends StatelessWidget {
       numberOf[chrono[i].id] = i + 1;
     }
 
-    // Best run = highest final rating.
+    // Best run = highest final rating, each scored against its own snapshot.
     String? bestId;
     var bestScore = double.negativeInfinity;
     for (final r in runs) {
-      final s = r.finalRating(outcomes);
+      final s = _scoreOf(r);
       if (s > bestScore) {
         bestScore = s;
         bestId = r.id;
@@ -183,7 +182,7 @@ class _ReadyView extends StatelessWidget {
     // Apply the selected ordering.
     final ordered = [...runs]..sort((a, b) {
         if (sort == RunSortMode.rated) {
-          final d = b.finalRating(outcomes).compareTo(a.finalRating(outcomes));
+          final d = _scoreOf(b).compareTo(_scoreOf(a));
           if (d != 0) return d;
         }
         return _whenOf(b).compareTo(_whenOf(a));
@@ -241,6 +240,12 @@ class _ReadyView extends StatelessWidget {
   }
 
   int _whenOf(SchemaRun r) => r.completedAt ?? r.createdAt ?? 0;
+
+  /// A run's 0–1 rating, scored against its own captured outcome snapshot and
+  /// falling back to the experiment's current outcomes for legacy runs.
+  double _scoreOf(SchemaRun r) => r.outcomes != null
+      ? r.finalRating()
+      : r.finalRating(experiment.outcomes ?? const []);
 }
 
 /// The "no runs yet" placeholder (source: `screens.jsx` `RunHistoryScreen`

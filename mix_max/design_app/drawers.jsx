@@ -193,14 +193,15 @@ function ChipEditor({ items, setItems, placeholder }) {
 
 function TwoCol({ children }) { return <div style={{ display: 'flex', gap: 10 }}>{children.map((c, i) => <div key={i} style={{ flex: 1 }}>{c}</div>)}</div>; }
 
-function AddParameterDrawer({ onSave, onClose }) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState('number');
-  const [unit, setUnit] = useState('');
-  const [min, setMin] = useState('');
-  const [max, setMax] = useState('');
-  const [options, setOptions] = useState([]);
-  const [items, setItems] = useState([]);
+function ParameterDrawer({ initial, onSave, onDelete, onClose }) {
+  const isEdit = !!initial;
+  const [name, setName] = useState(initial?.name || '');
+  const [type, setType] = useState(initial?.type || 'number');
+  const [unit, setUnit] = useState(initial?.unit || '');
+  const [min, setMin] = useState(initial?.min != null ? String(initial.min) : '');
+  const [max, setMax] = useState(initial?.max != null ? String(initial.max) : '');
+  const [options, setOptions] = useState(initial?.options || []);
+  const [items, setItems] = useState(initial?.items || []);
 
   const applyPreset = (p) => {
     const s = p.set;
@@ -215,7 +216,7 @@ function AddParameterDrawer({ onSave, onClose }) {
   const valid = name.trim() && (type !== 'choice' || options.length > 0) && (type !== 'order' || items.length > 1);
 
   const save = () => onSave({
-    id: 'p' + Date.now(), name: name.trim(), type,
+    id: isEdit ? initial.id : 'p' + Date.now(), name: name.trim(), type,
     unit: ranged && unit.trim() ? unit.trim() : undefined,
     min: ranged && min !== '' ? Number(min) : undefined,
     max: ranged && max !== '' ? Number(max) : undefined,
@@ -224,20 +225,37 @@ function AddParameterDrawer({ onSave, onClose }) {
   });
 
   return (
-    <DrawerShell title="Add a parameter" subtitle="A knob Mix Max will learn to tune" onClose={onClose}
-      footer={<Btn label="Save parameter" iconR="check" variant={valid ? 'ink' : 'disabled'} disabled={!valid} onClick={save} />}>
+    <DrawerShell title={isEdit ? 'Edit parameter' : 'Add a parameter'} subtitle="A knob Mix Max will learn to tune" onClose={onClose}
+      footer={isEdit ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn label="Save changes" iconR="check" variant={valid ? 'ink' : 'disabled'} disabled={!valid} onClick={save} />
+          <Btn label="Delete parameter" icon="trash" variant="ghost" onClick={onDelete} />
+        </div>
+      ) : <Btn label="Save parameter" iconR="check" variant={valid ? 'ink' : 'disabled'} disabled={!valid} onClick={save} />}>
 
-      <SubHead>Quick add</SubHead>
-      <PresetRow presets={PARAM_PRESETS} onPick={applyPreset} />
+      {!isEdit && <SubHead>Quick add</SubHead>}
+      {!isEdit && <PresetRow presets={PARAM_PRESETS} onPick={applyPreset} />}
 
       <SubHead>Name</SubHead>
       <TextInput value={name} onChange={setName} placeholder="e.g. Ounces of water" maxLength={50} />
 
       <SubHead>What kind of value?</SubHead>
-      <TypePicker value={type} onChange={setType} />
-      <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkFaint, marginTop: 8 }}>{PARAM_TYPES[type].blurb}</div>
+      {isEdit ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: T.surfaceSoft, border: `1px solid ${T.hairline}`, borderRadius: T.rField, padding: '12px 14px' }}>
+          <Tile icon={PARAM_TYPES[type].icon} tone="sage" size={40} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink }}>{PARAM_TYPES[type].label}</div>
+            <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkFaint, marginTop: 1 }}>Type stays fixed once created</div>
+          </div>
+          <Chip tone="soft" icon="lock">Fixed</Chip>
+        </div>
+      ) : (
+        <React.Fragment>
+          <TypePicker value={type} onChange={setType} />
+          <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.inkFaint, marginTop: 8 }}>{PARAM_TYPES[type].blurb}</div>
+        </React.Fragment>
+      )}
 
-      {/* progressive disclosure */}
       {ranged && (
         <div style={{ marginTop: 6 }}>
           <SubHead>Unit & range</SubHead>
@@ -262,6 +280,11 @@ function AddParameterDrawer({ onSave, onClose }) {
   );
 }
 
+// create-mode wrapper (kept for the existing "Add parameter" entry point)
+function AddParameterDrawer({ onSave, onClose }) {
+  return <ParameterDrawer onSave={onSave} onClose={onClose} />;
+}
+
 // ── 3. Add output ────────────────────────────────────────
 const OUTPUT_PRESETS = [
   { title: 'Taste', hint: '1–10, higher', icon: 'spark2', tone: 'violet', set: { name: 'taste', min: 1, max: 10, step: 1, goal: 'maximize' } },
@@ -270,13 +293,14 @@ const OUTPUT_PRESETS = [
   { title: 'Time', hint: 'min, lower', icon: 'clock', tone: 'violet', set: { name: 'time', unit: 'min', min: 0, max: 60, step: 1, goal: 'minimize' } },
 ];
 
-function AddOutputDrawer({ onSave, onClose }) {
-  const [name, setName] = useState('');
-  const [unit, setUnit] = useState('');
-  const [goal, setGoal] = useState('maximize');
-  const [min, setMin] = useState('1');
-  const [max, setMax] = useState('10');
-  const [step, setStep] = useState('1');
+function OutcomeDrawer({ initial, onSave, onDelete, onClose }) {
+  const isEdit = !!initial;
+  const [name, setName] = useState(initial?.name || '');
+  const [unit, setUnit] = useState(initial?.unit || '');
+  const [goal, setGoal] = useState(initial?.goal || 'maximize');
+  const [min, setMin] = useState(initial?.min != null ? String(initial.min) : '1');
+  const [max, setMax] = useState(initial?.max != null ? String(initial.max) : '10');
+  const [step, setStep] = useState(initial?.step != null ? String(initial.step) : '1');
 
   const applyPreset = (p) => {
     const s = p.set;
@@ -284,8 +308,9 @@ function AddOutputDrawer({ onSave, onClose }) {
     setGoal(s.goal); setMin(String(s.min)); setMax(String(s.max)); setStep(String(s.step));
   };
   const valid = name.trim();
+
   const save = () => onSave({
-    id: 'o' + Date.now(), name: name.trim(),
+    id: isEdit ? initial.id : 'o' + Date.now(), name: name.trim(),
     unit: unit.trim() || undefined,
     min: min !== '' ? Number(min) : undefined,
     max: max !== '' ? Number(max) : undefined,
@@ -294,10 +319,15 @@ function AddOutputDrawer({ onSave, onClose }) {
   });
 
   return (
-    <DrawerShell title="Add an outcome" subtitle="What you'll measure after each run" onClose={onClose}
-      footer={<Btn label="Save outcome" iconR="check" variant={valid ? 'ink' : 'disabled'} disabled={!valid} onClick={save} />}>
-      <SubHead>Quick add</SubHead>
-      <PresetRow presets={OUTPUT_PRESETS} onPick={applyPreset} />
+    <DrawerShell title={isEdit ? 'Edit outcome' : 'Add an outcome'} subtitle="What you'll measure after each run" onClose={onClose}
+      footer={isEdit ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn label="Save changes" iconR="check" variant={valid ? 'ink' : 'disabled'} disabled={!valid} onClick={save} />
+          <Btn label="Delete outcome" icon="trash" variant="ghost" onClick={onDelete} />
+        </div>
+      ) : <Btn label="Save outcome" iconR="check" variant={valid ? 'ink' : 'disabled'} disabled={!valid} onClick={save} />}>
+      {!isEdit && <SubHead>Quick add</SubHead>}
+      {!isEdit && <PresetRow presets={OUTPUT_PRESETS} onPick={applyPreset} />}
 
       <SubHead>Name</SubHead>
       <TextInput value={name} onChange={setName} placeholder="e.g. taste" maxLength={50} />
@@ -321,6 +351,11 @@ function AddOutputDrawer({ onSave, onClose }) {
       <div style={{ height: 6 }} />
     </DrawerShell>
   );
+}
+
+// create-mode wrapper (kept for the existing "Add outcome" entry point)
+function AddOutputDrawer({ onSave, onClose }) {
+  return <OutcomeDrawer onSave={onSave} onClose={onClose} />;
 }
 
 // ── 4. Experiment actions sheet ──────────────────────────
@@ -389,4 +424,32 @@ function ConfirmDeleteDrawer({ exp, onConfirm, onClose }) {
   );
 }
 
-Object.assign(window, { DrawerShell, NameDrawer, AddParameterDrawer, AddOutputDrawer, Segmented, TextInput, ExperimentActionsDrawer, ConfirmDeleteDrawer });
+// ── 6. Confirm delete of a parameter / outcome ───────────
+// No "outdated" concept anymore: every past run keeps its own snapshot, so
+// deleting just removes the item going forward. Incompatible runs stay in
+// history, fully viewable — they simply stop tuning future runs.
+function ConfirmDeleteItemDrawer({ target = 'parameter', runCount = 0, onConfirm, onClose }) {
+  const hasRuns = runCount > 0;
+  return (
+    <DrawerShell onClose={onClose}
+      title={<span>Delete this {target}?</span>}
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn label={`Delete ${target}`} icon="trash" variant="danger" onClick={onConfirm} />
+          <Btn label="Keep it" variant="ghost" onClick={onClose} />
+        </div>
+      }>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 4 }}>
+        <Tile icon="trash" tone="danger" size={56} radius={18} stroke={2} />
+        <div style={{ fontFamily: T.sans, fontSize: 14.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 16, maxWidth: 312 }}>
+          {hasRuns
+            ? <span>Nothing in your run history will change, but some or all past runs may stop being used to tune your next run.</span>
+            : <span>This {target} will be removed from the experiment. There are no recorded runs, so nothing else is affected.</span>}
+        </div>
+      </div>
+      <div style={{ height: 8 }} />
+    </DrawerShell>
+  );
+}
+
+Object.assign(window, { DrawerShell, NameDrawer, ParameterDrawer, OutcomeDrawer, AddParameterDrawer, AddOutputDrawer, ConfirmDeleteItemDrawer, Segmented, TextInput, ExperimentActionsDrawer, ConfirmDeleteDrawer });

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
+import 'package:mix_max/classes/schema/outcome.dart';
+import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/pages/record_outcomes_page.dart';
 import 'package:mix_max/services/bayesian_optimization_service.dart';
@@ -76,12 +78,25 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
         pastRuns: pastRuns,
       );
 
+      // Capture a point-in-time snapshot of the parameter and outcome
+      // definitions so this run renders and scores correctly even after the
+      // experiment is later edited. Deep-cloned via JSON so later edits to the
+      // experiment never mutate the run's copy.
+      final paramSnapshot = (widget.experiment.parameters ?? const [])
+          .map((p) => SchemaParameter.fromJson(p.toJson()))
+          .toList();
+      final outcomeSnapshot = (widget.experiment.outcomes ?? const [])
+          .map((o) => SchemaOutcome.fromJson(o.toJson()))
+          .toList();
+
       final docRef = DatabaseService.runsRef.doc();
       final draft = SchemaRun(
         id: docRef.id,
         experimentId: widget.experiment.id,
         userId: userId,
         parameterValues: suggestion,
+        parameters: paramSnapshot,
+        outcomes: outcomeSnapshot,
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       );
 

@@ -3,8 +3,6 @@ Add general todo items here and plan out prompts as needed
 --- MVP ---
 - Editing a parameter & output
 - Deleting a parameter & output
-- Creating a parameter & output
-  - when changing anything but name state that the runs will become outdated and best run will be reset
 
 - design and implement a way to implment increments in numeric parameters
 - allow to press run expirment but highlight in red if parameers or outcomes are missing
@@ -38,6 +36,9 @@ Add general todo items here and plan out prompts as needed
 - Attempt to publish on both stores (paid app)
 
 --- Updates ---
+- better usage of previous runs after a parameter was updated
+- automatic update of best run after an outcome was updated
+- deleting a run
 - editing suggested paramers befre recording updates
 - description for outcomes for more detail when rating 
 - The large rating text is a bit grainy

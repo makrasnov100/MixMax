@@ -36,6 +36,9 @@ function Icon({ name, size = 22, color = 'currentColor', stroke = 1.8, style }) 
     clock: <g {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></g>,
     more: <g {...p}><circle cx="5" cy="12" r="1.4" fill={color} stroke="none" /><circle cx="12" cy="12" r="1.4" fill={color} stroke="none" /><circle cx="19" cy="12" r="1.4" fill={color} stroke="none" /></g>,
     alert: <g {...p}><path d="M12 3.5 21 19H3L12 3.5Z" /><path d="M12 10v4.5M12 17.4v.2" /></g>,
+    lock: <g {...p}><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /><circle cx="12" cy="15.2" r="1.1" fill={color} stroke="none" /></g>,
+    eye: <g {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></g>,
+    eyeOff: <g {...p}><path d="M4 4l16 16M9.9 5.2A9.9 9.9 0 0 1 12 5c6 0 9.5 7 9.5 7a16 16 0 0 1-3.2 3.9M6.3 7.8A16 16 0 0 0 2.5 12S6 19 12 19a9.6 9.6 0 0 0 3.4-.6M9.9 14.1a3 3 0 0 0 4.2-4.2" /></g>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={style} aria-hidden="true">

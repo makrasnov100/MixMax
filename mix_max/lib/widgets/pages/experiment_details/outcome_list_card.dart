@@ -22,11 +22,16 @@ class OutcomeListCard extends StatelessWidget {
   /// Empty-state nudge. Defaults to the design's copy.
   final String emptyBody;
 
+  /// Called with an outcome when its row is tapped — opens its edit drawer.
+  /// Null leaves the rows inert.
+  final ValueChanged<SchemaOutcome>? onEdit;
+
   const OutcomeListCard({
     Key? key,
     required this.outcomes,
     this.emptyTitle = 'No outcomes yet',
     this.emptyBody = 'Add a result to maximize or minimize.',
+    this.onEdit,
   }) : super(key: key);
 
   @override
@@ -47,7 +52,10 @@ class OutcomeListCard extends StatelessWidget {
         children: [
           for (var i = 0; i < outcomes.length; i++) ...[
             if (i > 0) const _RowDivider(),
-            OutcomeDisplay(outcome: outcomes[i]),
+            OutcomeDisplay(
+              outcome: outcomes[i],
+              onTap: onEdit == null ? null : () => onEdit!(outcomes[i]),
+            ),
           ],
         ],
       ),

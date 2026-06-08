@@ -55,8 +55,14 @@ class RatingBreakdownCard extends StatelessWidget {
   /// Builds the per-outcome contribution rows. Weights are split equally across
   /// the outcomes that actually carry a recorded value, so the points total
   /// matches [SchemaRun.finalRating] × 10.
+  /// The outcome definitions this run was scored against — its own captured
+  /// snapshot, falling back to the experiment's current outcomes for legacy
+  /// runs without one.
+  List<SchemaOutcome> get _outcomeDefs =>
+      run.outcomes ?? experiment.outcomes ?? const [];
+
   List<_RatingRow> _rows() {
-    final outcomes = experiment.outcomes ?? const [];
+    final outcomes = _outcomeDefs;
     final values = run.outcomeValues ?? const <String, double>{};
 
     final measured = outcomes.where((o) => values[o.id] != null).length;
@@ -87,11 +93,14 @@ class RatingBreakdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outcomes = experiment.outcomes ?? const [];
     final rows = _rows();
     // Use finalRating directly for the headline total so it is exactly the
-    // number shown by the hero card and run-history list.
-    final rating = run.finalRating(outcomes) * 10;
+    // number shown by the hero card and run-history list, scored against the
+    // run's own outcome snapshot.
+    final rating = (run.outcomes != null
+            ? run.finalRating()
+            : run.finalRating(experiment.outcomes ?? const [])) *
+        10;
     final measured = rows.where((r) => r.hasValue).toList();
 
     return Container(

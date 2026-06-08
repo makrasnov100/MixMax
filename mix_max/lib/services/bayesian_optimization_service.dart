@@ -46,18 +46,30 @@ class BayesianOptimizationService {
 
     final rng = math.Random();
 
-    // Require at least 2 runs with complete data before using the GP.
-    final validRuns = _filterValidRuns(parameters, outcomes, pastRuns);
+    // Require at least 2 runs with complete data before using the GP. Runs
+    // recorded before the parameters were last changed are dropped — they were
+    // generated against a different parameter set and would mislead the model.
+    final validRuns = _filterValidRuns(
+      parameters,
+      outcomes,
+      pastRuns,
+      experiment.lastParametersUpdatedAt,
+    );
     if (validRuns.length < 2) {
       return _randomSuggestion(parameters, rng);
     }
 
     // Encode past runs into a normalised feature matrix and objective vector.
+    // Each run is scored against its own captured outcome snapshot via
+    // [SchemaRun.finalRating], falling back to the experiment's current
+    // outcomes for legacy runs that never stored one.
     final X =
         validRuns
             .map((r) => _encodeParameters(parameters, r.parameterValues!))
             .toList();
-    final y = validRuns.map((r) => r.finalRating(outcomes)).toList();
+    final y = validRuns
+        .map((r) => r.outcomes != null ? r.finalRating() : r.finalRating(outcomes))
+        .toList();
 
     final gp = _GaussianProcess(
       lengthScale: _lengthScale,
@@ -91,13 +103,23 @@ class BayesianOptimizationService {
     List<SchemaParameter> parameters,
     List<SchemaOutcome> outcomes,
     List<SchemaRun> runs,
+    int? lastParametersUpdatedAt,
   ) {
     return runs.where((r) {
       final pv = r.parameterValues ?? {};
       final ov = r.outcomeValues ?? {};
       final hasAllParams = parameters.every((p) => pv.containsKey(p.id));
       final hasAnyOutcome = outcomes.any((o) => ov.containsKey(o.id));
-      return hasAllParams && hasAnyOutcome;
+      if (!hasAllParams || !hasAnyOutcome) return false;
+
+      // Drop runs generated before the parameters were last edited — they used
+      // an outdated parameter set. The run's [createdAt] is when its parameter
+      // values were assigned, so it is the moment to compare against.
+      if (lastParametersUpdatedAt != null) {
+        final generatedAt = r.createdAt ?? r.completedAt ?? 0;
+        if (generatedAt < lastParametersUpdatedAt) return false;
+      }
+      return true;
     }).toList();
   }
 
