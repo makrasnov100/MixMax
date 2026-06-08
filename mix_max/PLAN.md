@@ -1,7 +1,5 @@
 
 --- MVP ---
-- design and implement a way to implement increments in numeric parameters
-
 - delete a run menu same as deleting an expirement
 - allow to re rate a run in the top menu (for later aswell)
 
@@ -31,10 +29,8 @@
 --- Updates ---
 - weighted outcome priority (pie chart?)
 - better usage of previous runs after a parameter was updated
-- automatic update of best run after an outcome was updated
-- deleting a run
 - editing suggested paramers befre recording updates
-- description for outcomes for more detail when rating 
+- description for outcomes for more detail when rating, description for expirments
 - The large rating text is a bit grainy
 - Subitting a run outputs later skipping a rating (secondary option during rating)
 - Ability to see previous runs and ratings for those (seperate page)

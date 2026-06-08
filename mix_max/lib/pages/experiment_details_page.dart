@@ -27,6 +27,7 @@ import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dar
 import 'package:mix_max/widgets/pages/experiment_details/rename_experiment_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/runs_pill.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
+import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
 
 /// The Experiment Details screen.
 ///
@@ -74,11 +75,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => ExperimentActionsDrawer(
-        experimentName: _experiment.name,
-        onRename: _showRenameDrawer,
-        onDelete: _showConfirmDeleteDrawer,
-      ),
+      builder:
+          (_) => ExperimentActionsDrawer(
+            experimentName: _experiment.name,
+            onRename: _showRenameDrawer,
+            onDelete: _showConfirmDeleteDrawer,
+          ),
     );
   }
 
@@ -88,13 +90,14 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => ConfirmDeleteExperimentDrawer(
-        experimentName: _experiment.name,
-        parameterCount: _experiment.parameters?.length ?? 0,
-        outcomeCount: _experiment.outcomes?.length ?? 0,
-        runCount: _experiment.runCount,
-        onConfirm: _deleteExperiment,
-      ),
+      builder:
+          (_) => ConfirmDeleteExperimentDrawer(
+            experimentName: _experiment.name,
+            parameterCount: _experiment.parameters?.length ?? 0,
+            outcomeCount: _experiment.outcomes?.length ?? 0,
+            runCount: _experiment.runCount,
+            onConfirm: _deleteExperiment,
+          ),
     );
   }
 
@@ -152,11 +155,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => AddParameterDrawer(
-        initial: parameter,
-        onSave: _saveParameterEdit,
-        onDelete: () => _requestDeleteParameter(parameter),
-      ),
+      builder:
+          (_) => AddParameterDrawer(
+            initial: parameter,
+            onSave: _saveParameterEdit,
+            onDelete: () => _requestDeleteParameter(parameter),
+          ),
     );
   }
 
@@ -183,19 +187,21 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => ConfirmDeleteItemDrawer(
-        target: DeleteItemTarget.parameter,
-        runCount: _experiment.runCount,
-        onConfirm: () => _deleteParameter(parameter),
-        onClose: () => _showEditParameterDrawer(parameter),
-      ),
+      builder:
+          (_) => ConfirmDeleteItemDrawer(
+            target: DeleteItemTarget.parameter,
+            runCount: _experiment.runCount,
+            onConfirm: () => _deleteParameter(parameter),
+            onClose: () => _showEditParameterDrawer(parameter),
+          ),
     );
   }
 
   Future<void> _deleteParameter(SchemaParameter parameter) async {
-    _experiment.parameters = (_experiment.parameters ?? [])
-        .where((p) => p.id != parameter.id)
-        .toList();
+    _experiment.parameters =
+        (_experiment.parameters ?? [])
+            .where((p) => p.id != parameter.id)
+            .toList();
     _experiment.markParametersUpdated();
     await _experiment.save();
     if (!mounted) return;
@@ -226,11 +232,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => AddOutputDrawer(
-        initial: outcome,
-        onSave: _saveOutcomeEdit,
-        onDelete: () => _requestDeleteOutcome(outcome),
-      ),
+      builder:
+          (_) => AddOutputDrawer(
+            initial: outcome,
+            onSave: _saveOutcomeEdit,
+            onDelete: () => _requestDeleteOutcome(outcome),
+          ),
     );
   }
 
@@ -254,19 +261,19 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => ConfirmDeleteItemDrawer(
-        target: DeleteItemTarget.outcome,
-        runCount: _experiment.runCount,
-        onConfirm: () => _deleteOutcome(outcome),
-        onClose: () => _showEditOutcomeDrawer(outcome),
-      ),
+      builder:
+          (_) => ConfirmDeleteItemDrawer(
+            target: DeleteItemTarget.outcome,
+            runCount: _experiment.runCount,
+            onConfirm: () => _deleteOutcome(outcome),
+            onClose: () => _showEditOutcomeDrawer(outcome),
+          ),
     );
   }
 
   Future<void> _deleteOutcome(SchemaOutcome outcome) async {
-    _experiment.outcomes = (_experiment.outcomes ?? [])
-        .where((o) => o.id != outcome.id)
-        .toList();
+    _experiment.outcomes =
+        (_experiment.outcomes ?? []).where((o) => o.id != outcome.id).toList();
     await _experiment.save();
     if (!mounted) return;
     setState(() {});
@@ -286,11 +293,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   void _openBestRun(SchemaRun run) {
     Navigation.goTo(
       context: context,
-      page: RunDetailsPage(
-        experiment: _experiment,
-        run: run,
-        isBest: true,
-      ),
+      page: RunDetailsPage(experiment: _experiment, run: run, isBest: true),
     );
   }
 
@@ -326,9 +329,10 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     final outcomes = _experiment.outcomes ?? const [];
     final runCount = _experiment.runCount;
     final bestRun = _experiment.bestRun;
-    final bestLabel = bestRun == null
-        ? null
-        : BestMixCard.labelFor(bestRun.outcomes ?? outcomes, bestRun);
+    final bestLabel =
+        bestRun == null
+            ? null
+            : BestMixCard.labelFor(bestRun.outcomes ?? outcomes, bestRun);
     final name =
         _experiment.name?.isNotEmpty == true
             ? _experiment.name!
@@ -337,188 +341,182 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     return OrientationScaffold(
       body: ColoredBox(
         color: AppColors.bg,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 200),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top bar: back + the run-count chip on the right.
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      MixMaxRoundButton(
-                        glyph: MixMaxGlyph.arrowLeft,
-                        onTap: () => Navigator.of(context).maybePop(),
+        child: StickyTopBar(
+          onBack: () => Navigator.of(context).maybePop(),
+          // Run-count pill + manage actions, pinned beside the back button.
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RunsPill(count: runCount, onTap: _openRunHistory),
+              const SizedBox(width: 10),
+              MixMaxRoundButton(
+                glyph: MixMaxGlyph.more,
+                onTap: _showActionsDrawer,
+              ),
+            ],
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  20,
+                  StickyTopBar.contentInset,
+                  20,
+                  200,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tappable experiment name → rename drawer. The edit glyph
+                    // flows inline right after the name (an Expanded row would
+                    // shove it to the far screen edge instead).
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _showRenameDrawer(),
+                      child: Text.rich(
+                        TextSpan(
+                          text: name,
+                          style: DisplayText.styleOf(fontSize: 36),
+                          children: const [
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Padding(
+                                padding: EdgeInsets.only(left: 10),
+                                child: MixMaxIcon(
+                                  MixMaxGlyph.edit,
+                                  size: 19,
+                                  color: AppColors.inkFaint,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          RunsPill(
-                            count: runCount,
-                            onTap: _openRunHistory,
-                          ),
-                          const SizedBox(width: 10),
-                          MixMaxRoundButton(
-                            glyph: MixMaxGlyph.more,
-                            onTap: _showActionsDrawer,
-                          ),
-                        ],
+                    ),
+
+                    // Best mix so far — only once a winning run is recorded.
+                    if (bestLabel != null && bestRun != null) ...[
+                      const SizedBox(height: 22),
+                      BestMixCard(
+                        label: bestLabel,
+                        onTap: () => _openBestRun(bestRun),
                       ),
                     ],
-                  ),
 
-                  // Tappable experiment name → rename drawer. The edit glyph
-                  // flows inline right after the name (an Expanded row would
-                  // shove it to the far screen edge instead).
-                  const SizedBox(height: 18),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _showRenameDrawer(),
-                    child: Text.rich(
-                      TextSpan(
-                        text: name,
-                        style: DisplayText.styleOf(fontSize: 36),
-                        children: const [
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Padding(
-                              padding: EdgeInsets.only(left: 10),
-                              child: MixMaxIcon(
-                                MixMaxGlyph.edit,
-                                size: 19,
-                                color: AppColors.inkFaint,
+                    // Parameters.
+                    const SizedBox(height: 26),
+                    _SectionHeader(
+                      label: 'Parameters',
+                      count: parameters.isEmpty ? null : parameters.length,
+                    ),
+                    const SizedBox(height: 4),
+                    const BodyText(
+                      text: 'The knobs Mix Max tunes for you.',
+                      fontSize: 13,
+                    ),
+                    const SizedBox(height: 13),
+                    MixMaxShake(
+                      trigger: _parametersShake,
+                      child: ParameterListCard(
+                        parameters: parameters,
+                        onEdit: _showEditParameterDrawer,
+                        onAdd: _showAddParameterDrawer,
+                        emptyError: _parametersMissing,
+                      ),
+                    ),
+
+                    // Outcomes.
+                    const SizedBox(height: 24),
+                    _SectionHeader(
+                      label: 'Outcomes',
+                      count: outcomes.isEmpty ? null : outcomes.length,
+                    ),
+                    const SizedBox(height: 4),
+                    const BodyText(
+                      text: 'What you measure to score each run.',
+                      fontSize: 13,
+                    ),
+                    const SizedBox(height: 13),
+                    MixMaxShake(
+                      trigger: _outcomesShake,
+                      child: OutcomeListCard(
+                        outcomes: outcomes,
+                        onEdit: _showEditOutcomeDrawer,
+                        onAdd: _showAddOutputDrawer,
+                        emptyError: _outcomesMissing,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Sticky footer over a bg fade.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x00FBF7F0), AppColors.bg],
+                      stops: [0.0, 0.28],
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      MixMaxButton(
+                        label: 'Run experiment',
+                        variant: MixMaxButtonVariant.gold,
+                        onPressed: _runExperiment,
+                        trailing: const MixMaxIcon(
+                          MixMaxGlyph.play,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: MixMaxButton(
+                              label: 'Parameter',
+                              variant: MixMaxButtonVariant.sage,
+                              onPressed: _showAddParameterDrawer,
+                              leading: const MixMaxIcon(
+                                MixMaxGlyph.plus,
+                                size: 20,
+                                color: AppColors.sageText,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: MixMaxButton(
+                              label: 'Outcome',
+                              variant: MixMaxButtonVariant.violet,
+                              onPressed: _showAddOutputDrawer,
+                              leading: const MixMaxIcon(
+                                MixMaxGlyph.plus,
+                                size: 20,
+                                color: AppColors.violetText,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-
-                  // Best mix so far — only once a winning run is recorded.
-                  if (bestLabel != null && bestRun != null) ...[
-                    const SizedBox(height: 22),
-                    BestMixCard(
-                      label: bestLabel,
-                      onTap: () => _openBestRun(bestRun),
-                    ),
-                  ],
-
-                  // Parameters.
-                  const SizedBox(height: 26),
-                  _SectionHeader(
-                    label: 'Parameters',
-                    count: parameters.isEmpty ? null : parameters.length,
-                  ),
-                  const SizedBox(height: 4),
-                  const BodyText(
-                    text: 'The knobs Mix Max tunes for you.',
-                    fontSize: 13,
-                  ),
-                  const SizedBox(height: 13),
-                  MixMaxShake(
-                    trigger: _parametersShake,
-                    child: ParameterListCard(
-                      parameters: parameters,
-                      onEdit: _showEditParameterDrawer,
-                      onAdd: _showAddParameterDrawer,
-                      emptyError: _parametersMissing,
-                    ),
-                  ),
-
-                  // Outcomes.
-                  const SizedBox(height: 24),
-                  _SectionHeader(
-                    label: 'Outcomes',
-                    count: outcomes.isEmpty ? null : outcomes.length,
-                  ),
-                  const SizedBox(height: 4),
-                  const BodyText(
-                    text: 'What you measure to score each run.',
-                    fontSize: 13,
-                  ),
-                  const SizedBox(height: 13),
-                  MixMaxShake(
-                    trigger: _outcomesShake,
-                    child: OutcomeListCard(
-                      outcomes: outcomes,
-                      onEdit: _showEditOutcomeDrawer,
-                      onAdd: _showAddOutputDrawer,
-                      emptyError: _outcomesMissing,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Sticky footer over a bg fade.
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x00FBF7F0), AppColors.bg],
-                    stops: [0.0, 0.28],
+                    ],
                   ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    MixMaxButton(
-                      label: 'Run experiment',
-                      variant: MixMaxButtonVariant.gold,
-                      onPressed: _runExperiment,
-                      trailing: const MixMaxIcon(
-                        MixMaxGlyph.play,
-                        size: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: MixMaxButton(
-                            label: 'Parameter',
-                            variant: MixMaxButtonVariant.sage,
-                            onPressed: _showAddParameterDrawer,
-                            leading: const MixMaxIcon(
-                              MixMaxGlyph.plus,
-                              size: 20,
-                              color: AppColors.sageText,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: MixMaxButton(
-                            label: 'Outcome',
-                            variant: MixMaxButtonVariant.violet,
-                            onPressed: _showAddOutputDrawer,
-                            leading: const MixMaxIcon(
-                              MixMaxGlyph.plus,
-                              size: 20,
-                              color: AppColors.violetText,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

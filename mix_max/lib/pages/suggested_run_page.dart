@@ -11,7 +11,6 @@ import 'package:mix_max/services/get_it.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
-import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
 import 'package:mix_max/widgets/design/ions/text/display_text.dart';
@@ -20,6 +19,7 @@ import 'package:mix_max/widgets/design/ions/text/section_label_text.dart';
 import 'package:mix_max/widgets/pages/suggested_run/smart_pick_banner.dart';
 import 'package:mix_max/widgets/pages/suggested_run/suggestion_card.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
+import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
 
 enum _SuggestedRunPhase { loading, ready, error }
 
@@ -63,15 +63,17 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
         throw StateError('Not signed in yet. Please try again in a moment.');
       }
 
-      final pastRunsSnapshot = await DatabaseService.runsRef
-          .where('userId', isEqualTo: userId)
-          .where('experimentId', isEqualTo: widget.experiment.id)
-          .get();
+      final pastRunsSnapshot =
+          await DatabaseService.runsRef
+              .where('userId', isEqualTo: userId)
+              .where('experimentId', isEqualTo: widget.experiment.id)
+              .get();
 
-      final pastRuns = pastRunsSnapshot.docs
-          .map((d) => d.data())
-          .where((r) => r.isValid())
-          .toList();
+      final pastRuns =
+          pastRunsSnapshot.docs
+              .map((d) => d.data())
+              .where((r) => r.isValid())
+              .toList();
 
       final suggestion = BayesianOptimizationService.suggestNextParameters(
         experiment: widget.experiment,
@@ -82,12 +84,14 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
       // definitions so this run renders and scores correctly even after the
       // experiment is later edited. Deep-cloned via JSON so later edits to the
       // experiment never mutate the run's copy.
-      final paramSnapshot = (widget.experiment.parameters ?? const [])
-          .map((p) => SchemaParameter.fromJson(p.toJson()))
-          .toList();
-      final outcomeSnapshot = (widget.experiment.outcomes ?? const [])
-          .map((o) => SchemaOutcome.fromJson(o.toJson()))
-          .toList();
+      final paramSnapshot =
+          (widget.experiment.parameters ?? const [])
+              .map((p) => SchemaParameter.fromJson(p.toJson()))
+              .toList();
+      final outcomeSnapshot =
+          (widget.experiment.outcomes ?? const [])
+              .map((o) => SchemaOutcome.fromJson(o.toJson()))
+              .toList();
 
       final docRef = DatabaseService.runsRef.doc();
       final draft = SchemaRun(
@@ -134,19 +138,19 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
         color: AppColors.bg,
         child: switch (_phase) {
           _SuggestedRunPhase.loading => const _StatusView(
-              message: 'Generating next run…',
-            ),
+            message: 'Generating next run…',
+          ),
           _SuggestedRunPhase.error => _ErrorView(
-              message: _errorMessage ?? 'Something went wrong.',
-              onRetry: _bootstrap,
-            ),
+            message: _errorMessage ?? 'Something went wrong.',
+            onRetry: _bootstrap,
+          ),
           _SuggestedRunPhase.ready => _ReadyView(
-              experiment: widget.experiment,
-              suggestion: _suggestedParameters,
-              errorMessage: _errorMessage,
-              onBack: () => Navigator.of(context).maybePop(),
-              onRecordOutcomes: _recordOutcomes,
-            ),
+            experiment: widget.experiment,
+            suggestion: _suggestedParameters,
+            errorMessage: _errorMessage,
+            onBack: () => Navigator.of(context).maybePop(),
+            onRecordOutcomes: _recordOutcomes,
+          ),
         },
       ),
     );
@@ -175,96 +179,97 @@ class _ReadyView extends StatelessWidget {
   Widget build(BuildContext context) {
     final parameters = experiment.parameters ?? const [];
     final outcomes = experiment.outcomes ?? const [];
-    final name = experiment.name?.isNotEmpty == true
-        ? experiment.name!
-        : 'Untitled experiment';
+    final name =
+        experiment.name?.isNotEmpty == true
+            ? experiment.name!
+            : 'Untitled experiment';
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top bar: back.
-              Row(
-                children: [
-                  MixMaxRoundButton(
-                    glyph: MixMaxGlyph.arrowLeft,
-                    onTap: onBack,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-              const EyebrowText(text: 'Next run · suggested', color: AppColors.gold),
-              const SizedBox(height: 8),
-              DisplayText(
-                text: name,
-                fontSize: 34,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 16),
-              const SmartPickBanner(),
-
-              const SizedBox(height: 22),
-              const SectionLabelText(text: 'Try these'),
-              const SizedBox(height: 13),
-              if (parameters.isEmpty)
-                const BodyText(text: 'No parameters set.', fontSize: 13)
-              else
-                for (var i = 0; i < parameters.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 11),
-                  SuggestionCard(
-                    parameter: parameters[i],
-                    value: suggestion[parameters[i].id],
-                  ),
-                ],
-
-              if (errorMessage != null) ...[
-                const SizedBox(height: 16),
-                BodyText(
-                  text: errorMessage!,
-                  color: AppColors.danger,
-                  fontSize: 13,
+    return StickyTopBar(
+      onBack: onBack,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              StickyTopBar.contentInset,
+              20,
+              140,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const EyebrowText(
+                  text: 'Next run · suggested',
+                  color: AppColors.gold,
                 ),
-              ],
-            ],
-          ),
-        ),
+                const SizedBox(height: 8),
+                DisplayText(
+                  text: name,
+                  fontSize: 34,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
 
-        // Sticky footer over a bg fade.
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x00FBF7F0), AppColors.bg],
-                stops: [0.0, 0.28],
-              ),
+                const SizedBox(height: 16),
+                const SmartPickBanner(),
+
+                const SizedBox(height: 22),
+                const SectionLabelText(text: 'Try these'),
+                const SizedBox(height: 13),
+                if (parameters.isEmpty)
+                  const BodyText(text: 'No parameters set.', fontSize: 13)
+                else
+                  for (var i = 0; i < parameters.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 11),
+                    SuggestionCard(
+                      parameter: parameters[i],
+                      value: suggestion[parameters[i].id],
+                    ),
+                  ],
+
+                if (errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  BodyText(
+                    text: errorMessage!,
+                    color: AppColors.danger,
+                    fontSize: 13,
+                  ),
+                ],
+              ],
             ),
-            child: MixMaxButton(
-              label: 'Record outcomes',
-              variant: MixMaxButtonVariant.ink,
-              enabled: outcomes.isNotEmpty,
-              onPressed: outcomes.isEmpty ? null : onRecordOutcomes,
-              trailing: MixMaxIcon(
-                MixMaxGlyph.arrowRight,
-                size: 20,
-                color: outcomes.isEmpty ? AppColors.inkFaint : Colors.white,
+          ),
+
+          // Sticky footer over a bg fade.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00FBF7F0), AppColors.bg],
+                  stops: [0.0, 0.28],
+                ),
+              ),
+              child: MixMaxButton(
+                label: 'Record outcomes',
+                variant: MixMaxButtonVariant.ink,
+                enabled: outcomes.isNotEmpty,
+                onPressed: outcomes.isEmpty ? null : onRecordOutcomes,
+                trailing: MixMaxIcon(
+                  MixMaxGlyph.arrowRight,
+                  size: 20,
+                  color: outcomes.isEmpty ? AppColors.inkFaint : Colors.white,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -308,7 +313,11 @@ class _ErrorView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Center(
-            child: MixMaxIcon(MixMaxGlyph.info, size: 40, color: AppColors.danger),
+            child: MixMaxIcon(
+              MixMaxGlyph.info,
+              size: 40,
+              color: AppColors.danger,
+            ),
           ),
           const SizedBox(height: 16),
           BodyText(

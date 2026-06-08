@@ -8,7 +8,6 @@ import 'package:mix_max/services/get_it.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
-import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
@@ -18,6 +17,7 @@ import 'package:mix_max/widgets/design/ions/text/title_text.dart';
 import 'package:mix_max/widgets/pages/run_history/run_history_card.dart';
 import 'package:mix_max/widgets/pages/run_history/run_sort_toggle.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
+import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
 
 enum _RunHistoryPhase { loading, ready, error }
 
@@ -69,15 +69,17 @@ class _RunHistoryPageState extends State<RunHistoryPage> {
         throw StateError('Not signed in yet. Please try again in a moment.');
       }
 
-      final snapshot = await DatabaseService.runsRef
-          .where('userId', isEqualTo: userId)
-          .where('experimentId', isEqualTo: widget.experiment.id)
-          .get();
+      final snapshot =
+          await DatabaseService.runsRef
+              .where('userId', isEqualTo: userId)
+              .where('experimentId', isEqualTo: widget.experiment.id)
+              .get();
 
-      final runs = snapshot.docs
-          .map((d) => d.data())
-          .where((r) => r.isValid() && r.outcomeValues != null)
-          .toList();
+      final runs =
+          snapshot.docs
+              .map((d) => d.data())
+              .where((r) => r.isValid() && r.outcomeValues != null)
+              .toList();
 
       if (!mounted) return;
       setState(() {
@@ -115,20 +117,20 @@ class _RunHistoryPageState extends State<RunHistoryPage> {
         color: AppColors.bg,
         child: switch (_phase) {
           _RunHistoryPhase.loading => const _StatusView(
-              message: 'Loading runs…',
-            ),
+            message: 'Loading runs…',
+          ),
           _RunHistoryPhase.error => _ErrorView(
-              message: _errorMessage ?? 'Something went wrong.',
-              onRetry: _load,
-            ),
+            message: _errorMessage ?? 'Something went wrong.',
+            onRetry: _load,
+          ),
           _RunHistoryPhase.ready => _ReadyView(
-              experiment: widget.experiment,
-              runs: _runs,
-              sort: _sort,
-              onSortChanged: (mode) => setState(() => _sort = mode),
-              onBack: () => Navigator.of(context).maybePop(),
-              onOpenRun: _openRun,
-            ),
+            experiment: widget.experiment,
+            runs: _runs,
+            sort: _sort,
+            onSortChanged: (mode) => setState(() => _sort = mode),
+            onBack: () => Navigator.of(context).maybePop(),
+            onOpenRun: _openRun,
+          ),
         },
       ),
     );
@@ -156,13 +158,13 @@ class _ReadyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = experiment.name?.isNotEmpty == true
-        ? experiment.name!
-        : 'Untitled experiment';
+    final name =
+        experiment.name?.isNotEmpty == true
+            ? experiment.name!
+            : 'Untitled experiment';
 
     // Chronological numbering: oldest run is "Run 1".
-    final chrono = [...runs]
-      ..sort((a, b) => _whenOf(a).compareTo(_whenOf(b)));
+    final chrono = [...runs]..sort((a, b) => _whenOf(a).compareTo(_whenOf(b)));
     final numberOf = <String, int>{};
     for (var i = 0; i < chrono.length; i++) {
       numberOf[chrono[i].id] = i + 1;
@@ -181,60 +183,58 @@ class _ReadyView extends StatelessWidget {
 
     // Apply the selected ordering.
     final ordered = [...runs]..sort((a, b) {
-        if (sort == RunSortMode.rated) {
-          final d = _scoreOf(b).compareTo(_scoreOf(a));
-          if (d != 0) return d;
-        }
-        return _whenOf(b).compareTo(_whenOf(a));
-      });
+      if (sort == RunSortMode.rated) {
+        final d = _scoreOf(b).compareTo(_scoreOf(a));
+        if (d != 0) return d;
+      }
+      return _whenOf(b).compareTo(_whenOf(a));
+    });
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top bar: back.
-          Row(
-            children: [
-              MixMaxRoundButton(
-                glyph: MixMaxGlyph.arrowLeft,
-                onTap: onBack,
-              ),
-            ],
-          ),
+    return StickyTopBar(
+      onBack: onBack,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          StickyTopBar.contentInset,
+          20,
+          40,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const EyebrowText(text: 'Run history', color: AppColors.gold),
+            const SizedBox(height: 8),
+            DisplayText(
+              text: name,
+              fontSize: 34,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
 
-          const SizedBox(height: 18),
-          const EyebrowText(text: 'Run history', color: AppColors.gold),
-          const SizedBox(height: 8),
-          DisplayText(
-            text: name,
-            fontSize: 34,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          if (runs.isEmpty)
-            const _EmptyState()
-          else ...[
-            const SizedBox(height: 22),
-            RunSortToggle(value: sort, onChanged: onSortChanged),
-            const SizedBox(height: 16),
-            for (var i = 0; i < ordered.length; i++) ...[
-              if (i > 0) const SizedBox(height: 12),
-              RunHistoryCard(
-                experiment: experiment,
-                run: ordered[i],
-                number: numberOf[ordered[i].id] ?? (i + 1),
-                isBest: ordered[i].id == bestId,
-                onOpen: () => onOpenRun(
-                  ordered[i],
-                  numberOf[ordered[i].id] ?? (i + 1),
-                  ordered[i].id == bestId,
+            if (runs.isEmpty)
+              const _EmptyState()
+            else ...[
+              const SizedBox(height: 22),
+              RunSortToggle(value: sort, onChanged: onSortChanged),
+              const SizedBox(height: 16),
+              for (var i = 0; i < ordered.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                RunHistoryCard(
+                  experiment: experiment,
+                  run: ordered[i],
+                  number: numberOf[ordered[i].id] ?? (i + 1),
+                  isBest: ordered[i].id == bestId,
+                  onOpen:
+                      () => onOpenRun(
+                        ordered[i],
+                        numberOf[ordered[i].id] ?? (i + 1),
+                        ordered[i].id == bestId,
+                      ),
                 ),
-              ),
+              ],
             ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -243,9 +243,10 @@ class _ReadyView extends StatelessWidget {
 
   /// A run's 0–1 rating, scored against its own captured outcome snapshot and
   /// falling back to the experiment's current outcomes for legacy runs.
-  double _scoreOf(SchemaRun r) => r.outcomes != null
-      ? r.finalRating()
-      : r.finalRating(experiment.outcomes ?? const []);
+  double _scoreOf(SchemaRun r) =>
+      r.outcomes != null
+          ? r.finalRating()
+          : r.finalRating(experiment.outcomes ?? const []);
 }
 
 /// The "no runs yet" placeholder (source: `screens.jsx` `RunHistoryScreen`
@@ -267,7 +268,11 @@ class _EmptyState extends StatelessWidget {
             radius: 20,
           ),
           SizedBox(height: 18),
-          TitleText(text: 'No runs yet', fontSize: 22, textAlign: TextAlign.center),
+          TitleText(
+            text: 'No runs yet',
+            fontSize: 22,
+            textAlign: TextAlign.center,
+          ),
           SizedBox(height: 6),
           BodyText(
             text:
