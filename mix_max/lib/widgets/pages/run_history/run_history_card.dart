@@ -106,9 +106,12 @@ class RunHistoryCard extends StatelessWidget {
                 const SizedBox(height: 13),
                 Container(
                   padding: const EdgeInsets.only(top: 13),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
-                      top: BorderSide(color: AppColors.hairline, width: 1),
+                      top: BorderSide(
+                        color: isBest ? AppColors.gold : AppColors.hairline,
+                        width: 1,
+                      ),
                     ),
                   ),
                   child: Row(

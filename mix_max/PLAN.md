@@ -1,16 +1,9 @@
 Add general todo items here and plan out prompts as needed
 
 --- MVP ---
-- Editing a parameter & output
-- Deleting a parameter & output
-
-- design and implement a way to implment increments in numeric parameters
 - allow to press run expirment but highlight in red if parameers or outcomes are missing
-
-- off/on label inputs
-- rename step in outcome to increments
-
-- weighted outcome priority (pie chart?)
+- design and implement a way to implement increments in numeric parameters
+- top bar to be sticky when draging down?
 
 - Sharing functionality
   - in expirement menu
@@ -23,7 +16,6 @@ Add general todo items here and plan out prompts as needed
   - run list 
   - best run 
 
-- top bar to be sticky when draging down?
 
 - experiment runs as paid feature with x amount of free runs per account (10)
 - ability to pay for lifetime subscription
@@ -36,6 +28,7 @@ Add general todo items here and plan out prompts as needed
 - Attempt to publish on both stores (paid app)
 
 --- Updates ---
+- weighted outcome priority (pie chart?)
 - better usage of previous runs after a parameter was updated
 - automatic update of best run after an outcome was updated
 - deleting a run
