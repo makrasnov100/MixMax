@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/pages/experiment_details_page.dart';
 import 'package:mix_max/pages/experiments_list_page.dart';
 import 'package:mix_max/pages/record_outcomes_page.dart';
+import 'package:mix_max/pages/run_details_page.dart';
 import 'package:mix_max/pages/run_history_page.dart';
 import 'package:mix_max/pages/suggested_run_page.dart';
 
@@ -14,6 +15,7 @@ enum Destination {
   suggestedRun,
   recordOutcomes,
   runHistory,
+  runDetails,
   unknown,
 }
 
@@ -40,6 +42,8 @@ class Navigation {
       destination = Destination.recordOutcomes;
     } else if (page is RunHistoryPage) {
       destination = Destination.runHistory;
+    } else if (page is RunDetailsPage) {
+      destination = Destination.runDetails;
     }
 
     if (destination == Destination.unknown) {

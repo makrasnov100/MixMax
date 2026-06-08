@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/run.dart';
+import 'package:mix_max/pages/run_details_page.dart';
 import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/get_it.dart';
+import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/round_button.dart';
@@ -28,8 +30,8 @@ enum _RunHistoryPhase { loading, ready, error }
 /// user can re-order between "Most recent" and "Highest rated" via the
 /// [RunSortToggle]; the highest-scoring run is highlighted as the best run.
 ///
-/// Tapping a run is wired to [onOpenRun] but the run-details screen is not built
-/// yet, so for now it is a no-op placeholder.
+/// Tapping a run opens the [RunDetailsPage], carrying that card's number and
+/// best-run flag so the details header matches it.
 class RunHistoryPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
@@ -91,10 +93,19 @@ class _RunHistoryPageState extends State<RunHistoryPage> {
     }
   }
 
-  /// Opens a run's details. The details screen is not built yet, so this is a
-  /// no-op for now.
-  void _openRun(SchemaRun run) {
-    // TODO: navigate to the run details screen once it exists.
+  /// Opens the Run Details page for [run], carrying its chronological [number]
+  /// and whether it is the experiment's best run so the details header matches
+  /// the card the user tapped.
+  void _openRun(SchemaRun run, int number, bool isBest) {
+    Navigation.goTo(
+      context: context,
+      page: RunDetailsPage(
+        experiment: widget.experiment,
+        run: run,
+        number: number,
+        isBest: isBest,
+      ),
+    );
   }
 
   @override
@@ -132,7 +143,7 @@ class _ReadyView extends StatelessWidget {
   final RunSortMode sort;
   final ValueChanged<RunSortMode> onSortChanged;
   final VoidCallback onBack;
-  final ValueChanged<SchemaRun> onOpenRun;
+  final void Function(SchemaRun run, int number, bool isBest) onOpenRun;
 
   const _ReadyView({
     required this.experiment,
@@ -216,7 +227,11 @@ class _ReadyView extends StatelessWidget {
                 run: ordered[i],
                 number: numberOf[ordered[i].id] ?? (i + 1),
                 isBest: ordered[i].id == bestId,
-                onOpen: () => onOpenRun(ordered[i]),
+                onOpen: () => onOpenRun(
+                  ordered[i],
+                  numberOf[ordered[i].id] ?? (i + 1),
+                  ordered[i].id == bestId,
+                ),
               ),
             ],
           ],

@@ -1,13 +1,15 @@
 Add general todo items here and plan out prompts as needed
 
 --- MVP ---
-- pressing on best mix goes to that mix details (reuse the suggested parameters Ui)
-
 - Editing a parameter & output
 - Deleting a parameter & output
+- Creating a parameter & output
+  - when changing anything but name state that the runs will become outdated and best run will be reset
 
 - check step is supported? any better way to represent it?
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
+
+- weighted outcome priority (pie chart?)
 
 - Sharing functionality, image generated with my best combo.
 
@@ -29,7 +31,6 @@ Add general todo items here and plan out prompts as needed
 - editing suggested paramers befre recording updates
 - description for outcomes for more detail when rating 
 - The large rating text is a bit grainy
-- weighted outcome priority (pie chart?)
 - Subitting a run outputs later skipping a rating (secondary option during rating)
 - Ability to see previous runs and ratings for those (seperate page)
 - Rating slider outcome not always visible

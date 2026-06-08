@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
+import 'package:mix_max/classes/schema/run.dart';
+import 'package:mix_max/pages/run_details_page.dart';
 import 'package:mix_max/pages/run_history_page.dart';
 import 'package:mix_max/pages/suggested_run_page.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
@@ -152,6 +154,20 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     );
   }
 
+  /// Opens the cached best run's details. The full run list isn't loaded here,
+  /// so the run's chronological number is unknown — the details header falls
+  /// back to the "Best run" kicker.
+  void _openBestRun(SchemaRun run) {
+    Navigation.goTo(
+      context: context,
+      page: RunDetailsPage(
+        experiment: _experiment,
+        run: run,
+        isBest: true,
+      ),
+    );
+  }
+
   Future<void> _runExperiment() async {
     // The run flow mutates [_experiment] in place (e.g. promoting a new best
     // run); rebuild on return so the "Best mix so far" banner reflects it.
@@ -244,9 +260,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                   ),
 
                   // Best mix so far — only once a winning run is recorded.
-                  if (bestLabel != null) ...[
+                  if (bestLabel != null && bestRun != null) ...[
                     const SizedBox(height: 22),
-                    BestMixCard(label: bestLabel),
+                    BestMixCard(
+                      label: bestLabel,
+                      onTap: () => _openBestRun(bestRun),
+                    ),
                   ],
 
                   // Parameters.

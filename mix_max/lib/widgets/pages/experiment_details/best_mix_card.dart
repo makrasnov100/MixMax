@@ -16,15 +16,23 @@ import 'package:mix_max/widgets/design/ions/text/label_text.dart';
 /// describing the leading run. Render it only when a best run exists; the
 /// caller supplies the [label] from the experiment's cached best run and skips
 /// the card when there is none.
+///
+/// When [onTap] is set the whole panel becomes a button (with a trailing
+/// chevron) that opens the best run's details, matching the design's
+/// `onOpenBest` affordance.
 class BestMixCard extends StatelessWidget {
   /// One-line description of the best run (e.g. `Sweetness 8  ·  Bitterness 2`).
   final String label;
 
-  const BestMixCard({Key? key, required this.label}) : super(key: key);
+  /// Opens the best run's details. Null leaves the card inert (no chevron).
+  final VoidCallback? onTap;
+
+  const BestMixCard({Key? key, required this.label, this.onTap})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
         color: AppColors.goldTint,
@@ -46,8 +54,23 @@ class BestMixCard extends StatelessWidget {
               ],
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 10),
+            const MixMaxIcon(
+              MixMaxGlyph.chevRight,
+              size: 19,
+              color: AppColors.goldText,
+            ),
+          ],
         ],
       ),
+    );
+
+    if (onTap == null) return card;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: card),
     );
   }
 
