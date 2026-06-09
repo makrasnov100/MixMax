@@ -1,11 +1,5 @@
 
 --- MVP ---
-- Onboarding, show a user a sample use case step by step
-  - create expirement
-  - added parameters
-  - run list 
-  - best run 
-
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
 
 --- Publishing ---
