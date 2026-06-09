@@ -13,6 +13,7 @@ import 'package:mix_max/services/firebase/flutter_fire.dart';
 import 'package:mix_max/services/get_it.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/services/ui/size_config.dart';
+import 'package:mix_max/widgets/pages/onboarding/onboarding_overlay.dart';
 
 AppNavigatorObserver<PageRoute> navigatorObserver = AppNavigatorObserver<PageRoute>();
 
@@ -91,6 +92,8 @@ class MyApp extends StatelessWidget {
       home: const ExperimentsListPage(),
       navigatorKey: Navigation.navigatorKey,
       navigatorObservers: [navigatorObserver, analyticsObserver],
+      // Float the first-launch onboarding tour above every route.
+      builder: (context, child) => OnboardingHost(child: child ?? const SizedBox.shrink()),
     );
   }
 }

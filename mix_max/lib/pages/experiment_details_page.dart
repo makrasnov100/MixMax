@@ -45,7 +45,20 @@ import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
 class ExperimentDetailsPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
-  const ExperimentDetailsPage({super.key, required this.experiment});
+  /// Spotlight targets for the onboarding tour, attached to the Parameters /
+  /// Outcomes / best-mix sections so the tour can highlight each. Null in
+  /// normal use.
+  final Key? parametersKey;
+  final Key? outcomesKey;
+  final Key? bestMixKey;
+
+  const ExperimentDetailsPage({
+    super.key,
+    required this.experiment,
+    this.parametersKey,
+    this.outcomesKey,
+    this.bestMixKey,
+  });
 
   @override
   State<ExperimentDetailsPage> createState() => _ExperimentDetailsPageState();
@@ -419,9 +432,12 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                     // Best mix so far — only once a winning run is recorded.
                     if (bestLabel != null && bestRun != null) ...[
                       const SizedBox(height: 22),
-                      BestMixCard(
-                        label: bestLabel,
-                        onTap: () => _openBestRun(bestRun),
+                      KeyedSubtree(
+                        key: widget.bestMixKey,
+                        child: BestMixCard(
+                          label: bestLabel,
+                          onTap: () => _openBestRun(bestRun),
+                        ),
                       ),
                     ],
 
@@ -437,13 +453,16 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                       fontSize: 13,
                     ),
                     const SizedBox(height: 13),
-                    MixMaxShake(
-                      trigger: _parametersShake,
-                      child: ParameterListCard(
-                        parameters: parameters,
-                        onEdit: _showEditParameterDrawer,
-                        onAdd: _showAddParameterDrawer,
-                        emptyError: _parametersMissing,
+                    KeyedSubtree(
+                      key: widget.parametersKey,
+                      child: MixMaxShake(
+                        trigger: _parametersShake,
+                        child: ParameterListCard(
+                          parameters: parameters,
+                          onEdit: _showEditParameterDrawer,
+                          onAdd: _showAddParameterDrawer,
+                          emptyError: _parametersMissing,
+                        ),
                       ),
                     ),
 
@@ -459,13 +478,16 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                       fontSize: 13,
                     ),
                     const SizedBox(height: 13),
-                    MixMaxShake(
-                      trigger: _outcomesShake,
-                      child: OutcomeListCard(
-                        outcomes: outcomes,
-                        onEdit: _showEditOutcomeDrawer,
-                        onAdd: _showAddOutputDrawer,
-                        emptyError: _outcomesMissing,
+                    KeyedSubtree(
+                      key: widget.outcomesKey,
+                      child: MixMaxShake(
+                        trigger: _outcomesShake,
+                        child: OutcomeListCard(
+                          outcomes: outcomes,
+                          onEdit: _showEditOutcomeDrawer,
+                          onAdd: _showAddOutputDrawer,
+                          emptyError: _outcomesMissing,
+                        ),
                       ),
                     ),
                   ],

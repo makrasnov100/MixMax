@@ -23,11 +23,16 @@ class ExperimentsList extends StatelessWidget {
   /// caller should add bottom room for the floating action button.
   final EdgeInsetsGeometry padding;
 
+  /// When set, attached to the first card so the onboarding tour can spotlight
+  /// it. Null in normal use.
+  final Key? firstItemKey;
+
   const ExperimentsList({
     Key? key,
     required this.experiments,
     required this.onOpen,
     this.padding = const EdgeInsets.fromLTRB(20, 22, 20, 8),
+    this.firstItemKey,
   }) : super(key: key);
 
   @override
@@ -42,9 +47,12 @@ class ExperimentsList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 13),
       itemBuilder: (_, index) {
         final experiment = experiments[index];
-        return ExperimentListItem(
-          experiment: experiment,
-          onTap: () => onOpen(experiment),
+        return KeyedSubtree(
+          key: index == 0 ? firstItemKey : null,
+          child: ExperimentListItem(
+            experiment: experiment,
+            onTap: () => onOpen(experiment),
+          ),
         );
       },
     );

@@ -31,7 +31,20 @@ enum _SuggestedRunPhase { loading, ready, error }
 class SuggestedRunPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
-  const SuggestedRunPage({super.key, required this.experiment});
+  /// When non-null, the page shows this fixed suggestion instead of querying
+  /// past runs and running the optimizer — used by the onboarding tour so the
+  /// suggested-run screen renders offline against in-memory demo data.
+  final Map<String, dynamic>? demoSuggestion;
+
+  /// Spotlight target for the onboarding tour, attached to the suggested values.
+  final Key? spotlightKey;
+
+  const SuggestedRunPage({
+    super.key,
+    required this.experiment,
+    this.demoSuggestion,
+    this.spotlightKey,
+  });
 
   @override
   State<SuggestedRunPage> createState() => _SuggestedRunPageState();
@@ -58,6 +71,30 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
     });
 
     try {
+      // Onboarding tour: skip the database + optimizer and present the fixed
+      // demo suggestion. Nothing is ever recorded, so a placeholder user id is
+      // fine for the in-memory draft run.
+      final demoSuggestion = widget.demoSuggestion;
+      if (demoSuggestion != null) {
+        final docRef = DatabaseService.runsRef.doc();
+        final draft = SchemaRun(
+          id: docRef.id,
+          experimentId: widget.experiment.id,
+          userId: 'demo',
+          parameterValues: demoSuggestion,
+          parameters: widget.experiment.parameters ?? const [],
+          outcomes: widget.experiment.outcomes ?? const [],
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        if (!mounted) return;
+        setState(() {
+          _suggestedParameters = demoSuggestion;
+          _draftRun = draft;
+          _phase = _SuggestedRunPhase.ready;
+        });
+        return;
+      }
+
       final userId = getIt<AuthService>().user.id;
       if (userId.isEmpty || userId == 'INITIAL') {
         throw StateError('Not signed in yet. Please try again in a moment.');
@@ -148,6 +185,7 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
             experiment: widget.experiment,
             suggestion: _suggestedParameters,
             errorMessage: _errorMessage,
+            spotlightKey: widget.spotlightKey,
             onBack: () => Navigator.of(context).maybePop(),
             onRecordOutcomes: _recordOutcomes,
           ),
@@ -164,6 +202,7 @@ class _ReadyView extends StatelessWidget {
   final SchemaExperiment experiment;
   final Map<String, dynamic> suggestion;
   final String? errorMessage;
+  final Key? spotlightKey;
   final VoidCallback onBack;
   final VoidCallback onRecordOutcomes;
 
@@ -171,6 +210,7 @@ class _ReadyView extends StatelessWidget {
     required this.experiment,
     required this.suggestion,
     required this.errorMessage,
+    required this.spotlightKey,
     required this.onBack,
     required this.onRecordOutcomes,
   });
@@ -215,18 +255,26 @@ class _ReadyView extends StatelessWidget {
                 const SmartPickBanner(),
 
                 const SizedBox(height: 22),
-                const SectionLabelText(text: 'Try these'),
-                const SizedBox(height: 13),
-                if (parameters.isEmpty)
-                  const BodyText(text: 'No parameters set.', fontSize: 13)
-                else
-                  for (var i = 0; i < parameters.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 11),
-                    SuggestionCard(
-                      parameter: parameters[i],
-                      value: suggestion[parameters[i].id],
-                    ),
-                  ],
+                KeyedSubtree(
+                  key: spotlightKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionLabelText(text: 'Try these'),
+                      const SizedBox(height: 13),
+                      if (parameters.isEmpty)
+                        const BodyText(text: 'No parameters set.', fontSize: 13)
+                      else
+                        for (var i = 0; i < parameters.length; i++) ...[
+                          if (i > 0) const SizedBox(height: 11),
+                          SuggestionCard(
+                            parameter: parameters[i],
+                            value: suggestion[parameters[i].id],
+                          ),
+                        ],
+                    ],
+                  ),
+                ),
 
                 if (errorMessage != null) ...[
                   const SizedBox(height: 16),

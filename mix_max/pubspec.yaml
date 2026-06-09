@@ -45,6 +45,7 @@ dependencies:
   # same SharePlus.instance.share(ShareParams) API on androidx.core 1.13.1.
   share_plus: ">=11.0.0 <12.0.0"
   path_provider: ^2.1.5
+  shared_preferences: ^2.3.2
 
   ### [App Specific] ###
   # NOTE: add unique packages here (categorize by main feature)

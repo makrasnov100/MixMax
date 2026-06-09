@@ -5,6 +5,8 @@ import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/get_it.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
+import 'package:mix_max/services/ui/onboarding_service.dart';
+import 'package:mix_max/widgets/pages/onboarding/onboarding_controller.dart';
 import 'package:mix_max/pages/experiment_details_page.dart';
 import 'package:mix_max/widgets/pages/experiments_list/create_experiment_drawer.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
@@ -24,7 +26,21 @@ import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 /// of cards beneath it, and a sticky gold-fading footer carrying the ink
 /// "New experiment" action.
 class ExperimentsListPage extends StatefulWidget {
-  const ExperimentsListPage({super.key});
+  /// When non-null, the page renders these in-memory experiments instead of the
+  /// live Firestore stream — used by the onboarding tour to show its sample
+  /// experiment on the real list screen without saving anything.
+  final List<SchemaExperiment>? demoExperiments;
+
+  /// Spotlight target handed to the first card during the onboarding tour.
+  final Key? spotlightFirstItemKey;
+
+  const ExperimentsListPage({
+    super.key,
+    this.demoExperiments,
+    this.spotlightFirstItemKey,
+  });
+
+  bool get isDemo => demoExperiments != null;
 
   @override
   State<ExperimentsListPage> createState() => _ExperimentsListPageState();
@@ -38,6 +54,19 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     super.initState();
     _authService = getIt<AuthService>();
     _authService.addListener(_onAuthChanged);
+    _maybeStartOnboarding();
+  }
+
+  /// On the real home screen (not the tour's demo copy), auto-start the one-time
+  /// onboarding tour for a brand-new user once the first frame is laid out.
+  void _maybeStartOnboarding() {
+    if (widget.isDemo) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (await OnboardingService.shouldShow()) {
+        getIt<OnboardingController>().start();
+      }
+    });
   }
 
   @override
@@ -100,7 +129,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final stream = _experimentsStream();
+    final stream = widget.isDemo ? null : _experimentsStream();
 
     return OrientationScaffold(
       body: ColoredBox(
@@ -168,6 +197,16 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
   /// Resolves the body for the current auth / stream state: a sign-in hint
   /// while the user resolves, then the live experiment list.
   Widget _buildList(Stream<QuerySnapshot<SchemaExperiment>>? stream) {
+    // Onboarding tour: render the in-memory sample experiment directly.
+    if (widget.isDemo) {
+      return ExperimentsList(
+        experiments: widget.demoExperiments!,
+        onOpen: (_) {},
+        firstItemKey: widget.spotlightFirstItemKey,
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 110),
+      );
+    }
+
     if (stream == null) {
       return const Center(
         child: BodyText(
