@@ -77,15 +77,11 @@ class _MixMaxTextInputState extends State<MixMaxTextInput> {
   void _attachNode(FocusNode? external) {
     _ownsNode = external == null;
     _node = external ?? FocusNode();
-    _node.addListener(_onFocusChange);
   }
 
   void _detachNode() {
-    _node.removeListener(_onFocusChange);
     if (_ownsNode) _node.dispose();
   }
-
-  void _onFocusChange() => setState(() {});
 
   @override
   void dispose() {
@@ -105,39 +101,57 @@ class _MixMaxTextInputState extends State<MixMaxTextInput> {
       height: 1,
     );
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
-      height: big ? 56 : 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(_kRadius),
-        border: Border.all(
-          color: _node.hasFocus ? AppColors.gold : AppColors.hairline,
-          width: 1.5,
+    final field = TextField(
+      controller: widget.controller,
+      focusNode: _node,
+      onChanged: widget.onChanged,
+      onSubmitted: widget.onSubmitted,
+      autofocus: widget.autofocus,
+      textAlign: widget.textAlign,
+      // Keep the single-line copy vertically centred now that the field fills
+      // the full box height (see the decoration's contentPadding).
+      textAlignVertical: TextAlignVertical.center,
+      maxLines: 1,
+      keyboardType: widget.keyboardType,
+      cursorColor: AppColors.gold,
+      style: textStyle,
+      inputFormatters: widget.maxLength != null
+          ? [LengthLimitingTextInputFormatter(widget.maxLength)]
+          : null,
+      decoration: InputDecoration(
+        border: InputBorder.none,
+        // The field — not the surrounding container — owns the tap target, so
+        // its content padding (rather than a fixed container height + centred,
+        // collapsed field) defines the 50/56px box. This keeps the whole field
+        // tappable; the old isCollapsed + Alignment.center layout shrank the
+        // hit area to the text line, so taps near the edges did nothing and the
+        // field felt like it needed a second tap to focus.
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: big ? 17 : 15.5,
         ),
+        hintText: widget.placeholder,
+        hintStyle: textStyle.copyWith(color: AppColors.inkFaint),
       ),
-      child: TextField(
-        controller: widget.controller,
-        focusNode: _node,
-        onChanged: widget.onChanged,
-        onSubmitted: widget.onSubmitted,
-        autofocus: widget.autofocus,
-        textAlign: widget.textAlign,
-        keyboardType: widget.keyboardType,
-        cursorColor: AppColors.gold,
-        style: textStyle,
-        inputFormatters: widget.maxLength != null
-            ? [LengthLimitingTextInputFormatter(widget.maxLength)]
-            : null,
-        decoration: InputDecoration(
-          isCollapsed: true,
-          border: InputBorder.none,
-          hintText: widget.placeholder,
-          hintStyle: textStyle.copyWith(color: AppColors.inkFaint),
+    );
+
+    // Drive the border colour off the focus node directly so toggling focus
+    // animates the hairline without rebuilding the field subtree.
+    return AnimatedBuilder(
+      animation: _node,
+      child: field,
+      builder: (context, child) => AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(_kRadius),
+          border: Border.all(
+            color: _node.hasFocus ? AppColors.gold : AppColors.hairline,
+            width: 1.5,
+          ),
         ),
+        child: child,
       ),
     );
   }
