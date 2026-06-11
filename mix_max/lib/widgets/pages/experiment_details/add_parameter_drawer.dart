@@ -15,6 +15,7 @@ import 'package:mix_max/widgets/design/ions/text/title_text.dart';
 import 'package:mix_max/widgets/design/molecules/multi_option_adder.dart';
 import 'package:mix_max/widgets/design/molecules/param_type_picker.dart';
 import 'package:mix_max/widgets/design/molecules/quick_add_card.dart';
+import 'package:mix_max/widgets/design/molecules/segmented.dart';
 import 'package:mix_max/widgets/pages/experiment_details/increment_field.dart';
 import 'package:mix_max/widgets/pages/experiment_details/toggle_field.dart';
 
@@ -76,6 +77,9 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   final _offLabelController = TextEditingController();
 
   ParameterType _type = ParameterType.number;
+  // The unit a duration parameter is measured in — chosen from a segmented
+  // picker rather than typed, so the value can be shown back as `1h 30m`.
+  DurationUnit _durationUnit = DurationUnit.minutes;
   List<String> _options = [];
   List<String> _items = [];
 
@@ -102,6 +106,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     if (p == null) return;
     _nameController.text = p.name ?? '';
     _type = p.type ?? ParameterType.number;
+    _durationUnit = p.durationUnit;
     _unitController.text = p.unit ?? '';
     _minController.text = _fmtBound(p.min);
     _maxController.text = _fmtBound(p.max);
@@ -164,6 +169,9 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     setState(() {
       _type = preset.type;
       _nameController.text = preset.name;
+      if (preset.type == ParameterType.duration) {
+        _durationUnit = DurationUnit.fromLabel(preset.unit);
+      }
       _unitController.text = preset.unit ?? '';
       _minController.text = preset.min?.toString() ?? '';
       _maxController.text = preset.max?.toString() ?? '';
@@ -174,7 +182,9 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   void _save() {
     if (!_canSave) return;
     final name = _nameController.text.trim();
-    final unit = _unitController.text.trim();
+    final isDuration = _type == ParameterType.duration;
+    // A duration's unit comes from the segmented picker; a number's is typed.
+    final unit = isDuration ? _durationUnit.label : _unitController.text.trim();
     final isToggle = _type == ParameterType.toggle;
     final onLabel = _onLabelController.text.trim();
     final offLabel = _offLabelController.text.trim();
@@ -184,6 +194,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
       name: name,
       type: _type,
       unit: _isRanged && unit.isNotEmpty ? unit : null,
+      // (a duration always carries one of the [DurationUnit] labels)
       min: _isRanged ? double.tryParse(_minController.text.trim()) : null,
       max: _isRanged ? double.tryParse(_maxController.text.trim()) : null,
       // Only a positive step is meaningful; anything else is a smooth range.
@@ -310,7 +321,6 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   List<Widget> _disclosure() {
     switch (_type) {
       case ParameterType.number:
-      case ParameterType.duration:
         return [
           _subHead('Unit & range'),
           _hpad(
@@ -321,33 +331,29 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
             ),
           ),
           const SizedBox(height: 10),
+          ..._rangeFields(),
+          _subHead('Increment'),
+          ..._incrementSection(),
+        ];
+
+      case ParameterType.duration:
+        return [
+          _subHead('Unit'),
           _hpad(
-            Row(
-              children: [
-                Expanded(child: _numberField(_minController, 'Min')),
-                const SizedBox(width: 10),
-                Expanded(child: _numberField(_maxController, 'Max')),
+            MixMaxSegmented<DurationUnit>(
+              value: _durationUnit,
+              onChanged: (u) => setState(() => _durationUnit = u),
+              options: const [
+                MixMaxSegment(value: DurationUnit.seconds, label: 'Seconds'),
+                MixMaxSegment(value: DurationUnit.minutes, label: 'Minutes'),
+                MixMaxSegment(value: DurationUnit.hours, label: 'Hours'),
               ],
             ),
           ),
+          _subHead('Range'),
+          ..._rangeFields(),
           _subHead('Increment'),
-          _hpad(
-            Padding(
-              padding: const EdgeInsets.only(bottom: 11),
-              child: CaptionText(
-                text:
-                    "How finely it's tuned. Set a whole number for integers only.",
-                fontSize: 12.5,
-                color: AppColors.inkFaint,
-              ),
-            ),
-          ),
-          _hpad(
-            IncrementField(
-              controller: _incrementController,
-              onChanged: (_) => _onChanged(),
-            ),
-          ),
+          ..._incrementSection(),
         ];
 
       case ParameterType.toggle:
@@ -405,6 +411,40 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
         ];
     }
   }
+
+  // The shared Min / Max row used by both the number and duration tails.
+  List<Widget> _rangeFields() => [
+        _hpad(
+          Row(
+            children: [
+              Expanded(child: _numberField(_minController, 'Min')),
+              const SizedBox(width: 10),
+              Expanded(child: _numberField(_maxController, 'Max')),
+            ],
+          ),
+        ),
+      ];
+
+  // The shared "Increment" caption + field used by number and duration.
+  List<Widget> _incrementSection() => [
+        _hpad(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 11),
+            child: CaptionText(
+              text:
+                  "How finely it's tuned. Set a whole number for integers only.",
+              fontSize: 12.5,
+              color: AppColors.inkFaint,
+            ),
+          ),
+        ),
+        _hpad(
+          IncrementField(
+            controller: _incrementController,
+            onChanged: (_) => _onChanged(),
+          ),
+        ),
+      ];
 
   // A custom toggle-state label input. The placeholder shows the default that
   // applies when left blank ('On' / 'Off').

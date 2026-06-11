@@ -357,6 +357,9 @@ class _NumberEditor extends StatelessWidget {
           min: min,
           max: max,
           increment: increment,
+          format: parameter.type == ParameterType.duration
+              ? parameter.formatDuration
+              : null,
           onChanged: (v) => onChanged(parameter.snapToIncrement(v)),
         ),
       ],
@@ -603,10 +606,12 @@ MixMaxGlyph _glyphForType(ParameterType? type) {
 }
 
 /// Formats a number / duration value with its unit, matching the read-only card.
+/// Durations are rendered as a `1h 30m` string via the parameter itself.
 String _numberLabel(SchemaParameter parameter, dynamic value) {
-  if (value is num) {
-    final s = MixMaxFormat.number(value.toDouble(), decimals: 3);
-    return parameter.unit?.isNotEmpty == true ? '$s ${parameter.unit}' : s;
+  if (value is! num) return '—';
+  if (parameter.type == ParameterType.duration) {
+    return parameter.formatDuration(value);
   }
-  return '—';
+  final s = MixMaxFormat.number(value.toDouble(), decimals: 3);
+  return parameter.unit?.isNotEmpty == true ? '$s ${parameter.unit}' : s;
 }

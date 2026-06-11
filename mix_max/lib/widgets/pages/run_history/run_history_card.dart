@@ -380,8 +380,9 @@ String _formatParamValue(SchemaParameter p, dynamic v) {
       return v.toString();
     case ParameterType.order:
       return v is List ? v.map((e) => e.toString()).join('  →  ') : '';
-    case ParameterType.number:
     case ParameterType.duration:
+      return v is num ? p.formatDuration(v) : v.toString();
+    case ParameterType.number:
     case null:
       final s = v is num
           ? MixMaxFormat.number(v.toDouble(), decimals: 3)

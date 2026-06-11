@@ -15,22 +15,30 @@ class RangePips extends StatelessWidget {
   final double? max;
   final String? unit;
 
+  /// Formats each bound's numeral. Defaults to [MixMaxFormat.number]; a
+  /// duration parameter passes its own `formatDuration` so the caps read as
+  /// `1m` / `10m` (in which case [unit] is left null — it's already embedded).
+  final String Function(num?)? format;
+
   const RangePips({
     Key? key,
     required this.min,
     required this.max,
     this.unit,
+    this.format,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final String Function(num?) fmt =
+        format ?? (num? v) => MixMaxFormat.number(v?.toDouble());
     return Row(
       children: [
-        _Cap(text: MixMaxFormat.number(min)),
+        _Cap(text: fmt(min)),
         const SizedBox(width: 7),
         const Expanded(child: _Rail()),
         const SizedBox(width: 7),
-        _Cap(text: MixMaxFormat.number(max)),
+        _Cap(text: fmt(max)),
         if (unit != null && unit!.isNotEmpty) ...[
           const SizedBox(width: 7),
           Text(

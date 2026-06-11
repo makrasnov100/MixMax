@@ -109,8 +109,11 @@ class ShareCard extends StatelessWidget {
                   ? raw.map((e) => e.toString()).join('  →  ')
                   : '—';
           break;
-        case ParameterType.number:
         case ParameterType.duration:
+          // The unit is folded into the `1h 30m` value, so none is shown apart.
+          value = raw is num ? p.formatDuration(raw) : '—';
+          break;
+        case ParameterType.number:
         case null:
           value = raw is num
               ? MixMaxFormat.number(raw.toDouble(), decimals: 3)

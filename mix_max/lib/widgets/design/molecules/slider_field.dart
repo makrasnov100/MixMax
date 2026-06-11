@@ -20,6 +20,10 @@ class MixMaxSliderField extends StatelessWidget {
 
   final ValueChanged<double>? onChanged;
 
+  /// Formats the two end labels. Defaults to [MixMaxFormat.number]; a duration
+  /// parameter passes its own `formatDuration` so the ends read as `1m` / `10m`.
+  final String Function(num?)? format;
+
   const MixMaxSliderField({
     Key? key,
     required this.value,
@@ -27,6 +31,7 @@ class MixMaxSliderField extends StatelessWidget {
     required this.max,
     this.increment = 1,
     this.onChanged,
+    this.format,
   }) : super(key: key);
 
   @override
@@ -34,6 +39,8 @@ class MixMaxSliderField extends StatelessWidget {
     final range = max - min;
     final s = increment > 0 ? increment : 1.0;
     final divisions = range > 0 ? (range / s).round().clamp(1, 10000) : null;
+    final String Function(num?) fmt =
+        format ?? (num? v) => MixMaxFormat.number(v?.toDouble());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -51,12 +58,12 @@ class MixMaxSliderField extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               CaptionText(
-                text: MixMaxFormat.number(min),
+                text: fmt(min),
                 fontSize: 14,
                 color: AppColors.inkFaint,
               ),
               CaptionText(
-                text: MixMaxFormat.number(max),
+                text: fmt(max),
                 fontSize: 14,
                 color: AppColors.inkFaint,
               ),

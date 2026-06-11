@@ -1,7 +1,5 @@
 
 --- After testing ---
-- cant put cursor in middle of text it always selects 
-- sometimes takes multiple times to start input
 - duration parameter value should have quick selection for unit type (seconds, minutes, hours) and should be formatted correctly  
 - show which walues were edited after editing parameters, allow to recalculate paramters after edited the values
 - temperature
@@ -12,6 +10,7 @@
 - note of outcome how to grade?
 - quick selection taste step should be .1 not 1
 - fix over all rating being a 6.7 if rating from 1 to 10 (maybe jsut make default taste quick select 0 to 10)
+- launcher for older phones
 
 --- Publishing ---
 - Test on ios

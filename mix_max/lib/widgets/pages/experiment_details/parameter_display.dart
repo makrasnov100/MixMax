@@ -87,8 +87,15 @@ class _ParameterValue extends StatelessWidget {
     switch (p.type) {
       case ParameterType.number:
       case ParameterType.duration:
+        final isDuration = p.type == ParameterType.duration;
         if (p.min != null && p.max != null) {
-          return RangePips(min: p.min, max: p.max, unit: p.unit);
+          return RangePips(
+            min: p.min,
+            max: p.max,
+            // Durations fold the unit into each cap (`1m` / `10m`).
+            unit: isDuration ? null : p.unit,
+            format: isDuration ? p.formatDuration : null,
+          );
         }
         return CaptionText(text: _boundsLabel(p), fontSize: 13.5);
 
@@ -118,14 +125,18 @@ class _ParameterValue extends StatelessWidget {
 
   /// Text fallback for an unbounded number/duration: the unit and whichever
   /// single bound exists, or "any value" when neither does. Mirrors the JS
-  /// `[unit, ≥min | ≤max | 'any value'].join('  ·  ')`.
+  /// `[unit, ≥min | ≤max | 'any value'].join('  ·  ')`. Duration bounds are
+  /// rendered as `1h 30m`, with the unit already folded in.
   String _boundsLabel(SchemaParameter p) {
+    final isDuration = p.type == ParameterType.duration;
+    String fmt(double? v) =>
+        isDuration ? p.formatDuration(v) : MixMaxFormat.number(v);
     final parts = <String>[
-      if (p.unit?.isNotEmpty == true) p.unit!,
+      if (!isDuration && p.unit?.isNotEmpty == true) p.unit!,
       if (p.min != null)
-        '≥ ${MixMaxFormat.number(p.min)}'
+        '≥ ${fmt(p.min)}'
       else if (p.max != null)
-        '≤ ${MixMaxFormat.number(p.max)}'
+        '≤ ${fmt(p.max)}'
       else
         'any value',
     ];
