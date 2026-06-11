@@ -30,6 +30,12 @@ class ParameterListCard extends StatelessWidget {
   /// Tapping the empty-state hint (e.g. open the add-parameter drawer).
   final VoidCallback? onAdd;
 
+  /// Press-and-hold drag reorder handler, called with the row's old and new
+  /// indices once a drag settles. Null disables reordering (the rows render as
+  /// a plain list). Reordering only changes the saved list order — it never
+  /// rewrites a parameter's definition, so it leaves earlier runs untouched.
+  final void Function(int oldIndex, int newIndex)? onReorder;
+
   /// Paints the empty-state hint in the danger voice — flags a required but
   /// missing parameter when "Run experiment" is pressed.
   final bool emptyError;
@@ -41,6 +47,7 @@ class ParameterListCard extends StatelessWidget {
     this.emptyBody = 'Add the knobs you want to tune.',
     this.onEdit,
     this.onAdd,
+    this.onReorder,
     this.emptyError = false,
   }) : super(key: key);
 
@@ -53,6 +60,41 @@ class ParameterListCard extends StatelessWidget {
         body: emptyBody,
         error: emptyError,
         onTap: onAdd,
+      );
+    }
+
+    // With two or more rows and a reorder handler, the card becomes a
+    // press-and-hold drag list so the order can be rearranged; otherwise it
+    // stays a plain stack of rows.
+    if (onReorder != null && parameters.length > 1) {
+      return MixMaxCard(
+        padding: EdgeInsets.zero,
+        clipContents: true,
+        child: ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          itemCount: parameters.length,
+          onReorder: onReorder!,
+          proxyDecorator: _draggedRowDecorator,
+          itemBuilder: (context, i) {
+            final parameter = parameters[i];
+            return ReorderableDelayedDragStartListener(
+              key: ValueKey('parameter-${parameter.id}'),
+              index: i,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (i > 0) const _RowDivider(),
+                  ParameterDisplay(
+                    parameter: parameter,
+                    onTap: onEdit == null ? null : () => onEdit!(parameter),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       );
     }
 
@@ -73,6 +115,22 @@ class ParameterListCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lifts the row being dragged onto a white surface with a soft shadow, so it
+/// reads as floating above the card while it is moved. Mirrors the calm
+/// `CARD_SHADOW` lift used elsewhere in the design system.
+Widget _draggedRowDecorator(
+  Widget child,
+  int index,
+  Animation<double> animation,
+) {
+  return Material(
+    color: AppColors.surface,
+    elevation: 6,
+    shadowColor: const Color(0x33221F2A),
+    child: child,
+  );
 }
 
 /// Inset hairline between rows — indented past the type tile, per `screens.jsx`

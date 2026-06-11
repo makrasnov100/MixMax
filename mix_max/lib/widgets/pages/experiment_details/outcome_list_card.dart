@@ -29,6 +29,12 @@ class OutcomeListCard extends StatelessWidget {
   /// Tapping the empty-state hint (e.g. open the add-outcome drawer).
   final VoidCallback? onAdd;
 
+  /// Press-and-hold drag reorder handler, called with the row's old and new
+  /// indices once a drag settles. Null disables reordering. The saved order
+  /// drives how outcomes are walked on the record-outcomes page; past runs keep
+  /// their own outcome snapshot, so reordering here never disturbs them.
+  final void Function(int oldIndex, int newIndex)? onReorder;
+
   /// Paints the empty-state hint in the danger voice — flags a required but
   /// missing outcome when "Run experiment" is pressed.
   final bool emptyError;
@@ -40,6 +46,7 @@ class OutcomeListCard extends StatelessWidget {
     this.emptyBody = 'Add a result to maximize or minimize.',
     this.onEdit,
     this.onAdd,
+    this.onReorder,
     this.emptyError = false,
   }) : super(key: key);
 
@@ -52,6 +59,41 @@ class OutcomeListCard extends StatelessWidget {
         body: emptyBody,
         error: emptyError,
         onTap: onAdd,
+      );
+    }
+
+    // With two or more rows and a reorder handler, the card becomes a
+    // press-and-hold drag list so the order can be rearranged; otherwise it
+    // stays a plain stack of rows.
+    if (onReorder != null && outcomes.length > 1) {
+      return MixMaxCard(
+        padding: EdgeInsets.zero,
+        clipContents: true,
+        child: ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          itemCount: outcomes.length,
+          onReorder: onReorder!,
+          proxyDecorator: _draggedRowDecorator,
+          itemBuilder: (context, i) {
+            final outcome = outcomes[i];
+            return ReorderableDelayedDragStartListener(
+              key: ValueKey('outcome-${outcome.id}'),
+              index: i,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (i > 0) const _RowDivider(),
+                  OutcomeDisplay(
+                    outcome: outcome,
+                    onTap: onEdit == null ? null : () => onEdit!(outcome),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       );
     }
 
@@ -72,6 +114,22 @@ class OutcomeListCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lifts the row being dragged onto a white surface with a soft shadow, so it
+/// reads as floating above the card while it is moved. Mirrors the calm
+/// `CARD_SHADOW` lift used elsewhere in the design system.
+Widget _draggedRowDecorator(
+  Widget child,
+  int index,
+  Animation<double> animation,
+) {
+  return Material(
+    color: AppColors.surface,
+    elevation: 6,
+    shadowColor: const Color(0x33221F2A),
+    child: child,
+  );
 }
 
 /// Inset hairline between rows — indented past the type tile, per `screens.jsx`

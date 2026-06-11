@@ -1,10 +1,5 @@
 
---- MVP ---
-- simplify text on the play store and app store pages, post to the stores
-- privacy policy and terms of use on main website, simple site no downnlaod links
-
 --- After testing ---
-- ability to rearrange parameters in expirement details press hold and drag?
 - cant put cursor in middle of text it always selects 
 - sometimes takes multiple times to start input
 - duration parameter value should have quick selection for unit type (seconds, minutes, hours) and should be formatted correctly  
@@ -21,8 +16,10 @@
 --- Publishing ---
 - Test on ios
 - Test on ipad size screen
-- start play store page and assets
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
+- start play store page and assets
+- simplify and make more intuitive text on the play store and app store pages, post to the stores
+- privacy policy and terms of use on main website, simple site no downnlaod links
 - generate great ASO title subtitles, tags, description, give ai my notes
 - Attempt to publish on both stores
 - update download links on the website

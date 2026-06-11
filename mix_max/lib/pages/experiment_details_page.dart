@@ -236,6 +236,22 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     setState(() {});
   }
 
+  /// Reorders the parameters after a press-and-hold drag and persists the new
+  /// order. The state is updated optimistically so the list settles instantly,
+  /// then saved in the background. Reordering only changes how parameters are
+  /// laid out (here, on the suggested-run page, and in run details) — it doesn't
+  /// touch any parameter's definition, so it deliberately skips
+  /// [SchemaExperiment.markParametersUpdated] and leaves earlier runs valid for
+  /// the optimizer.
+  void _reorderParameters(int oldIndex, int newIndex) {
+    final list = [...(_experiment.parameters ?? <SchemaParameter>[])];
+    if (newIndex > oldIndex) newIndex -= 1;
+    final moved = list.removeAt(oldIndex);
+    list.insert(newIndex, moved);
+    setState(() => _experiment.parameters = list);
+    _experiment.save();
+  }
+
   void _showAddOutputDrawer() {
     showModalBottomSheet(
       context: context,
@@ -305,6 +321,19 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     await _experiment.save();
     if (!mounted) return;
     setState(() {});
+  }
+
+  /// Reorders the outcomes after a press-and-hold drag and persists the new
+  /// order. The saved order drives how the record-outcomes flow walks each
+  /// outcome; past runs carry their own outcome snapshot, so reordering here
+  /// never disturbs how they're scored or displayed.
+  void _reorderOutcomes(int oldIndex, int newIndex) {
+    final list = [...(_experiment.outcomes ?? <SchemaOutcome>[])];
+    if (newIndex > oldIndex) newIndex -= 1;
+    final moved = list.removeAt(oldIndex);
+    list.insert(newIndex, moved);
+    setState(() => _experiment.outcomes = list);
+    _experiment.save();
   }
 
   /// Opens the Run History page for this experiment.
@@ -461,6 +490,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                           parameters: parameters,
                           onEdit: _showEditParameterDrawer,
                           onAdd: _showAddParameterDrawer,
+                          onReorder: _reorderParameters,
                           emptyError: _parametersMissing,
                         ),
                       ),
@@ -486,6 +516,7 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                           outcomes: outcomes,
                           onEdit: _showEditOutcomeDrawer,
                           onAdd: _showAddOutputDrawer,
+                          onReorder: _reorderOutcomes,
                           emptyError: _outcomesMissing,
                         ),
                       ),
