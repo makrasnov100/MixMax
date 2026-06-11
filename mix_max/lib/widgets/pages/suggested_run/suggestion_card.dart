@@ -25,39 +25,71 @@ import 'package:mix_max/widgets/design/molecules/slider_field.dart';
 /// a serif metric (the card's hero); choice / order / toggle reuse the system's
 /// value-preview molecules so a pick looks the same here as on the details page.
 ///
-/// When [onChanged] is supplied the card becomes interactive: the value turns
-/// into the right control for its type (a bounded slider, an options picker, a
-/// reorder list, or a switch), so the user can override the optimizer's pick
-/// before recording — always within the parameter's own spec. Left null the
-/// card is read-only, as on the run-details screen.
+/// When [onChanged] is supplied the card becomes interactive, but it stays
+/// collapsed to the compact read-only row until the user taps it. Tapping calls
+/// [onStartEdit]; the parent then rebuilds the card with [editing] true, which
+/// swaps in the right control for the parameter's type (a bounded slider, an
+/// options picker, a reorder list, or a switch) plus a "Done" affordance that
+/// fires [onDone] to collapse it again — always within the parameter's own spec.
+/// Left null the card is purely read-only and inert, as on the run-details
+/// screen.
 class SuggestionCard extends StatelessWidget {
   final SchemaParameter parameter;
   final dynamic value;
 
-  /// Reports the user's adjusted value. Null keeps the card read-only.
+  /// Reports the user's adjusted value. Null keeps the card purely read-only
+  /// (no tap-to-edit, as on the run-details screen).
   final ValueChanged<dynamic>? onChanged;
+
+  /// Whether this card is currently expanded into its editor. Only meaningful
+  /// when [onChanged] is non-null.
+  final bool editing;
+
+  /// Tapped on the collapsed card to begin editing it.
+  final VoidCallback? onStartEdit;
+
+  /// Tapped on the "Done" control to collapse the editor back to the row.
+  final VoidCallback? onDone;
 
   const SuggestionCard({
     Key? key,
     required this.parameter,
     required this.value,
     this.onChanged,
+    this.editing = false,
+    this.onStartEdit,
+    this.onDone,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final onChanged = this.onChanged;
-    return MixMaxCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: onChanged == null
-          ? _readOnly()
-          : _editable(onChanged),
-    );
+    const padding = EdgeInsets.symmetric(horizontal: 18, vertical: 16);
+
+    // Purely read-only (run details): no tap target.
+    if (onChanged == null) {
+      return MixMaxCard(padding: padding, child: _readOnly());
+    }
+
+    // Adjustable but collapsed: the whole card is a tap target that opens the
+    // editor, with a quiet pencil hint at the trailing edge.
+    if (!editing) {
+      return MixMaxCard(
+        padding: padding,
+        onTap: onStartEdit,
+        child: _readOnly(showEditHint: true),
+      );
+    }
+
+    // Expanded into its editor.
+    return MixMaxCard(padding: padding, child: _editable(onChanged));
   }
 
-  /// The compact display row used on the run-details screen: tile, name, and the
-  /// value preview, side by side.
-  Widget _readOnly() {
+  /// The compact display row used on the run-details screen and as the collapsed
+  /// state on the suggested-run screen: tile, name, and the value preview, side
+  /// by side. [showEditHint] adds a trailing pencil glyph to signal the row is
+  /// tappable.
+  Widget _readOnly({bool showEditHint = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -78,12 +110,20 @@ class SuggestionCard extends StatelessWidget {
             ],
           ),
         ),
+        if (showEditHint) ...[
+          const SizedBox(width: 12),
+          const MixMaxIcon(
+            MixMaxGlyph.edit,
+            size: 18,
+            color: AppColors.inkFaint,
+          ),
+        ],
       ],
     );
   }
 
-  /// The interactive layout: the tile + name header sits above a full-width
-  /// editor for the parameter's type.
+  /// The interactive layout: the tile + name header (with a "Done" control to
+  /// collapse) sits above a full-width editor for the parameter's type.
   Widget _editable(ValueChanged<dynamic> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,6 +139,10 @@ class SuggestionCard extends StatelessWidget {
             ),
             const SizedBox(width: 15),
             Expanded(child: _name()),
+            if (onDone != null) ...[
+              const SizedBox(width: 12),
+              _DoneButton(onTap: onDone!),
+            ],
           ],
         ),
         const SizedBox(height: 16),
@@ -112,12 +156,46 @@ class SuggestionCard extends StatelessWidget {
   }
 
   Widget _name() => CaptionText(
-        text: parameter.name?.isNotEmpty == true
+    text:
+        parameter.name?.isNotEmpty == true
             ? parameter.name
             : 'Untitled parameter',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      );
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+  );
+}
+
+/// The small sage "Done" pill in an expanded card's header — a check glyph and
+/// label that collapse the card back to its compact row.
+class _DoneButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _DoneButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppColors.sage,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MixMaxIcon(MixMaxGlyph.check, size: 15, color: Colors.white),
+              SizedBox(width: 5),
+              CaptionText(text: 'Done', fontSize: 13, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The per-type value visual for a suggested parameter (source: `screens.jsx`
@@ -157,9 +235,10 @@ class _SuggestedValue extends StatelessWidget {
 
       case ParameterType.order:
         return OrderPreview(
-          items: value is List
-              ? (value as List).map((e) => e.toString()).toList()
-              : const [],
+          items:
+              value is List
+                  ? (value as List).map((e) => e.toString()).toList()
+                  : const [],
         );
 
       case null:
@@ -257,21 +336,21 @@ class _NumberEditor extends StatelessWidget {
       );
     }
 
-    final current = (value is num ? (value as num).toDouble() : min)
-        .clamp(min, max);
+    final current = (value is num ? (value as num).toDouble() : min).clamp(
+      min,
+      max,
+    );
     // Respect the parameter's granularity; smooth params get ~100 fine stops so
     // the track still feels continuous.
-    final increment = (parameter.increment != null && parameter.increment! > 0)
-        ? parameter.increment!
-        : (max - min) / 100;
+    final increment =
+        (parameter.increment != null && parameter.increment! > 0)
+            ? parameter.increment!
+            : (max - min) / 100;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DisplayText(
-          text: _numberLabel(parameter, current),
-          fontSize: 28,
-        ),
+        DisplayText(text: _numberLabel(parameter, current), fontSize: 28),
         const SizedBox(height: 10),
         MixMaxSliderField(
           value: current,
@@ -379,9 +458,10 @@ class _ChoiceEditor extends StatelessWidget {
         for (final option in options)
           MixMaxChip(
             label: option,
-            tone: option == selected
-                ? MixMaxChipTone.sage
-                : MixMaxChipTone.outline,
+            tone:
+                option == selected
+                    ? MixMaxChipTone.sage
+                    : MixMaxChipTone.outline,
             onTap: () => onChanged(option),
           ),
       ],
@@ -404,9 +484,10 @@ class _OrderEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = value is List
-        ? (value as List).map((e) => e.toString()).toList()
-        : List<String>.from(fallback);
+    final items =
+        value is List
+            ? (value as List).map((e) => e.toString()).toList()
+            : List<String>.from(fallback);
 
     if (items.isEmpty) {
       return const BodyText(text: 'No steps set.', fontSize: 13);
@@ -416,10 +497,9 @@ class _OrderEditor extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
-      proxyDecorator: (child, index, animation) => Material(
-        color: Colors.transparent,
-        child: child,
-      ),
+      proxyDecorator:
+          (child, index, animation) =>
+              Material(color: Colors.transparent, child: child),
       onReorder: (oldIndex, newIndex) {
         final next = [...items];
         if (newIndex > oldIndex) newIndex -= 1;
@@ -444,11 +524,8 @@ class _OrderRow extends StatelessWidget {
   final int index;
   final String label;
 
-  const _OrderRow({
-    required Key key,
-    required this.index,
-    required this.label,
-  }) : super(key: key);
+  const _OrderRow({required Key key, required this.index, required this.label})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {

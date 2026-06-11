@@ -54,6 +54,11 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
   _SuggestedRunPhase _phase = _SuggestedRunPhase.loading;
   String? _errorMessage;
 
+  /// Ids of the parameters the user has tapped open to edit. Empty by default so
+  /// the screen opens on the cleaner read-only view; each card expands into its
+  /// editor only once tapped, and collapses again on "Done".
+  final Set<String> _editingParameterIds = <String>{};
+
   Map<String, dynamic> _suggestedParameters = const <String, dynamic>{};
   SchemaRun? _draftRun;
 
@@ -168,6 +173,16 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
     });
   }
 
+  /// Opens one parameter's card into its editor.
+  void _startEditing(String parameterId) {
+    setState(() => _editingParameterIds.add(parameterId));
+  }
+
+  /// Collapses one parameter's card back to its read-only row.
+  void _stopEditing(String parameterId) {
+    setState(() => _editingParameterIds.remove(parameterId));
+  }
+
   /// Hands the in-memory draft run off to the record-outcomes screen. Nothing is
   /// persisted yet — the run is written to the database only once every outcome
   /// has been recorded, on the final step of that flow.
@@ -198,6 +213,9 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
             suggestion: _suggestedParameters,
             errorMessage: _errorMessage,
             spotlightKey: widget.spotlightKey,
+            editingParameterIds: _editingParameterIds,
+            onStartEditing: _startEditing,
+            onStopEditing: _stopEditing,
             onBack: () => Navigator.of(context).maybePop(),
             onRecordOutcomes: _recordOutcomes,
             onAdjustParameter: _adjustParameter,
@@ -216,6 +234,11 @@ class _ReadyView extends StatelessWidget {
   final Map<String, dynamic> suggestion;
   final String? errorMessage;
   final Key? spotlightKey;
+
+  /// Ids of the parameters currently expanded into their editors.
+  final Set<String> editingParameterIds;
+  final void Function(String parameterId) onStartEditing;
+  final void Function(String parameterId) onStopEditing;
   final VoidCallback onBack;
   final VoidCallback onRecordOutcomes;
   final void Function(String parameterId, dynamic value) onAdjustParameter;
@@ -225,6 +248,9 @@ class _ReadyView extends StatelessWidget {
     required this.suggestion,
     required this.errorMessage,
     required this.spotlightKey,
+    required this.editingParameterIds,
+    required this.onStartEditing,
+    required this.onStopEditing,
     required this.onBack,
     required this.onRecordOutcomes,
     required this.onAdjustParameter,
@@ -279,8 +305,9 @@ class _ReadyView extends StatelessWidget {
                       const SizedBox(height: 4),
                       const BodyText(
                         text:
-                            'Adjust any value to suit what you have on hand — '
-                            'each stays within the experiment’s limits.',
+                            'These are the optimizer’s picks for this run. Tap '
+                            'any one to adjust it — each stays within the '
+                            'experiment’s limits.',
                         fontSize: 13,
                         color: AppColors.inkSoft,
                       ),
@@ -293,10 +320,15 @@ class _ReadyView extends StatelessWidget {
                           SuggestionCard(
                             parameter: parameters[i],
                             value: suggestion[parameters[i].id],
+                            editing: editingParameterIds.contains(
+                              parameters[i].id,
+                            ),
                             onChanged: (value) => onAdjustParameter(
                               parameters[i].id,
                               value,
                             ),
+                            onStartEdit: () => onStartEditing(parameters[i].id),
+                            onDone: () => onStopEditing(parameters[i].id),
                           ),
                         ],
                     ],
