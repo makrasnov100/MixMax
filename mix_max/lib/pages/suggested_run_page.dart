@@ -156,6 +156,18 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
     }
   }
 
+  /// Applies a user override to one suggested parameter. The change is kept in
+  /// the in-memory draft only — it flows into the run when "Record outcomes" is
+  /// pressed, exactly as the optimizer's original pick would have.
+  void _adjustParameter(String parameterId, dynamic value) {
+    setState(() {
+      _suggestedParameters = {..._suggestedParameters, parameterId: value};
+      _draftRun?.parameterValues = Map<String, dynamic>.from(
+        _suggestedParameters,
+      );
+    });
+  }
+
   /// Hands the in-memory draft run off to the record-outcomes screen. Nothing is
   /// persisted yet — the run is written to the database only once every outcome
   /// has been recorded, on the final step of that flow.
@@ -188,6 +200,7 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
             spotlightKey: widget.spotlightKey,
             onBack: () => Navigator.of(context).maybePop(),
             onRecordOutcomes: _recordOutcomes,
+            onAdjustParameter: _adjustParameter,
           ),
         },
       ),
@@ -205,6 +218,7 @@ class _ReadyView extends StatelessWidget {
   final Key? spotlightKey;
   final VoidCallback onBack;
   final VoidCallback onRecordOutcomes;
+  final void Function(String parameterId, dynamic value) onAdjustParameter;
 
   const _ReadyView({
     required this.experiment,
@@ -213,6 +227,7 @@ class _ReadyView extends StatelessWidget {
     required this.spotlightKey,
     required this.onBack,
     required this.onRecordOutcomes,
+    required this.onAdjustParameter,
   });
 
   @override
@@ -261,6 +276,14 @@ class _ReadyView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SectionLabelText(text: 'Try these'),
+                      const SizedBox(height: 4),
+                      const BodyText(
+                        text:
+                            'Adjust any value to suit what you have on hand — '
+                            'each stays within the experiment’s limits.',
+                        fontSize: 13,
+                        color: AppColors.inkSoft,
+                      ),
                       const SizedBox(height: 13),
                       if (parameters.isEmpty)
                         const BodyText(text: 'No parameters set.', fontSize: 13)
@@ -270,6 +293,10 @@ class _ReadyView extends StatelessWidget {
                           SuggestionCard(
                             parameter: parameters[i],
                             value: suggestion[parameters[i].id],
+                            onChanged: (value) => onAdjustParameter(
+                              parameters[i].id,
+                              value,
+                            ),
                           ),
                         ],
                     ],

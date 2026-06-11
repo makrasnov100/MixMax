@@ -3,13 +3,19 @@ import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/widgets/design/atoms/card.dart';
 import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/inputs/text_input.dart';
+import 'package:mix_max/widgets/design/atoms/inputs/toggle_input.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
+import 'package:mix_max/widgets/design/ions/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_typography.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
+import 'package:mix_max/widgets/design/ions/text/body_text.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/display_text.dart';
 import 'package:mix_max/widgets/design/molecules/mini_switch.dart';
 import 'package:mix_max/widgets/design/molecules/option_preview.dart';
 import 'package:mix_max/widgets/design/molecules/order_preview.dart';
+import 'package:mix_max/widgets/design/molecules/slider_field.dart';
 
 /// One suggested-parameter card on the Suggested Run page — a sage type tile,
 /// the parameter's name, and the concrete value the optimizer picked for this
@@ -18,50 +24,100 @@ import 'package:mix_max/widgets/design/molecules/order_preview.dart';
 /// Source: `design_app/screens.jsx` `SuggestionCard`. A number/duration reads as
 /// a serif metric (the card's hero); choice / order / toggle reuse the system's
 /// value-preview molecules so a pick looks the same here as on the details page.
+///
+/// When [onChanged] is supplied the card becomes interactive: the value turns
+/// into the right control for its type (a bounded slider, an options picker, a
+/// reorder list, or a switch), so the user can override the optimizer's pick
+/// before recording — always within the parameter's own spec. Left null the
+/// card is read-only, as on the run-details screen.
 class SuggestionCard extends StatelessWidget {
   final SchemaParameter parameter;
   final dynamic value;
+
+  /// Reports the user's adjusted value. Null keeps the card read-only.
+  final ValueChanged<dynamic>? onChanged;
 
   const SuggestionCard({
     Key? key,
     required this.parameter,
     required this.value,
+    this.onChanged,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final onChanged = this.onChanged;
     return MixMaxCard(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          MixMaxTile(
-            glyph: _glyphForType(parameter.type),
-            tone: MixMaxTileTone.sage,
-            size: 46,
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CaptionText(
-                  text: parameter.name?.isNotEmpty == true
-                      ? parameter.name
-                      : 'Untitled parameter',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                _SuggestedValue(parameter: parameter, value: value),
-              ],
-            ),
-          ),
-        ],
-      ),
+      child: onChanged == null
+          ? _readOnly()
+          : _editable(onChanged),
     );
   }
+
+  /// The compact display row used on the run-details screen: tile, name, and the
+  /// value preview, side by side.
+  Widget _readOnly() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        MixMaxTile(
+          glyph: _glyphForType(parameter.type),
+          tone: MixMaxTileTone.sage,
+          size: 46,
+        ),
+        const SizedBox(width: 15),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _name(),
+              const SizedBox(height: 4),
+              _SuggestedValue(parameter: parameter, value: value),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// The interactive layout: the tile + name header sits above a full-width
+  /// editor for the parameter's type.
+  Widget _editable(ValueChanged<dynamic> onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            MixMaxTile(
+              glyph: _glyphForType(parameter.type),
+              tone: MixMaxTileTone.sage,
+              size: 46,
+            ),
+            const SizedBox(width: 15),
+            Expanded(child: _name()),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _SuggestedEditor(
+          parameter: parameter,
+          value: value,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _name() => CaptionText(
+        text: parameter.name?.isNotEmpty == true
+            ? parameter.name
+            : 'Untitled parameter',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
 }
 
 /// The per-type value visual for a suggested parameter (source: `screens.jsx`
@@ -77,7 +133,7 @@ class _SuggestedValue extends StatelessWidget {
     switch (parameter.type) {
       case ParameterType.number:
       case ParameterType.duration:
-        return DisplayText(text: _numberLabel(), fontSize: 24);
+        return DisplayText(text: _numberLabel(parameter, value), fontSize: 24);
 
       case ParameterType.toggle:
         final on = value == true;
@@ -110,13 +166,343 @@ class _SuggestedValue extends StatelessWidget {
         return const DisplayText(text: '—', fontSize: 24);
     }
   }
+}
 
-  String _numberLabel() {
-    if (value is num) {
-      final s = MixMaxFormat.number((value as num).toDouble(), decimals: 3);
-      return parameter.unit?.isNotEmpty == true ? '$s ${parameter.unit}' : s;
+/// The interactive counterpart to [_SuggestedValue]: an editor constrained to
+/// the parameter's own spec — a slider between its min/max (snapped to its
+/// increment), a single-select over its options, a reorder of its items, or an
+/// on/off switch with its labels. Controlled: every change is reported up; this
+/// widget keeps no state.
+class _SuggestedEditor extends StatelessWidget {
+  final SchemaParameter parameter;
+  final dynamic value;
+  final ValueChanged<dynamic> onChanged;
+
+  const _SuggestedEditor({
+    required this.parameter,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    switch (parameter.type) {
+      case ParameterType.number:
+      case ParameterType.duration:
+        return _NumberEditor(
+          parameter: parameter,
+          value: value,
+          onChanged: onChanged,
+        );
+
+      case ParameterType.toggle:
+        final on = value == true;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            MixMaxToggleInput(value: on, onChanged: onChanged),
+            const SizedBox(width: 13),
+            DisplayText(
+              text: on ? parameter.resolvedOnLabel : parameter.resolvedOffLabel,
+              fontSize: 22,
+            ),
+          ],
+        );
+
+      case ParameterType.choice:
+        return _ChoiceEditor(
+          options: parameter.options ?? const [],
+          selected: value?.toString(),
+          onChanged: onChanged,
+        );
+
+      case ParameterType.order:
+        return _OrderEditor(
+          value: value,
+          fallback: parameter.items ?? const [],
+          onChanged: onChanged,
+        );
+
+      case null:
+        return const DisplayText(text: '—', fontSize: 24);
     }
-    return '—';
+  }
+}
+
+/// A bounded slider for number / duration parameters, with the live value as the
+/// serif hero above it. When the parameter has no usable min/max range it falls
+/// back to a clamped numeric field so an open-ended value can still be typed.
+class _NumberEditor extends StatelessWidget {
+  final SchemaParameter parameter;
+  final dynamic value;
+  final ValueChanged<dynamic> onChanged;
+
+  const _NumberEditor({
+    required this.parameter,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final min = parameter.min;
+    final max = parameter.max;
+    final hasRange = min != null && max != null && max > min;
+
+    if (!hasRange) {
+      return _NumberFieldFallback(
+        parameter: parameter,
+        value: value,
+        onChanged: onChanged,
+      );
+    }
+
+    final current = (value is num ? (value as num).toDouble() : min)
+        .clamp(min, max);
+    // Respect the parameter's granularity; smooth params get ~100 fine stops so
+    // the track still feels continuous.
+    final increment = (parameter.increment != null && parameter.increment! > 0)
+        ? parameter.increment!
+        : (max - min) / 100;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DisplayText(
+          text: _numberLabel(parameter, current),
+          fontSize: 28,
+        ),
+        const SizedBox(height: 10),
+        MixMaxSliderField(
+          value: current,
+          min: min,
+          max: max,
+          increment: increment,
+          onChanged: (v) => onChanged(parameter.snapToIncrement(v)),
+        ),
+      ],
+    );
+  }
+}
+
+/// A clamped numeric text field — the editor for a number parameter that has no
+/// bounded range to slide within.
+class _NumberFieldFallback extends StatefulWidget {
+  final SchemaParameter parameter;
+  final dynamic value;
+  final ValueChanged<dynamic> onChanged;
+
+  const _NumberFieldFallback({
+    required this.parameter,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  State<_NumberFieldFallback> createState() => _NumberFieldFallbackState();
+}
+
+class _NumberFieldFallbackState extends State<_NumberFieldFallback> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final v = widget.value;
+    _controller = TextEditingController(
+      text: v is num ? MixMaxFormat.number(v.toDouble()) : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _commit(String raw) {
+    final parsed = double.tryParse(raw.trim());
+    if (parsed == null) return;
+    var v = parsed;
+    final min = widget.parameter.min;
+    final max = widget.parameter.max;
+    if (min != null && v < min) v = min;
+    if (max != null && v > max) v = max;
+    widget.onChanged(widget.parameter.snapToIncrement(v));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unit = widget.parameter.unit;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: MixMaxTextInput(
+            controller: _controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            placeholder: 'Enter a value',
+            onChanged: _commit,
+          ),
+        ),
+        if (unit?.isNotEmpty == true) ...[
+          const SizedBox(width: 12),
+          CaptionText(text: unit, color: AppColors.inkSoft),
+        ],
+      ],
+    );
+  }
+}
+
+/// A single-select over a choice parameter's options, rendered as tap-to-pick
+/// chips. The active option fills sage; the rest sit as quiet outline chips.
+class _ChoiceEditor extends StatelessWidget {
+  final List<String> options;
+  final String? selected;
+  final ValueChanged<dynamic> onChanged;
+
+  const _ChoiceEditor({
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (options.isEmpty) {
+      return const BodyText(text: 'No options set.', fontSize: 13);
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final option in options)
+          MixMaxChip(
+            label: option,
+            tone: option == selected
+                ? MixMaxChipTone.sage
+                : MixMaxChipTone.outline,
+            onTap: () => onChanged(option),
+          ),
+      ],
+    );
+  }
+}
+
+/// A drag-to-reorder list of an order parameter's items — the user can only
+/// rearrange the spec's items, never add or drop one.
+class _OrderEditor extends StatelessWidget {
+  final dynamic value;
+  final List<String> fallback;
+  final ValueChanged<dynamic> onChanged;
+
+  const _OrderEditor({
+    required this.value,
+    required this.fallback,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = value is List
+        ? (value as List).map((e) => e.toString()).toList()
+        : List<String>.from(fallback);
+
+    if (items.isEmpty) {
+      return const BodyText(text: 'No steps set.', fontSize: 13);
+    }
+
+    return ReorderableListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      proxyDecorator: (child, index, animation) => Material(
+        color: Colors.transparent,
+        child: child,
+      ),
+      onReorder: (oldIndex, newIndex) {
+        final next = [...items];
+        if (newIndex > oldIndex) newIndex -= 1;
+        next.insert(newIndex, next.removeAt(oldIndex));
+        onChanged(next);
+      },
+      children: [
+        for (var i = 0; i < items.length; i++)
+          _OrderRow(
+            key: ValueKey('order-$i-${items[i]}'),
+            index: i,
+            label: items[i],
+          ),
+      ],
+    );
+  }
+}
+
+/// One row of the order editor: its position, the step name, and a grip handle
+/// that starts the drag.
+class _OrderRow extends StatelessWidget {
+  final int index;
+  final String label;
+
+  const _OrderRow({
+    required Key key,
+    required this.index,
+    required this.label,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.bgAlt,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              child: DisplayText(
+                text: '${index + 1}',
+                fontSize: 16,
+                color: AppColors.sageText,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14.5,
+                  color: AppColors.ink,
+                  height: 1.1,
+                ),
+              ),
+            ),
+            ReorderableDragStartListener(
+              index: index,
+              child: const MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: MixMaxIcon(
+                    MixMaxGlyph.grip,
+                    size: 18,
+                    color: AppColors.inkFaint,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -137,4 +523,13 @@ MixMaxGlyph _glyphForType(ParameterType? type) {
     case null:
       return MixMaxGlyph.hash;
   }
+}
+
+/// Formats a number / duration value with its unit, matching the read-only card.
+String _numberLabel(SchemaParameter parameter, dynamic value) {
+  if (value is num) {
+    final s = MixMaxFormat.number(value.toDouble(), decimals: 3);
+    return parameter.unit?.isNotEmpty == true ? '$s ${parameter.unit}' : s;
+  }
+  return '—';
 }

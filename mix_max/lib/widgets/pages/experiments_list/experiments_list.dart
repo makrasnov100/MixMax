@@ -82,7 +82,7 @@ class _EmptyState extends StatelessWidget {
             ),
             SizedBox(height: 18),
             TitleText(
-              text: 'Nothing brewing yet',
+              text: 'No experiments yet',
               fontSize: 22,
               textAlign: TextAlign.center,
             ),
