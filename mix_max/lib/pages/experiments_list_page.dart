@@ -14,6 +14,7 @@ import 'package:mix_max/widgets/pages/account/confirm_delete_account_drawer.dart
 import 'package:mix_max/widgets/pages/experiments_list/create_experiment_drawer.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/progress_overlay.dart';
 import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
@@ -130,16 +131,20 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
       return;
     }
 
-    await PopupService.performToastOperation(
-      loadingMessage: '⌛ Deleting your account…',
-      successMessage: '✅ Your account and data have been deleted.',
-      errorMessage: '❌ Could not delete your account. Please try again later.',
-      operation: () async {
-        final result = await _authService.deleteAccount();
-        if (!result.success) {
-          throw Exception(result.message);
-        }
-      },
+    // A full-screen blocking overlay (matching the sign-in flows), then a
+    // result toast once the cloud call settles.
+    final result = await MixMaxProgressOverlay.during(
+      context: context,
+      message: 'Deleting your account…',
+      operation: _authService.deleteAccount,
+    );
+    if (!mounted) return;
+
+    PopupService.showResultToast(
+      message: result.success
+          ? '✅ Your account and data have been deleted.'
+          : '❌ Could not delete your account. Please try again later.',
+      backgroundColor: result.success ? AppColors.addGreen : AppColors.dangerRed,
     );
   }
 

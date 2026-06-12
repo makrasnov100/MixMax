@@ -1,8 +1,5 @@
 
 --- After testing ---
-- sso sign in with prompts to save user data, delete user data section (account section)
-- test sign in with google works on andorid
-
 - fix sharing not working on my own device
 
 - description of outcome (how to grade?)
@@ -16,6 +13,7 @@
 - timer built in for duration type  parameters in suggested run
 
 --- Publishing ---
+- Test sign in works to transfer anonyomous account data to signed in user
 - Test on ios, implment sign in with apple and google on apple
 - Test on tabled screen
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes

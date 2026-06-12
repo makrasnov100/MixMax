@@ -20,16 +20,11 @@ class AuthButton extends StatefulWidget {
   /// sign-in is already in flight.
   final VoidCallback? onPressed;
 
-  /// True while this button's own sign-in flow is running — the brand mark
-  /// gives way to a spinner so the wait reads on the button that was pressed.
-  final bool loading;
-
   const AuthButton({
     super.key,
     required this.provider,
     required this.label,
     this.onPressed,
-    this.loading = false,
   });
 
   @override
@@ -68,31 +63,20 @@ class _AuthButtonState extends State<AuthButton> {
           children: [
             Positioned(
               left: 20,
-              child: widget.loading
-                  ? SizedBox(
+              child: apple
+                  ? SvgPicture.asset(
+                      'assets/svg/icons/apple_mark.svg',
+                      width: 21,
+                      height: 21,
+                      colorFilter:
+                          const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    )
+                  // Multicolor brand mark — rendered untinted.
+                  : SvgPicture.asset(
+                      'assets/svg/icons/google_mark.svg',
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        valueColor: AlwaysStoppedAnimation(
-                          apple ? Colors.white : AppColors.gold,
-                        ),
-                      ),
-                    )
-                  : apple
-                      ? SvgPicture.asset(
-                          'assets/svg/icons/apple_mark.svg',
-                          width: 21,
-                          height: 21,
-                          colorFilter:
-                              const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                        )
-                      // Multicolor brand mark — rendered untinted.
-                      : SvgPicture.asset(
-                          'assets/svg/icons/google_mark.svg',
-                          width: 20,
-                          height: 20,
-                        ),
+                    ),
             ),
             Text(
               widget.label,

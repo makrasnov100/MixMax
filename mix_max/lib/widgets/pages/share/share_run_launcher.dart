@@ -11,8 +11,7 @@ import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/get_it.dart';
-import 'package:mix_max/widgets/design/ions/app_colors.dart';
-import 'package:mix_max/widgets/design/ions/text/body_text.dart';
+import 'package:mix_max/widgets/design/atoms/progress_overlay.dart';
 import 'package:mix_max/widgets/pages/share/share_card.dart';
 
 /// Renders a run as a [ShareCard] image and opens the system share sheet, with
@@ -44,8 +43,8 @@ class RunShareLauncher {
         ? (anchor.localToGlobal(Offset.zero) & anchor.size)
         : null;
 
-    final progress = OverlayEntry(builder: (_) => const _PreparingOverlay());
-    overlay.insert(progress);
+    final progress =
+        MixMaxProgressOverlay.show(context, message: 'Preparing your image…');
     OverlayEntry? cardEntry;
 
     try {
@@ -196,47 +195,3 @@ class _ShareFigures {
   });
 }
 
-/// A dimmed, tap-blocking "Preparing your image…" overlay shown while the card
-/// is being captured.
-class _PreparingOverlay extends StatelessWidget {
-  const _PreparingOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        const ModalBarrier(dismissible: false, color: AppColors.scrim),
-        Center(
-          // A Material ancestor so the caption renders cleanly (without one,
-          // debug builds paint the yellow "missing Material" underline).
-          child: Material(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 22),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.hairline, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      valueColor: AlwaysStoppedAnimation(AppColors.gold),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  BodyText(text: 'Preparing your image…', color: AppColors.ink),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}

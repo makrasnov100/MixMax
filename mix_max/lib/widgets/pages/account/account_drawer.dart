@@ -9,6 +9,7 @@ import 'package:mix_max/services/ui/link_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/drawer_container.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/progress_overlay.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -59,18 +60,13 @@ class AccountDrawer extends StatefulWidget {
   State<AccountDrawer> createState() => _AccountDrawerState();
 }
 
-/// Which drawer action is currently in flight — the matching button shows a
-/// spinner; every other action is disabled.
-enum _PendingAction { google, apple, guest, signOut }
-
 class _AccountDrawerState extends State<AccountDrawer> {
   late final AuthService _authService;
 
-  /// The action in flight, or null when idle.
-  _PendingAction? _pending;
-
-  /// True while a sign-in / sign-out is in flight — all actions disabled.
-  bool get _busy => _pending != null;
+  /// True while a sign-in / sign-out is in flight. The full-screen
+  /// [MixMaxProgressOverlay] already blocks every tap; this is a re-entry
+  /// guard for the gap before the overlay mounts.
+  bool _busy = false;
 
   /// Inline failure message under the actions (a snackbar would hide behind
   /// the modal sheet).
@@ -84,24 +80,26 @@ class _AccountDrawerState extends State<AccountDrawer> {
 
   Future<void> _signIn(AuthButtonProvider provider) async {
     setState(() {
-      _pending = provider == AuthButtonProvider.google
-          ? _PendingAction.google
-          : _PendingAction.apple;
+      _busy = true;
       _error = null;
     });
 
-    final result = provider == AuthButtonProvider.google
-        ? await _authService.signInWithGoogle()
-        : await _authService.signInWithApple();
+    final result = await MixMaxProgressOverlay.during(
+      context: context,
+      message: 'Signing in…',
+      operation: () => provider == AuthButtonProvider.google
+          ? _authService.signInWithGoogle()
+          : _authService.signInWithApple(),
+    );
     if (!mounted) return;
 
     if (result.success) {
       Navigator.of(context).pop(AccountDrawerResult.chose);
       return;
     }
-    // Failure: drop the spinner so the sign-in button is offered again.
+    // Failure: the overlay is gone — offer the sign-in options again.
     setState(() {
-      _pending = null;
+      _busy = false;
       // A null auth token means the user dismissed the platform sheet — that's
       // a cancel, not an error worth surfacing.
       _error = result.message.contains('Auth token is null') ? null : result.message;
@@ -110,11 +108,15 @@ class _AccountDrawerState extends State<AccountDrawer> {
 
   Future<void> _continueAsGuest() async {
     setState(() {
-      _pending = _PendingAction.guest;
+      _busy = true;
       _error = null;
     });
 
-    final success = await _authService.signInAsGuest();
+    final success = await MixMaxProgressOverlay.during(
+      context: context,
+      message: 'Setting up your account…',
+      operation: _authService.signInAsGuest,
+    );
     if (!mounted) return;
 
     if (success) {
@@ -122,14 +124,18 @@ class _AccountDrawerState extends State<AccountDrawer> {
       return;
     }
     setState(() {
-      _pending = null;
+      _busy = false;
       _error = 'Could not continue as guest. Please try again.';
     });
   }
 
   Future<void> _signOut() async {
-    setState(() => _pending = _PendingAction.signOut);
-    await _authService.signOut();
+    setState(() => _busy = true);
+    await MixMaxProgressOverlay.during(
+      context: context,
+      message: 'Signing out…',
+      operation: _authService.signOut,
+    );
     if (!mounted) return;
     Navigator.of(context).pop(AccountDrawerResult.signedOut);
   }
@@ -194,7 +200,6 @@ class _AccountDrawerState extends State<AccountDrawer> {
         AuthButton(
           provider: AuthButtonProvider.google,
           label: 'Continue with Google',
-          loading: _pending == _PendingAction.google,
           onPressed: _busy ? null : () => _signIn(AuthButtonProvider.google),
         ),
         // Apple sign-in is an iOS affordance — Android offers Google only.
@@ -203,16 +208,12 @@ class _AccountDrawerState extends State<AccountDrawer> {
           AuthButton(
             provider: AuthButtonProvider.apple,
             label: 'Continue with Apple',
-            loading: _pending == _PendingAction.apple,
             onPressed: _busy ? null : () => _signIn(AuthButtonProvider.apple),
           ),
         ],
         if (!guest) ...[
           const _OrDivider(),
-          _GuestButton(
-            loading: _pending == _PendingAction.guest,
-            onPressed: _busy ? null : _continueAsGuest,
-          ),
+          _GuestButton(onPressed: _busy ? null : _continueAsGuest),
         ],
         if (_error != null) ...[
           const SizedBox(height: 12),
@@ -391,11 +392,7 @@ class _OrDivider extends StatelessWidget {
 class _GuestButton extends StatefulWidget {
   final VoidCallback? onPressed;
 
-  /// True while the guest sign-in is running — the arrow gives way to a
-  /// spinner so the wait reads on the button that was pressed.
-  final bool loading;
-
-  const _GuestButton({this.onPressed, this.loading = false});
+  const _GuestButton({this.onPressed});
 
   @override
   State<_GuestButton> createState() => _GuestButtonState();
@@ -438,17 +435,7 @@ class _GuestButtonState extends State<_GuestButton> {
                       .copyWith(letterSpacing: 16 * 0.005, height: 1),
                 ),
                 const SizedBox(width: 8),
-                if (widget.loading)
-                  const SizedBox(
-                    width: 17,
-                    height: 17,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      valueColor: AlwaysStoppedAnimation(AppColors.inkSoft),
-                    ),
-                  )
-                else
-                  const MixMaxIcon(MixMaxGlyph.arrowRight, size: 19, color: AppColors.inkSoft),
+                const MixMaxIcon(MixMaxGlyph.arrowRight, size: 19, color: AppColors.inkSoft),
               ],
             ),
           ),
