@@ -10,6 +10,7 @@
 - quick selection taste step should be .1 not 1
 - fix over all rating being a 6.7 if rating from 1 to 10 (maybe jsut make default taste quick select 0 to 10)
 - launcher for older phones
+- fix sharing not working on my own device
 
 --- Publishing ---
 - Test on ios

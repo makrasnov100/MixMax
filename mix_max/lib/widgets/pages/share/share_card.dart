@@ -506,15 +506,17 @@ class _MixGrid extends StatelessWidget {
     for (var i = 0; i < mix.length; i += 2) {
       final left = _MixChip(entry: mix[i]);
       final hasRight = i + 1 < mix.length;
-      rows.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: left),
-          const SizedBox(width: 8),
-          Expanded(
-            child: hasRight ? _MixChip(entry: mix[i + 1]) : const SizedBox(),
-          ),
-        ],
+      rows.add(IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: left),
+            const SizedBox(width: 8),
+            Expanded(
+              child: hasRight ? _MixChip(entry: mix[i + 1]) : const SizedBox(),
+            ),
+          ],
+        ),
       ));
       if (i + 2 < mix.length) rows.add(const SizedBox(height: 8));
     }
