@@ -35,9 +35,16 @@ class BayesianOptimizationService {
   /// Falls back to a uniform-random suggestion when fewer than 2 valid past
   /// runs are available, since a GP requires at least 2 observations to be
   /// meaningful.
+  ///
+  /// [fixedValues] holds user-pinned values (parameterId → value) that must be
+  /// returned unchanged. The acquisition search conditions on them: every
+  /// candidate carries the pinned values in those parameters' feature slots, so
+  /// Expected Improvement only explores the remaining free dimensions given
+  /// the user's picks.
   static Map<String, dynamic> suggestNextParameters({
     required SchemaExperiment experiment,
     required List<SchemaRun> pastRuns,
+    Map<String, dynamic> fixedValues = const {},
   }) {
     final parameters = experiment.parameters ?? [];
     final outcomes = experiment.outcomes ?? [];
@@ -56,7 +63,11 @@ class BayesianOptimizationService {
       experiment.lastParametersUpdatedAt,
     );
     if (validRuns.length < 2) {
-      return _randomSuggestion(parameters, rng);
+      return _withFixedValues(
+        _randomSuggestion(parameters, rng),
+        parameters,
+        fixedValues,
+      );
     }
 
     // Encode past runs into a normalised feature matrix and objective vector.
@@ -80,12 +91,20 @@ class BayesianOptimizationService {
     final fBest = y.reduce(math.max);
     final featureDim = X.first.length;
 
+    // The pinned parameters' encoding, copied over every sampled candidate so
+    // the search happens on the slice of feature space the user has fixed.
+    final fixedTemplate =
+        fixedValues.isEmpty ? null : _encodeParameters(parameters, fixedValues);
+
     // Random search over the acquisition function.
     var bestCandidate = List<double>.filled(featureDim, 0.0);
     var bestEI = double.negativeInfinity;
 
     for (int i = 0; i < _numCandidates; i++) {
       final candidate = _sampleCandidate(parameters, rng);
+      if (fixedTemplate != null) {
+        _pinFixedSlots(candidate, fixedTemplate, parameters, fixedValues);
+      }
       final pred = gp.predict(candidate);
       final ei = _expectedImprovement(pred.mean, pred.stdDev, fBest);
       if (ei > bestEI) {
@@ -94,7 +113,66 @@ class BayesianOptimizationService {
       }
     }
 
-    return _decodeParameters(parameters, bestCandidate);
+    return _withFixedValues(
+      _decodeParameters(parameters, bestCandidate),
+      parameters,
+      fixedValues,
+    );
+  }
+
+  /// Overwrites the pinned values into a decoded suggestion verbatim, so a
+  /// user's pick survives encode/decode round-trips (increment snapping,
+  /// one-hot argmax) exactly as they set it.
+  static Map<String, dynamic> _withFixedValues(
+    Map<String, dynamic> suggestion,
+    List<SchemaParameter> parameters,
+    Map<String, dynamic> fixedValues,
+  ) {
+    if (fixedValues.isEmpty) return suggestion;
+    for (final param in parameters) {
+      if (fixedValues.containsKey(param.id)) {
+        suggestion[param.id] = fixedValues[param.id];
+      }
+    }
+    return suggestion;
+  }
+
+  /// Number of feature-vector slots a parameter occupies — must mirror the
+  /// dimension breakdown of [_encodeParameters] / [_sampleCandidate].
+  static int _featureWidth(SchemaParameter param) {
+    switch (param.type) {
+      case ParameterType.number:
+      case ParameterType.duration:
+      case ParameterType.temperature:
+      case ParameterType.toggle:
+        return 1;
+      case ParameterType.choice:
+        return math.max(param.options?.length ?? 0, 1);
+      case ParameterType.order:
+        return (param.items ?? const []).length;
+      case null:
+        return 1;
+    }
+  }
+
+  /// Copies the feature slots of every pinned parameter from [fixedTemplate]
+  /// into [candidate], leaving the free parameters' slots untouched.
+  static void _pinFixedSlots(
+    List<double> candidate,
+    List<double> fixedTemplate,
+    List<SchemaParameter> parameters,
+    Map<String, dynamic> fixedValues,
+  ) {
+    int cursor = 0;
+    for (final param in parameters) {
+      final width = _featureWidth(param);
+      if (fixedValues.containsKey(param.id)) {
+        for (int i = 0; i < width; i++) {
+          candidate[cursor + i] = fixedTemplate[cursor + i];
+        }
+      }
+      cursor += width;
+    }
   }
 
   // ── Filtering ──────────────────────────────────────────────────────────────

@@ -59,6 +59,22 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
   /// editor only once tapped, and collapses again on "Done".
   final Set<String> _editingParameterIds = <String>{};
 
+  /// Ids of the parameters the user has frozen: they closed the editor with a
+  /// value different from the optimizer's pick. Frozen cards read subtly
+  /// different in "Try these", and "Retune" re-runs the optimizer holding them
+  /// at the user's values. Re-editing one back to the optimizer's pick thaws it.
+  final Set<String> _frozenParameterIds = <String>{};
+
+  /// The optimizer's own pick per parameter — what a value is compared against
+  /// on "Done" to decide whether the user froze it. Frozen parameters keep the
+  /// pick they diverged from, so setting one back by hand thaws it even after
+  /// retunes.
+  Map<String, dynamic> _baselineSuggestion = <String, dynamic>{};
+
+  /// The valid past runs fetched on bootstrap, kept so a retune can re-run the
+  /// optimizer without another round-trip to the database.
+  List<SchemaRun> _pastRuns = const [];
+
   Map<String, dynamic> _suggestedParameters = const <String, dynamic>{};
   SchemaRun? _draftRun;
 
@@ -73,6 +89,7 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
     setState(() {
       _phase = _SuggestedRunPhase.loading;
       _errorMessage = null;
+      _frozenParameterIds.clear();
     });
 
     try {
@@ -94,6 +111,7 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
         if (!mounted) return;
         setState(() {
           _suggestedParameters = demoSuggestion;
+          _baselineSuggestion = Map<String, dynamic>.from(demoSuggestion);
           _draftRun = draft;
           _phase = _SuggestedRunPhase.ready;
         });
@@ -148,7 +166,9 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
 
       if (!mounted) return;
       setState(() {
+        _pastRuns = pastRuns;
         _suggestedParameters = suggestion;
+        _baselineSuggestion = Map<String, dynamic>.from(suggestion);
         _draftRun = draft;
         _phase = _SuggestedRunPhase.ready;
       });
@@ -163,7 +183,8 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
 
   /// Applies a user override to one suggested parameter. The change is kept in
   /// the in-memory draft only — it flows into the run when "Record outcomes" is
-  /// pressed, exactly as the optimizer's original pick would have.
+  /// pressed, exactly as the optimizer's original pick would have. Whether the
+  /// parameter ends up frozen is decided on "Done", not here.
   void _adjustParameter(String parameterId, dynamic value) {
     setState(() {
       _suggestedParameters = {..._suggestedParameters, parameterId: value};
@@ -173,14 +194,70 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
     });
   }
 
+  /// Re-runs the optimizer over the cached past runs with every frozen value
+  /// held fixed: those values come back unchanged while the remaining
+  /// parameters are re-suggested conditioned on them. Synchronous — the runs
+  /// were already fetched on bootstrap.
+  void _retune() {
+    final fixedValues = <String, dynamic>{
+      for (final id in _frozenParameterIds)
+        if (_suggestedParameters.containsKey(id)) id: _suggestedParameters[id],
+    };
+
+    final suggestion = BayesianOptimizationService.suggestNextParameters(
+      experiment: widget.experiment,
+      pastRuns: _pastRuns,
+      fixedValues: fixedValues,
+    );
+
+    setState(() {
+      _suggestedParameters = suggestion;
+      _draftRun?.parameterValues = Map<String, dynamic>.from(suggestion);
+      // The retune's fresh picks become the new thaw-back baseline — but only
+      // for free parameters. A frozen one keeps the pick it diverged from
+      // (the optimizer just echoed the user's value back).
+      for (final entry in suggestion.entries) {
+        if (!_frozenParameterIds.contains(entry.key)) {
+          _baselineSuggestion[entry.key] = entry.value;
+        }
+      }
+    });
+  }
+
   /// Opens one parameter's card into its editor.
   void _startEditing(String parameterId) {
     setState(() => _editingParameterIds.add(parameterId));
   }
 
-  /// Collapses one parameter's card back to its read-only row.
+  /// Collapses one parameter's card back to its read-only row, and settles its
+  /// frozen state: diverged from the optimizer's pick → frozen; back at the
+  /// pick → thawed.
   void _stopEditing(String parameterId) {
-    setState(() => _editingParameterIds.remove(parameterId));
+    setState(() {
+      _editingParameterIds.remove(parameterId);
+      final diverged =
+          !_sameValue(
+            _suggestedParameters[parameterId],
+            _baselineSuggestion[parameterId],
+          );
+      diverged
+          ? _frozenParameterIds.add(parameterId)
+          : _frozenParameterIds.remove(parameterId);
+    });
+  }
+
+  /// Parameter-value equality across the types a suggestion can hold: an order
+  /// parameter's value is a list and must match element-wise; everything else
+  /// (num / bool / String) compares directly.
+  static bool _sameValue(dynamic a, dynamic b) {
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] != b[i]) return false;
+      }
+      return true;
+    }
+    return a == b;
   }
 
   /// Hands the in-memory draft run off to the record-outcomes screen. Nothing is
@@ -214,11 +291,15 @@ class _SuggestedRunPageState extends State<SuggestedRunPage> {
             errorMessage: _errorMessage,
             spotlightKey: widget.spotlightKey,
             editingParameterIds: _editingParameterIds,
+            frozenParameterIds: _frozenParameterIds,
             onStartEditing: _startEditing,
             onStopEditing: _stopEditing,
             onBack: () => Navigator.of(context).maybePop(),
             onRecordOutcomes: _recordOutcomes,
             onAdjustParameter: _adjustParameter,
+            // The onboarding tour runs against a canned suggestion with no past
+            // runs to retune from, so the demo hides the retune affordance.
+            onRetune: widget.demoSuggestion == null ? _retune : null,
           ),
         },
       ),
@@ -237,11 +318,19 @@ class _ReadyView extends StatelessWidget {
 
   /// Ids of the parameters currently expanded into their editors.
   final Set<String> editingParameterIds;
+
+  /// Ids of the values the user has frozen — their cards read subtly different
+  /// and [onRetune] holds them fixed.
+  final Set<String> frozenParameterIds;
   final void Function(String parameterId) onStartEditing;
   final void Function(String parameterId) onStopEditing;
   final VoidCallback onBack;
   final VoidCallback onRecordOutcomes;
   final void Function(String parameterId, dynamic value) onAdjustParameter;
+
+  /// Re-suggests the non-frozen parameters around the frozen ones. Null hides
+  /// the banner's retune action (onboarding demo).
+  final VoidCallback? onRetune;
 
   const _ReadyView({
     required this.experiment,
@@ -249,11 +338,13 @@ class _ReadyView extends StatelessWidget {
     required this.errorMessage,
     required this.spotlightKey,
     required this.editingParameterIds,
+    required this.frozenParameterIds,
     required this.onStartEditing,
     required this.onStopEditing,
     required this.onBack,
     required this.onRecordOutcomes,
     required this.onAdjustParameter,
+    required this.onRetune,
   });
 
   @override
@@ -293,7 +384,10 @@ class _ReadyView extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 16),
-                const SmartPickBanner(),
+                SmartPickBanner(
+                  hasFrozenValues: frozenParameterIds.isNotEmpty,
+                  onRetune: onRetune,
+                ),
 
                 const SizedBox(height: 22),
                 KeyedSubtree(
@@ -323,10 +417,12 @@ class _ReadyView extends StatelessWidget {
                             editing: editingParameterIds.contains(
                               parameters[i].id,
                             ),
-                            onChanged: (value) => onAdjustParameter(
+                            frozen: frozenParameterIds.contains(
                               parameters[i].id,
-                              value,
                             ),
+                            onChanged:
+                                (value) =>
+                                    onAdjustParameter(parameters[i].id, value),
                             onStartEdit: () => onStartEditing(parameters[i].id),
                             onDone: () => onStopEditing(parameters[i].id),
                           ),

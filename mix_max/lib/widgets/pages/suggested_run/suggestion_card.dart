@@ -45,6 +45,12 @@ class SuggestionCard extends StatefulWidget {
   /// when [onChanged] is non-null.
   final bool editing;
 
+  /// Whether the user has frozen this value (committed an edit that differs
+  /// from the optimizer's pick). A frozen card reads subtly different — a gold
+  /// edge and a small gold lock — so the held values stand out in "Try these"
+  /// without shouting.
+  final bool frozen;
+
   /// Tapped on the collapsed card to begin editing it.
   final VoidCallback? onStartEdit;
 
@@ -57,6 +63,7 @@ class SuggestionCard extends StatefulWidget {
     required this.value,
     this.onChanged,
     this.editing = false,
+    this.frozen = false,
     this.onStartEdit,
     this.onDone,
   }) : super(key: key);
@@ -100,6 +107,9 @@ class _SuggestionCardState extends State<SuggestionCard> {
     final onChanged = widget.onChanged;
     const padding = EdgeInsets.symmetric(horizontal: 18, vertical: 16);
 
+    // A frozen value's quiet tell: the hairline warms to gold.
+    final borderColor = widget.frozen ? AppColors.gold : null;
+
     // Purely read-only (run details): no tap target.
     if (onChanged == null) {
       return MixMaxCard(padding: padding, child: _readOnly());
@@ -110,13 +120,18 @@ class _SuggestionCardState extends State<SuggestionCard> {
     if (!widget.editing) {
       return MixMaxCard(
         padding: padding,
+        borderColor: borderColor,
         onTap: widget.onStartEdit,
         child: _readOnly(showEditHint: true),
       );
     }
 
     // Expanded into its editor.
-    return MixMaxCard(padding: padding, child: _editable(onChanged));
+    return MixMaxCard(
+      padding: padding,
+      borderColor: borderColor,
+      child: _editable(onChanged),
+    );
   }
 
   /// The compact display row used on the run-details screen and as the collapsed
@@ -149,6 +164,10 @@ class _SuggestionCardState extends State<SuggestionCard> {
             ],
           ),
         ),
+        if (widget.frozen) ...[
+          const SizedBox(width: 12),
+          const MixMaxIcon(MixMaxGlyph.lock, size: 15, color: AppColors.gold),
+        ],
         if (showEditHint) ...[
           const SizedBox(width: 12),
           const MixMaxIcon(

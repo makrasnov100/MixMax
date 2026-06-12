@@ -1,7 +1,5 @@
 
 --- After testing ---
-- show which walues were edited after editing parameters, allow to recalculate paramters after edited the values
-- temperature
 - sso sign in with prompts to save user data, delete user data section (account section)
 - weighted outcomes (in outcome details) show graph
 - description of a run

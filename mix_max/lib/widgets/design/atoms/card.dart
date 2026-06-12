@@ -37,6 +37,10 @@ class MixMaxCard extends StatelessWidget {
   /// Surface fill. Defaults to white `AppColors.surface`.
   final Color? color;
 
+  /// 1px border colour. Defaults to the system `hairline`; override to let a
+  /// card quietly signal a state (e.g. a frozen suggestion's gold edge).
+  final Color? borderColor;
+
   const MixMaxCard({
     Key? key,
     required this.child,
@@ -46,6 +50,7 @@ class MixMaxCard extends StatelessWidget {
     this.elevated = true,
     this.clipContents = false,
     this.color,
+    this.borderColor,
   }) : super(key: key);
 
   @override
@@ -56,7 +61,7 @@ class MixMaxCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? AppColors.surface,
         borderRadius: BorderRadius.circular(_kRadius),
-        border: Border.all(color: AppColors.hairline, width: 1),
+        border: Border.all(color: borderColor ?? AppColors.hairline, width: 1),
         boxShadow: elevated ? _cardShadow : null,
       ),
       child: child,

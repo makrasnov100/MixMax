@@ -335,6 +335,70 @@ void main() {
     });
   });
 
+  group('BayesianOptimizationService — fixed values', () {
+    SchemaExperiment mixedExperiment() => SchemaExperiment(
+      id: 'exp',
+      parameters: [
+        SchemaParameter(
+          id: 'x',
+          type: ParameterType.number,
+          min: 0,
+          max: 100,
+          increment: 1,
+        ),
+        SchemaParameter(id: 't', type: ParameterType.toggle),
+        SchemaParameter(
+          id: 'c',
+          type: ParameterType.choice,
+          options: ['a', 'b', 'c'],
+        ),
+      ],
+      outcomes: [_scoreOutcome()],
+    );
+
+    test('cold-start keeps fixed values verbatim', () {
+      final experiment = mixedExperiment();
+      // 33.7 is off the increment grid on purpose — a user pick must survive
+      // unsnapped.
+      const fixed = {'x': 33.7, 'c': 'b'};
+
+      for (int i = 0; i < 20; i++) {
+        final s = BayesianOptimizationService.suggestNextParameters(
+          experiment: experiment,
+          pastRuns: const [],
+          fixedValues: fixed,
+        );
+        expect(s['x'], equals(33.7));
+        expect(s['c'], equals('b'));
+        expect(s['t'], isA<bool>());
+      }
+    });
+
+    test('GP path keeps fixed values verbatim and re-suggests the rest', () {
+      final experiment = mixedExperiment();
+      double evaluate(Map<String, dynamic> pv) =>
+          _gaussianScore(pv['x'] as double, 60, sigma: 15);
+
+      final runs = _runBoLoop(
+        experiment: experiment,
+        evaluate: evaluate,
+        numIterations: 10,
+      );
+
+      const fixed = {'x': 33.7, 'c': 'b'};
+      for (int i = 0; i < 10; i++) {
+        final s = BayesianOptimizationService.suggestNextParameters(
+          experiment: experiment,
+          pastRuns: runs,
+          fixedValues: fixed,
+        );
+        expect(s['x'], equals(33.7));
+        expect(s['c'], equals('b'));
+        expect(s['t'], isA<bool>());
+      }
+    });
+  });
+
   group('BayesianOptimizationService — increment snapping', () {
     // A value lands on the grid when (v - min) is a whole multiple of the step.
     void expectOnGrid(num value, {required double min, required double step}) {
