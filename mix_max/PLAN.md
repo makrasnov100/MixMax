@@ -1,51 +1,32 @@
 
 --- After testing ---
 - sso sign in with prompts to save user data, delete user data section (account section)
-- weighted outcomes (in outcome details) show graph
-- description of a run
-- description of the expirement (maybe procedure)
-- note of outcome how to grade?
-- quick selection taste step should be .1 not 1
-- fix over all rating being a 6.7 if rating from 1 to 10 (maybe jsut make default taste quick select 0 to 10)
-- launcher for older phones
+- test sign in with google works on andorid
+
 - fix sharing not working on my own device
 
+- description of outcome (how to grade?)
+- notes of a run outcome (on differnt outcomes)
+
+- quick selection taste step should be .1 not 1
+- fix over all rating being a 6.7 if rating from 1 to 10 (maybe just make default quick select 0 to 10 same with others)
+
+- launcher for older phones
+- weighted outcomes (in outcome details) show graph
+- timer built in for duration type  parameters in suggested run
+
 --- Publishing ---
-- Test on ios
-- Test on ipad size screen
+- Test on ios, implment sign in with apple and google on apple
+- Test on tabled screen
 - Test simple experiment start to finish 1 - 3 parameters, make sure algorithm is sound for all classes
-- start play store page and assets
-- simplify and make more intuitive text on the play store and app store pages, post to the stores
-- privacy policy and terms of use on main website, simple site no downnlaod links
-- generate great ASO title subtitles, tags, description, give ai my notes
+- Start play store page
+- Simplify and make more intuitive text on the play store and app store pages, post to the stores
+- Create privacy policy and terms of use on main website, simple site no downnlaod links, add to app general info
+- Generate great ASO title subtitles, tags, description, give ai my notes and 
 - Attempt to publish on both stores
-- update download links on the website
+- Update download links on the website
 
 --- Updates ---
-- timer built in for duration type  parameters in suggested run
-- rearrange the paameter order in the expirement
-- experiment runs as paid feature with x amount of free runs per account (10)
-- ability to pay for lifetime access or buy packs of runs as one time puchase
-- local saving of the results (sembast or other)
-- sign in to save results
-- weighted outcome priority (pie chart?)
-- better usage of previous runs after a parameter was updated
-- editing suggested paramers befre recording updates
-- description for outcomes for more detail when rating, description for expirments
-- The large rating text is a bit grainy
-- Subitting a run outputs later skipping a rating (secondary option during rating)
-- Ability to see previous runs and ratings for those (seperate page)
-- Rating slider outcome not always visible
-- Simple outcome presets that prefil the form
-- check remove ability to add parameters or outcomes after running first expirement (or allow after removing all runs, or see if can allow to add without removing runs)
-- When using rating slider if didnt change from default value cann
-- Order optimization doesnt seem to converge?
-- Best variables so far (based on runs, and estimated, is estimated just the next run?)
-- Show amount of runs, search space etc in runs list?
-- Ability to delete expirements
-- Expirmenet list should have tags (how many runs done vs remaining)
-- Expirement list shoul allow emoji at start, can be pressed to change
-- Allow to submit outcome later? from run list? after closing the app at the try parmaeters list
-- Tag after expiemrnets showing number of expirements there are
-- Ability to freeze a certain variable (no igredients, liked a particular variable)
-- Make the app work fully offline (sembast? backup but everything compied online aswell)
+- Large rating text is a bit grainy (install more detailed font)
+- Submitt run outputs later, skipping a rating (secondary option during rating)
+- Order optimization doesnt seem to converge? better implmentation than just random values generation?

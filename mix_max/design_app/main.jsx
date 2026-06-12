@@ -79,6 +79,7 @@ function App() {
   const [drawer, setDrawer] = React.useState(null); // null | {kind, ...}
   const [suggestion, setSuggestion] = React.useState({});
   const [ratingValues, setRatingValues] = React.useState({});
+  const [account, setAccount] = React.useState({ mode: 'none', provider: null, email: '' });
 
   const current = experiments.find(e => e.id === route.expId);
 
@@ -102,12 +103,50 @@ function App() {
   const back = () => setRoute({ name: 'list' });
   const openHistory = () => setRoute({ name: 'history', expId: route.expId });
 
-  const addExperiment = () => {
+  // ── account ──
+  // mode: 'none'  → brand-new, hasn't chosen how to use the app yet (gate)
+  //       'guest' → using the app as a guest (still cloud-backed)
+  //       'signedIn' → signed in with Google / Apple
+  const openAccount = () => setDrawer({ kind: 'account' });
+  // Mocked OAuth: signing in records the provider + email (no name is stored).
+  // If we're sitting on the create-experiment gate, proceed straight into the
+  // new experiment once a choice is made; otherwise flip the drawer in place.
+  const signIn = (provider) => {
+    const gate = drawer && drawer.gate;
+    setAccount({ mode: 'signedIn', provider, email: provider === 'apple' ? 'alex.rivera@icloud.com' : 'alex.rivera@gmail.com' });
+    setDrawer(null);
+    if (gate) doAddExperiment();
+  };
+  const continueAsGuest = () => {
+    const gate = drawer && drawer.gate;
+    setAccount({ mode: 'guest', provider: null, email: '' });
+    setDrawer(null);
+    if (gate) doAddExperiment();
+  };
+  // Signing out keeps you onboarded as a guest (data stays in the cloud).
+  const signOut = () => { setAccount({ mode: 'guest', provider: null, email: '' }); setDrawer(null); };
+  const requestDeleteAccount = () => setDrawer({ kind: 'confirmDelAccount' });
+  // Deleting the account wipes the experiment data and returns to the unchosen
+  // state, so the next "New experiment" asks how to use the app again.
+  const confirmDeleteAccount = () => {
+    setAccount({ mode: 'none', provider: null, email: '' });
+    setExperiments([]);
+    setDrawer(null);
+    setRoute({ name: 'list' });
+  };
+
+  // Creating an experiment is gated on choosing how to use the app: a brand-new
+  // user must pick guest / Google / Apple first. Once chosen, doAddExperiment runs.
+  const doAddExperiment = () => {
     const id = 'exp-' + Date.now();
     const exp = { id, name: '', parameters: [], outcomes: [], runs: [] };
     setExperiments(list => [exp, ...list]);
     setRoute({ name: 'details', expId: id });
     setDrawer({ kind: 'name', isNew: true });
+  };
+  const addExperiment = () => {
+    if (account.mode === 'none') { setDrawer({ kind: 'account', gate: true }); return; }
+    doAddExperiment();
   };
 
   const saveName = (name) => {
@@ -263,7 +302,7 @@ function App() {
 
   let screen = null;
   if (route.name === 'list') {
-    screen = <ExperimentsListScreen experiments={experiments} onOpen={openExp} onAdd={addExperiment} />;
+    screen = <ExperimentsListScreen experiments={experiments} onOpen={openExp} onAdd={addExperiment} onAccount={openAccount} signedIn={account.mode === 'signedIn'} />;
   } else if (route.name === 'details' && current) {
     screen = <ExperimentDetailsScreen exp={current} onBack={back}
       onRename={() => setDrawer({ kind: 'name' })}
@@ -349,6 +388,18 @@ function App() {
           onConfirm={() => deleteRun(drawer.runId)}
           onClose={() => setDrawer({ kind: 'runActions', runId: drawer.runId, num: drawer.num, isBest: drawer.isBest })} /> : null;
       })()}
+      {drawer && drawer.kind === 'account' && (
+        <AccountDrawer account={account}
+          onGoogle={() => signIn('google')} onApple={() => signIn('apple')}
+          onGuest={continueAsGuest}
+          onSignOut={signOut} onDelete={requestDeleteAccount}
+          onClose={() => setDrawer(null)} />
+      )}
+      {drawer && drawer.kind === 'confirmDelAccount' && (
+        <ConfirmDeleteAccountDrawer experimentCount={experiments.length}
+          onConfirm={confirmDeleteAccount}
+          onClose={() => setDrawer({ kind: 'account' })} />
+      )}
     </div>
   );
 }

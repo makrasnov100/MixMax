@@ -400,7 +400,7 @@ class _ReadyView extends StatelessWidget {
                       const BodyText(
                         text:
                             'These are the optimizer’s picks for this run. Tap '
-                            'any one to adjust it — each stays within the '
+                            'any one to adjust it, each stays within the '
                             'experiment’s limits.',
                         fontSize: 13,
                         color: AppColors.inkSoft,

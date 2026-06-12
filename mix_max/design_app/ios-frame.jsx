@@ -200,7 +200,7 @@ function IOSList({ header, children, dark = false }) {
 // ─────────────────────────────────────────────────────────────
 function IOSDevice({
   children, width = 402, height = 874, dark = false,
-  title, keyboard = false,
+  title, keyboard = false, statusBar = true,
 }) {
   return (
     <div style={{
@@ -211,14 +211,14 @@ function IOSDevice({
       WebkitFontSmoothing: 'antialiased',
     }}>
       {/* dynamic island */}
-      <div style={{
+      {statusBar && <div style={{
         position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
         width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
-      }} />
+      }} />}
       {/* status bar (absolute) */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+      {statusBar && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
         <IOSStatusBar dark={dark} />
-      </div>
+      </div>}
       {/* nav + content */}
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {title !== undefined && <IOSNavBar title={title} dark={dark} />}

@@ -40,6 +40,9 @@ function Icon({ name, size = 22, color = 'currentColor', stroke = 1.8, style }) 
     eye: <g {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></g>,
     eyeOff: <g {...p}><path d="M4 4l16 16M9.9 5.2A9.9 9.9 0 0 1 12 5c6 0 9.5 7 9.5 7a16 16 0 0 1-3.2 3.9M6.3 7.8A16 16 0 0 0 2.5 12S6 19 12 19a9.6 9.6 0 0 0 3.4-.6M9.9 14.1a3 3 0 0 0 4.2-4.2" /></g>,
     share: <g {...p}><path d="M12 15V3.5M12 3.5 8.5 7M12 3.5 15.5 7M6 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1" /></g>,
+    user: <g {...p}><circle cx="12" cy="8.2" r="3.7" /><path d="M5.5 19.5a6.5 6.5 0 0 1 13 0" /></g>,
+    cloud: <g {...p}><path d="M7 18h9.4a3.8 3.8 0 0 0 .3-7.6 5.4 5.4 0 0 0-10.4 1.1A3.6 3.6 0 0 0 6.9 18Z" /></g>,
+    signout: <g {...p}><path d="M9.5 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3.5" /><path d="M14 12h7.5M18 8l4 4-4 4" /></g>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={style} aria-hidden="true">
@@ -48,4 +51,23 @@ function Icon({ name, size = 22, color = 'currentColor', stroke = 1.8, style }) 
   );
 }
 
-window.Icon = Icon;
+// Brand marks for the auth buttons — standard, recognizable sign-in affordances.
+function GoogleMark({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.3h12.4c-.5 2.9-2.1 5.3-4.6 6.9l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16.2z" />
+      <path fill="#FBBC05" d="M10.5 28.3c-.5-1.4-.7-2.9-.7-4.3s.3-3 .7-4.3l-7.9-6.1C1 16.5 0 20.1 0 24s1 7.5 2.6 10.4l7.9-6.1z" />
+      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2 1.4-4.6 2.2-8.7 2.2-6.3 0-11.6-4-13.5-9.5l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+    </svg>
+  );
+}
+function AppleMark({ size = 20, color = '#fff' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path fill={color} d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.85-1.4-.14-2.83.82-3.55.82-.72 0-1.9-.8-3.12-.78-1.6.02-3.08.93-3.9 2.37-1.66 2.88-.43 7.15 1.2 9.5.8 1.14 1.74 2.42 2.98 2.38 1.2-.05 1.65-.78 3.1-.78 1.44 0 1.85.78 3.12.75 1.29-.02 2.1-1.17 2.89-2.32.5-.74.88-1.55 1.16-2.42-.06-.02-2.34-.9-2.34-3.55zM14.13 5.83c.65-.79 1.09-1.89.97-2.98-.94.04-2.07.62-2.74 1.41-.6.7-1.13 1.82-.99 2.89 1.05.08 2.11-.53 2.76-1.32z" />
+    </svg>
+  );
+}
+
+Object.assign(window, { Icon, GoogleMark, AppleMark });

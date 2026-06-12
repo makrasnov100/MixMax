@@ -1,26 +1,59 @@
 {
   "project_info": {
-    "project_number": "204221789722",
-    "project_id": "template-app-4513a",
-    "storage_bucket": "template-app-4513a.firebasestorage.app"
+    "project_number": "124263762128",
+    "project_id": "mix-max-7a33e",
+    "storage_bucket": "mix-max-7a33e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:204221789722:android:b67f921d4883bbbd1703a3",
+        "mobilesdk_app_id": "1:124263762128:android:e8622bc7d3d243cbf776d5",
         "android_client_info": {
-          "package_name": "app.myfortuna.mix_max.dev"
+          "package_name": "app.myfortuna.mix_max"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "124263762128-jgn87j4psipnn1kguj5jaoo1b1ofbnsf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.myfortuna.mix_max",
+            "certificate_hash": "24ce205cbebcf6fbe104987c7a261d3298397461"
+          }
+        },
+        {
+          "client_id": "124263762128-pc39icpnaj2s8stc5eqgc87otqmj2q64.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.myfortuna.mix_max",
+            "certificate_hash": "caa6c9579e37cca7e4fbc72f736dffcd6ce4e602"
+          }
+        },
+        {
+          "client_id": "124263762128-hg34r7jrhhllptojggm69ire24b2tan6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDTUC39J2sz646tnJE5_ltfx5x2Q13iwLA"
+          "current_key": "AIzaSyDyVFXxZOqP19CiI8V7VwTqAb1b8xhZtc0"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "124263762128-hg34r7jrhhllptojggm69ire24b2tan6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "124263762128-55tcbjd4foiggilp5a7iftfnm3jahplv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "app.myfortuna.mixMax"
+              }
+            }
+          ]
         }
       }
     }

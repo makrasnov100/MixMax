@@ -234,19 +234,22 @@ function ChipEditor({ items, setItems, placeholder }) {
 
 function TwoCol({ children }) { return <div style={{ display: 'flex', gap: 10 }}>{children.map((c, i) => <div key={i} style={{ flex: 1 }}>{c}</div>)}</div>; }
 
-function ParameterDrawer({ initial, onSave, onDelete, onClose }) {
+function ParameterDrawer({ initial, createSeed, onSave, onDelete, onClose }) {
   const isEdit = !!initial;
-  const [name, setName] = useState(initial?.name || '');
-  const [type, setType] = useState(initial?.type || 'number');
-  const [unit, setUnit] = useState(initial?.unit || '');
-  const [min, setMin] = useState(initial?.min != null ? String(initial.min) : '');
-  const [max, setMax] = useState(initial?.max != null ? String(initial.max) : '');
-  const [increment, setIncrement] = useState(initial?.increment != null ? String(initial.increment) : '');
-  const [options, setOptions] = useState(initial?.options || []);
-  const [items, setItems] = useState(initial?.items || []);
+  // in create mode an optional createSeed pre-fills the fields (used for
+  // marketing / App Store shots) without flipping the drawer into edit mode.
+  const base = initial || createSeed || {};
+  const [name, setName] = useState(base.name || '');
+  const [type, setType] = useState(base.type || 'number');
+  const [unit, setUnit] = useState(base.unit || '');
+  const [min, setMin] = useState(base.min != null ? String(base.min) : '');
+  const [max, setMax] = useState(base.max != null ? String(base.max) : '');
+  const [increment, setIncrement] = useState(base.increment != null ? String(base.increment) : '');
+  const [options, setOptions] = useState(base.options || []);
+  const [items, setItems] = useState(base.items || []);
   // toggle: custom on/off state labels + a default-state preview
-  const [onLabel, setOnLabel] = useState(initial?.onLabel || '');
-  const [offLabel, setOffLabel] = useState(initial?.offLabel || '');
+  const [onLabel, setOnLabel] = useState(base.onLabel || '');
+  const [offLabel, setOffLabel] = useState(base.offLabel || '');
   const [toggleOn, setToggleOn] = useState(true);
 
   const applyPreset = (p) => {
@@ -349,8 +352,8 @@ function ParameterDrawer({ initial, onSave, onDelete, onClose }) {
 }
 
 // create-mode wrapper (kept for the existing "Add parameter" entry point)
-function AddParameterDrawer({ onSave, onClose }) {
-  return <ParameterDrawer onSave={onSave} onClose={onClose} />;
+function AddParameterDrawer({ onSave, onClose, seed }) {
+  return <ParameterDrawer onSave={onSave} onClose={onClose} createSeed={seed} />;
 }
 
 // ── 3. Add output ────────────────────────────────────────
@@ -569,4 +572,168 @@ function ConfirmDeleteItemDrawer({ target = 'parameter', runCount = 0, onConfirm
   );
 }
 
-Object.assign(window, { DrawerShell, NameDrawer, ParameterDrawer, OutcomeDrawer, AddParameterDrawer, AddOutputDrawer, ConfirmDeleteItemDrawer, Segmented, TextInput, ExperimentActionsDrawer, ConfirmDeleteDrawer, RunActionsDrawer, ConfirmDeleteRunDrawer });
+// ── 7. Account ───────────────────────────────────────────
+const LEGAL = {
+  terms:   'https://myfortuna.app/mix-max/terms-of-service',
+  privacy: 'https://myfortuna.app/mix-max/privacy-policy',
+};
+
+// A platform-style sign-in button: brand mark pinned left, label centered.
+// Google reads as the light bordered button; Apple as the ink button.
+function AuthButton({ provider, label, onClick }) {
+  const apple = provider === 'apple';
+  return (
+    <button onClick={onClick}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.985)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+      style={{
+        position: 'relative', width: '100%', height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: apple ? T.ink : T.surface, color: apple ? '#fff' : T.ink,
+        border: apple ? 'none' : `1.5px solid ${T.hairlineStrong}`,
+        boxShadow: apple ? BTN_SHADOW : '0 1px 2px rgba(34,31,42,0.05)',
+        borderRadius: T.rBtn,
+        fontFamily: T.sans, fontWeight: 600, fontSize: 16, letterSpacing: '0.005em',
+        cursor: 'pointer', transition: 'transform .12s ease',
+        WebkitTapHighlightColor: 'transparent',
+      }}>
+      <span style={{ position: 'absolute', left: 20, display: 'flex', alignItems: 'center' }}>
+        {apple ? <AppleMark size={21} color="#fff" /> : <GoogleMark size={20} />}
+      </span>
+      <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
+    </button>
+  );
+}
+
+// Fine print under the sign-in buttons; the two phrases are live links.
+function LegalLine() {
+  const link = { color: T.goldText, fontWeight: 600, textDecoration: 'underline', textDecorationColor: T.hairlineStrong, textUnderlineOffset: '2px' };
+  return (
+    <div style={{ textAlign: 'center', fontFamily: T.sans, fontSize: 12.5, color: T.inkFaint, lineHeight: 1.55, marginTop: 16, padding: '0 6px' }}>
+      By continuing you agree to our{' '}
+      <a href={LEGAL.terms} target="_blank" rel="noopener noreferrer" style={link}>Terms of Service</a>{' '}and{' '}
+      <a href={LEGAL.privacy} target="_blank" rel="noopener noreferrer" style={link}>Privacy Policy</a>.
+    </div>
+  );
+}
+
+// "or" rule between the platform sign-in buttons and the guest option.
+function OrDivider() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0' }}>
+      <div style={{ flex: 1, height: 1, background: T.hairline }} />
+      <span style={{ fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>or</span>
+      <div style={{ flex: 1, height: 1, background: T.hairline }} />
+    </div>
+  );
+}
+
+function GuestButton({ onClick }) {
+  return (
+    <button onClick={onClick}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.985)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+      style={{
+        width: '100%', height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        background: 'transparent', color: T.inkSoft,
+        border: `1.5px solid ${T.hairlineStrong}`, borderRadius: T.rBtn,
+        fontFamily: T.sans, fontWeight: 600, fontSize: 16, letterSpacing: '0.005em',
+        cursor: 'pointer', transition: 'transform .12s ease',
+        WebkitTapHighlightColor: 'transparent',
+      }}>
+      <span style={{ whiteSpace: 'nowrap' }}>Continue as guest</span>
+      <Icon name="arrowR" size={19} color={T.inkSoft} stroke={2} />
+    </button>
+  );
+}
+
+function AccountDrawer({ account, onGoogle, onApple, onGuest, onSignOut, onDelete, onClose }) {
+  // ── Signed in: sign out (primary) + a smaller delete-account link ──
+  if (account.mode === 'signedIn') {
+    return (
+      <DrawerShell title="Your account" subtitle="Signed in &amp; synced to the cloud" onClose={onClose}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: T.surface, border: `1px solid ${T.hairline}`, borderRadius: T.rField, padding: '14px 15px' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 999, flexShrink: 0, background: T.goldTint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="user" size={24} color={T.gold} stroke={1.9} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 16, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Mix Max Standard</div>
+            <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.email}</div>
+          </div>
+        </div>
+
+        <div style={{ height: 18 }} />
+        <Btn label="Sign out" icon="signout" variant="ghost" onClick={onSignOut} />
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14, marginBottom: 4 }}>
+          <button onClick={onDelete} style={{
+            border: 'none', background: 'none', padding: '6px 10px', cursor: 'pointer',
+            fontFamily: T.sans, fontWeight: 600, fontSize: 13.5, color: T.danger,
+            WebkitTapHighlightColor: 'transparent',
+          }}>Delete account</button>
+        </div>
+      </DrawerShell>
+    );
+  }
+
+  // ── Not signed in: a guest (already onboarded) sees the upgrade prompt; a
+  //    brand-new user who hasn't chosen yet must pick how to use the app. ──
+  const guest = account.mode === 'guest';
+  return (
+    <DrawerShell
+      title={guest ? 'Save your progress' : "Let's begin"}
+      subtitle={guest ? "You're not signed in" : 'Choose how to use the app.'}
+      onClose={onClose}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13, background: T.goldTint, borderRadius: 16, padding: '15px 16px', marginBottom: 18 }}>
+        <Tile icon="cloud" tone="gold" size={42} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink }}>Synced across your devices</div>
+          <div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.inkSoft, lineHeight: 1.45, marginTop: 3 }}>Your experiments are always backed up in the cloud. Sign in to reach them from any device and keep them if you switch phones.</div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <AuthButton provider="google" label="Continue with Google" onClick={onGoogle} />
+        <AuthButton provider="apple" label="Continue with Apple" onClick={onApple} />
+      </div>
+      {!guest && (
+        <React.Fragment>
+          <OrDivider />
+          <GuestButton onClick={onGuest} />
+        </React.Fragment>
+      )}
+      <LegalLine />
+      <div style={{ height: 6 }} />
+    </DrawerShell>
+  );
+}
+
+// Destructive confirm before wiping the account. The copy stresses that the
+// on-device experiment data is erased too, not just the cloud copy.
+function ConfirmDeleteAccountDrawer({ experimentCount = 0, onConfirm, onClose }) {
+  return (
+    <DrawerShell onClose={onClose}
+      title="Delete your account?"
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn label="Delete account" icon="trash" variant="danger" onClick={onConfirm} />
+          <Btn label="Keep my account" variant="ghost" onClick={onClose} />
+        </div>
+      }>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 4 }}>
+        <Tile icon="alert" tone="danger" size={56} radius={18} stroke={2} />
+        <div style={{ fontFamily: T.sans, fontSize: 14.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 16, maxWidth: 322 }}>
+          This permanently deletes your account and erases <b style={{ color: T.ink, fontWeight: 700 }}>all of your experiment data</b> — including the copies saved on this device. This can’t be undone.
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 18 }}>
+          <Chip tone="soft" icon="flask">{experimentCount} experiment{experimentCount === 1 ? '' : 's'}</Chip>
+        </div>
+      </div>
+      <div style={{ height: 8 }} />
+    </DrawerShell>
+  );
+}
+
+Object.assign(window, { DrawerShell, NameDrawer, ParameterDrawer, OutcomeDrawer, AddParameterDrawer, AddOutputDrawer, ConfirmDeleteItemDrawer, Segmented, TextInput, ExperimentActionsDrawer, ConfirmDeleteDrawer, RunActionsDrawer, ConfirmDeleteRunDrawer, AccountDrawer, ConfirmDeleteAccountDrawer, AuthButton });

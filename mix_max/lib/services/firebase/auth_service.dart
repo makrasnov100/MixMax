@@ -35,18 +35,25 @@ class AuthService extends ChangeNotifier {
 
   //[STREAMING USER INFO]
   void listenToLogin() async {
-    waitForSignInComplete(timeout: Duration(seconds: 10));
     firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser == null) {
-      await signInAnonymous();
-    } else if (firebaseUser!.isAnonymous) {
-      lastProvider = AcceptedProviders.anonymous;
-    } else if (firebaseUser!.providerData.isNotEmpty && firebaseUser!.providerData[0].providerId == 'google.com') {
-      lastProvider = AcceptedProviders.google;
-    } else if (firebaseUser!.providerData.isNotEmpty && firebaseUser!.providerData[0].providerId == 'apple.com') {
-      lastProvider = AcceptedProviders.apple;
+      // No automatic anonymous sign-in: a brand-new user stays signed out until
+      // they choose how to use the app in the account drawer — only after
+      // they've seen the Terms of Service / Privacy Policy line there.
+      lastProvider = null;
+      isLoading = false;
+      notifyListeners();
     } else {
-      lastProvider = AcceptedProviders.google; // default fallback
+      waitForSignInComplete(timeout: Duration(seconds: 10));
+      if (firebaseUser!.isAnonymous) {
+        lastProvider = AcceptedProviders.anonymous;
+      } else if (firebaseUser!.providerData.isNotEmpty && firebaseUser!.providerData[0].providerId == 'google.com') {
+        lastProvider = AcceptedProviders.google;
+      } else if (firebaseUser!.providerData.isNotEmpty && firebaseUser!.providerData[0].providerId == 'apple.com') {
+        lastProvider = AcceptedProviders.apple;
+      } else {
+        lastProvider = AcceptedProviders.google; // default fallback
+      }
     }
 
     firebaseUserStreamSubscription = FirebaseAuth.instance.authStateChanges().listen((User? newFirebaseUser) {
@@ -181,7 +188,11 @@ class AuthService extends ChangeNotifier {
         return result;
       }
 
-      await getUserSecret();
+      // The secret is only needed to transfer data off an existing (anonymous)
+      // user — and the cloud call would be rejected while signed out anyway.
+      if (hasAccount) {
+        await getUserSecret();
+      }
 
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
@@ -221,7 +232,9 @@ class AuthService extends ChangeNotifier {
         return result;
       }
 
-      await getUserSecret();
+      if (hasAccount) {
+        await getUserSecret();
+      }
 
       waitForSignInComplete(timeout: Duration(seconds: 10));
       final appleProvider =
@@ -364,19 +377,81 @@ class AuthService extends ChangeNotifier {
         (lastProvider == AcceptedProviders.google || lastProvider == AcceptedProviders.apple);
   }
 
+  /// True once any account exists — a guest (anonymous) or a federated one.
+  /// False only for a brand-new user who hasn't chosen how to use the app yet.
+  bool get hasAccount => firebaseUser != null;
+
+  /// True while using the app as a guest (anonymous account).
+  bool get isGuest => firebaseUser != null && lastProvider == AcceptedProviders.anonymous;
+
   bool authUserMatchesFirebaseUser() {
     return firebaseUser != null && firebaseUser!.uid == user.id;
   }
 
-  Future<void> signInAnonymous() async {
+  Future<bool> signInAnonymous() async {
     try {
       waitForSignInComplete(timeout: Duration(seconds: 10));
       await FirebaseAuth.instance.signInAnonymously();
       lastProvider = AcceptedProviders.anonymous;
+      return true;
     } catch (e) {
       lastProvider = null;
       notifyListeners();
+      return false;
     }
+  }
+
+  /// "Continue as guest" — creates the anonymous account. Called only from the
+  /// account drawer, after the Terms of Service / Privacy Policy were shown.
+  Future<bool> signInAsGuest() async {
+    if (hasAccount) {
+      return true;
+    }
+    return signInAnonymous();
+  }
+
+  /// Permanently deletes the current account through the `deleteUserAccount`
+  /// cloud function (auth record, user docs and every experiment / run), then
+  /// clears the local session *without* re-signing-in anonymously — the user
+  /// returns to the pre-choice state, so creating an experiment asks how to
+  /// use the app again.
+  Future<SignInResult> deleteAccount() async {
+    String? errorMessage;
+    bool success = await runCloudFunction(
+      functionName: "deleteUserAccount",
+      input: {},
+      timeoutSeconds: 300,
+      onError: (e, jsonResponse) {
+        errorMessage = e;
+      },
+    );
+
+    if (!success) {
+      return SignInResult(
+        success: false,
+        message: errorMessage ?? "Unable to delete your account. Please try again later.",
+        userCredential: null,
+      );
+    }
+
+    // The auth record is already gone server-side; drop the local session.
+    try {
+      await GoogleSignIn().signOut();
+    } catch (e) {
+      print(e);
+    }
+    await unsubscribeFromUserStream();
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      print(e);
+    }
+    firebaseUser = null;
+    lastProvider = null;
+    _lastNotNullUser = null;
+    oldUserSecret = null;
+    notifyListeners();
+    return SignInResult(success: true, message: "", userCredential: null);
   }
 
   Future<UserCredential?> signInAppleProvider({required AppleAuthProvider provider}) async {

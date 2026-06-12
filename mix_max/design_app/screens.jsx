@@ -129,14 +129,21 @@ function MetaBit({ icon, text }) {
   );
 }
 
-function ExperimentsListScreen({ experiments, onOpen, onAdd }) {
+function ExperimentsListScreen({ experiments, onOpen, onAdd, onAccount, signedIn }) {
   return (
     <Screen footer={<Btn label="New experiment" icon="plus" variant="ink" onClick={onAdd} />}>
-      <TopPad />
-      <div style={{ padding: '8px 20px 0' }}>
-        <Eyebrow color={T.gold}>Mix Max</Eyebrow>
-        <Display size={40} style={{ marginTop: 8 }}>Experiments</Display>
-        <div style={{ fontFamily: T.sans, fontSize: 14.5, color: T.inkSoft, marginTop: 10 }}>Find the best version of anything.</div>
+      <TopPad h={50} />
+      {/* Account menu trigger — same round button as the experiment-details menu,
+          with a person glyph. A small gold dot shows when signed in. */}
+      <div style={{ padding: '18px 20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
+        <div style={{ minWidth: 0 }}>
+          <Eyebrow color={T.gold}>Mix Max</Eyebrow>
+          <Display size={40} style={{ marginTop: 8 }}>Experiments</Display>
+          <div style={{ fontFamily: T.sans, fontSize: 14.5, color: T.inkSoft, marginTop: 10 }}>Find the best version of anything.</div>
+        </div>
+        <div style={{ flexShrink: 0, marginTop: 4 }}>
+          <RoundBtn icon="user" onClick={onAccount} />
+        </div>
       </div>
       <div style={{ padding: '22px 20px 8px', display: 'flex', flexDirection: 'column', gap: 13 }}>
         {experiments.length === 0 ? (

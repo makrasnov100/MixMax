@@ -8,9 +8,13 @@ import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/services/ui/onboarding_service.dart';
 import 'package:mix_max/widgets/pages/onboarding/onboarding_controller.dart';
 import 'package:mix_max/pages/experiment_details_page.dart';
+import 'package:mix_max/services/ui/popup_service.dart';
+import 'package:mix_max/widgets/pages/account/account_drawer.dart';
+import 'package:mix_max/widgets/pages/account/confirm_delete_account_drawer.dart';
 import 'package:mix_max/widgets/pages/experiments_list/create_experiment_drawer.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
 import 'package:mix_max/widgets/design/ions/text/display_text.dart';
@@ -79,9 +83,15 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     if (mounted) setState(() {});
   }
 
-  /// Prompts for a name first. Nothing is persisted until the user saves —
-  /// dismissing the drawer creates no experiment.
-  void _addExperiment() {
+  /// Gated on having an account: a brand-new user must first choose how to use
+  /// the app (guest / Google / Apple) in the account drawer — closing it
+  /// without choosing goes nowhere. Once an account exists this prompts for a
+  /// name; nothing is persisted until the user saves.
+  Future<void> _addExperiment() async {
+    if (!_authService.hasAccount) {
+      final result = await AccountDrawer.show(context);
+      if (!mounted || result != AccountDrawerResult.chose) return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -90,6 +100,59 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
         onSave: _createExperiment,
       ),
     );
+  }
+
+  /// The masthead account button — the same drawer as the create gate, but its
+  /// dismissal needs no follow-up except the delete-account confirm flow.
+  Future<void> _openAccount() async {
+    final result = await AccountDrawer.show(context);
+    if (!mounted) return;
+    if (result == AccountDrawerResult.deleteRequested) {
+      await _confirmDeleteAccount();
+    }
+  }
+
+  /// Shows the destructive confirm (with a live experiment count). "Keep my
+  /// account" returns to the account drawer, like the design; confirming runs
+  /// the cloud deletion and drops the session back to the unchosen state.
+  Future<void> _confirmDeleteAccount() async {
+    final count = await _countExperiments();
+    if (!mounted) return;
+
+    final confirmed = await ConfirmDeleteAccountDrawer.show(
+      context,
+      experimentCount: count,
+    );
+    if (!mounted) return;
+
+    if (!confirmed) {
+      await _openAccount();
+      return;
+    }
+
+    await PopupService.performToastOperation(
+      loadingMessage: '⌛ Deleting your account…',
+      successMessage: '✅ Your account and data have been deleted.',
+      errorMessage: '❌ Could not delete your account. Please try again later.',
+      operation: () async {
+        final result = await _authService.deleteAccount();
+        if (!result.success) {
+          throw Exception(result.message);
+        }
+      },
+    );
+  }
+
+  Future<int> _countExperiments() async {
+    try {
+      final aggregate = await DatabaseService.experimentsRef
+          .where('userId', isEqualTo: _authService.user.id)
+          .count()
+          .get();
+      return aggregate.count ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Future<void> _createExperiment(String name) async {
@@ -140,19 +203,36 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Editorial masthead — stays fixed above the scrolling list.
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Column(
+                // Editorial masthead — stays fixed above the scrolling list,
+                // with the round account trigger sitting opposite the title
+                // (screens.jsx ExperimentsListScreen header row).
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      EyebrowText(text: 'Mix Max', color: AppColors.gold),
-                      SizedBox(height: 8),
-                      DisplayText(text: 'Experiments', fontSize: 40),
-                      SizedBox(height: 10),
-                      BodyText(
-                        text: 'Find the best version of anything.',
-                        fontSize: 14.5,
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            EyebrowText(text: 'Mix Max', color: AppColors.gold),
+                            SizedBox(height: 8),
+                            DisplayText(text: 'Experiments', fontSize: 40),
+                            SizedBox(height: 10),
+                            BodyText(
+                              text: 'Find the best version of anything.',
+                              fontSize: 14.5,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: MixMaxRoundButton(
+                          glyph: MixMaxGlyph.user,
+                          onTap: _openAccount,
+                        ),
                       ),
                     ],
                   ),
@@ -208,6 +288,15 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     }
 
     if (stream == null) {
+      // Signed out entirely (no account chosen yet): show the regular empty
+      // state — the gate on "New experiment" handles the choice.
+      if (!_authService.hasAccount && !_authService.isLoading) {
+        return ExperimentsList(
+          experiments: const [],
+          onOpen: (_) {},
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 110),
+        );
+      }
       return const Center(
         child: BodyText(
           text: 'Signing you in…',
