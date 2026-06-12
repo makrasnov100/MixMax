@@ -6,17 +6,20 @@ import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
+import 'package:mix_max/widgets/design/atoms/drawer_container.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/inputs/text_input.dart';
 import 'package:mix_max/widgets/design/atoms/progress_dots.dart';
 import 'package:mix_max/widgets/design/atoms/round_button.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
+import 'package:mix_max/widgets/design/ions/app_typography.dart';
 import 'package:mix_max/widgets/design/molecules/confirm_drawer.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
 import 'package:mix_max/widgets/design/ions/text/body_text.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/display_text.dart';
+import 'package:mix_max/widgets/design/ions/text/title_text.dart';
 import 'package:mix_max/widgets/design/molecules/slider_field.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 
@@ -332,6 +335,8 @@ class _RecordingViewState extends State<_RecordingView> {
 
     final name = _outcome.name?.isNotEmpty == true ? _outcome.name! : 'Outcome';
     final unit = _outcome.unit ?? '';
+    final guide = _outcome.description?.trim() ?? '';
+    final hasGuide = guide.isNotEmpty;
 
     return Stack(
       fit: StackFit.expand,
@@ -382,14 +387,21 @@ class _RecordingViewState extends State<_RecordingView> {
               const SizedBox(height: 12),
               _GoalPill(outcome: _outcome),
 
+              // The grading guide, when the outcome carries one. The value
+              // and slider gaps tighten to make room for it.
+              if (hasGuide) ...[
+                const SizedBox(height: 16),
+                _RatingGuide(text: guide, outcomeName: name),
+              ],
+
               // Value + input.
-              SizedBox(height: _hasBounds ? 40 : 36),
+              SizedBox(height: hasGuide ? 26 : (_hasBounds ? 40 : 36)),
               if (_hasBounds) ...[
                 _ValueReadout(
                   value: MixMaxFormat.number(_sliderValue, decimals: 4),
                   unit: unit,
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: hasGuide ? 30 : 40),
                 MixMaxSliderField(
                   value: _sliderValue,
                   min: _sliderMin,
@@ -529,6 +541,169 @@ class _GoalPill extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The outcome's grading guide, shown while rating so scores stay consistent.
+/// Clamped to 3 lines in place; "Show more" opens a bottom drawer with the
+/// full text, so the value + slider never get pushed out of view.
+///
+/// Source: `screens.jsx` `RatingScreen` `RatingGuide` (the inline alert): a
+/// hairline `surface` card with a violet info glyph, sans-13 soft-ink copy,
+/// and a violet "Show more" link that only renders when the text overflows.
+class _RatingGuide extends StatelessWidget {
+  final String text;
+  final String outcomeName;
+
+  const _RatingGuide({required this.text, required this.outcomeName});
+
+  static const int _maxLines = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = BodyText.styleOf(fontSize: 13);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.hairline),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 3),
+            child: MixMaxIcon(
+              MixMaxGlyph.info,
+              size: 15,
+              color: AppColors.violetText,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            // Measure whether the guide overflows its 3-line clamp at this
+            // exact width so "Show more" only appears when there's more.
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final painter = TextPainter(
+                  text: TextSpan(text: text, style: style),
+                  maxLines: _maxLines,
+                  textDirection: TextDirection.ltr,
+                  textScaler: MediaQuery.textScalerOf(context),
+                )..layout(maxWidth: constraints.maxWidth);
+                final clamped = painter.didExceedMaxLines;
+                painter.dispose();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      text,
+                      style: style,
+                      maxLines: _maxLines,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (clamped)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _RatingGuideDrawer.show(
+                          context,
+                          outcomeName: outcomeName,
+                          text: text,
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.only(top: 5),
+                          child: BodyText(
+                            text: 'Show more',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.violetText,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The "How to rate" bottom drawer with an outcome's full grading guide.
+///
+/// Source: `screens.jsx` `RatingGuide` (the `DrawerShell` it opens): a
+/// centered serif "How to rate" title over the outcome's name, then the
+/// untruncated guide as relaxed reading copy.
+class _RatingGuideDrawer extends StatelessWidget {
+  final String outcomeName;
+  final String text;
+
+  const _RatingGuideDrawer({required this.outcomeName, required this.text});
+
+  static Future<void> show(
+    BuildContext context, {
+    required String outcomeName,
+    required String text,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _RatingGuideDrawer(outcomeName: outcomeName, text: text),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MixMaxDrawerContainer(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Centered serif title + soft subtitle. DrawerShell padding
+          // '14px 24px 4px'.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
+            child: Column(
+              children: [
+                const TitleText(
+                  text: 'How to rate',
+                  fontSize: 25,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 3),
+                CaptionText(
+                  text: outcomeName,
+                  fontSize: 13.5,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 22),
+              child: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontSize: 15,
+                    height: 1.6,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

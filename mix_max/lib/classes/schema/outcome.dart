@@ -7,6 +7,10 @@ enum OutcomeGoal { minimize, maximize }
 class SchemaOutcome {
   String id;
   String? name;
+
+  /// Optional grading guide ("how should this be graded?") shown while rating
+  /// a run so scores stay consistent across runs.
+  String? description;
   String? unit;
   double? min;
   double? max;
@@ -18,6 +22,7 @@ class SchemaOutcome {
   SchemaOutcome({
     required this.id,
     this.name,
+    this.description,
     this.unit,
     this.min,
     this.max,
@@ -28,6 +33,7 @@ class SchemaOutcome {
   SchemaOutcome.unknown({
     this.id = '',
     this.name,
+    this.description,
     this.unit,
     this.min,
     this.max,

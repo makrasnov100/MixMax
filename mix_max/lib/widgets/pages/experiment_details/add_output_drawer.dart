@@ -4,6 +4,7 @@ import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/drawer_container.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/inputs/text_area.dart';
 import 'package:mix_max/widgets/design/atoms/inputs/text_input.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
@@ -19,8 +20,9 @@ import 'package:mix_max/widgets/design/molecules/segmented.dart';
 /// Composed from the design system: the [MixMaxDrawerContainer] shell, a centered
 /// serif header, a violet "Quick add" row of [MixMaxQuickAddCard] presets, a name
 /// [MixMaxTextInput], a [MixMaxSegmented] goal selector (Minimize / Maximize), a
-/// two-column min/max scale, a unit + increment row, and a pinned ink "Save outcome"
-/// footer that stays disabled until a name is entered.
+/// two-column min/max scale, a unit + increment row, an optional grading-guide
+/// description [MixMaxTextArea], and a pinned ink "Save outcome" footer that
+/// stays disabled until a name is entered.
 ///
 /// Passing [initial] switches the drawer to edit mode: the form is prefilled,
 /// the quick-add row is hidden, and the footer gains a "Delete outcome" action
@@ -31,6 +33,7 @@ import 'package:mix_max/widgets/design/molecules/segmented.dart';
 /// [SchemaOutcome] and the sheet pops; the caller does the write.
 class AddOutputDrawer extends StatefulWidget {
   static const int maxNameLength = 50;
+  static const int maxDescriptionLength = 2000;
 
   /// Called with the assembled outcome when the user saves. In edit mode the
   /// outcome keeps [SchemaOutcome.id] of [initial].
@@ -56,6 +59,7 @@ class AddOutputDrawer extends StatefulWidget {
 
 class _AddOutputDrawerState extends State<AddOutputDrawer> {
   final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _unitController = TextEditingController();
   // Seed the scale with the design's defaults (a 1–10, increment-1 scale).
   final _minController = TextEditingController(text: '1');
@@ -71,6 +75,8 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
     super.initState();
     _prefillFromInitial();
     _nameController.addListener(_onChanged);
+    // The description's counter only appears once there's text to count.
+    _descriptionController.addListener(_onChanged);
   }
 
   /// Seeds the form from [AddOutputDrawer.initial] when editing.
@@ -78,6 +84,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
     final o = widget.initial;
     if (o == null) return;
     _nameController.text = o.name ?? '';
+    _descriptionController.text = o.description ?? '';
     _unitController.text = o.unit ?? '';
     _goal = o.goal ?? OutcomeGoal.maximize;
     if (o.min != null) _minController.text = _fmtBound(o.min);
@@ -94,6 +101,9 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
   @override
   void dispose() {
     _nameController
+      ..removeListener(_onChanged)
+      ..dispose();
+    _descriptionController
       ..removeListener(_onChanged)
       ..dispose();
     _unitController.dispose();
@@ -121,12 +131,14 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
 
   void _save() {
     if (!_canSave) return;
+    final description = _descriptionController.text.trim();
     final unit = _unitController.text.trim();
     final increment = double.tryParse(_incrementController.text.trim());
 
     final outcome = SchemaOutcome(
       id: widget.initial?.id ?? DatabaseService.experimentsRef.doc().id,
       name: _nameController.text.trim(),
+      description: description.isEmpty ? null : description,
       unit: unit.isEmpty ? null : unit,
       min: double.tryParse(_minController.text.trim()),
       max: double.tryParse(_maxController.text.trim()),
@@ -247,7 +259,54 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
               ],
             ),
           ),
+
+          // Optional grading guide, surfaced again on the rating screen.
+          _descriptionHead(),
+          _hpad(
+            MixMaxTextArea(
+              controller: _descriptionController,
+              maxLength: AddOutputDrawer.maxDescriptionLength,
+              rows: 3,
+              placeholder: 'How should this be graded? e.g. 10 = rich and '
+                  'balanced, 1 = undrinkable. Shown every time you rate a run.',
+            ),
+          ),
+          if (_descriptionController.text.isNotEmpty) _hpad(_counter()),
+          const SizedBox(height: 6),
         ],
+      ),
+    );
+  }
+
+  // "DESCRIPTION  optional" — the eyebrow with a soft lowercase hint beside it.
+  Widget _descriptionHead() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: const [
+          EyebrowText(text: 'Description', color: AppColors.inkFaint),
+          SizedBox(width: 7),
+          CaptionText(text: 'optional', fontSize: 11.5, color: AppColors.inkFaint),
+        ],
+      ),
+    );
+  }
+
+  // Right-aligned "n/2000" character counter, shown once there's text.
+  // Mirrors `drawers.jsx` `Counter`.
+  Widget _counter() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: CaptionText(
+          text:
+              '${_descriptionController.text.length}/${AddOutputDrawer.maxDescriptionLength}',
+          fontSize: 12,
+          color: AppColors.inkFaint,
+        ),
       ),
     );
   }

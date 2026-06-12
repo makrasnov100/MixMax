@@ -341,6 +341,50 @@ function SliderRow({ o, value, onChange }) {
   );
 }
 
+// the outcome's grading guide, shown while rating so scores stay consistent.
+// clamped to 3 lines in place; "Show more" opens a bottom drawer with the
+// full text, so the value + slider never get pushed out of view.
+function RatingGuide({ text, outcomeName }) {
+  const [open, setOpen] = React.useState(false);
+  const clampRef = React.useRef(null);
+  const [clamped, setClamped] = React.useState(false);
+  React.useEffect(() => {
+    const el = clampRef.current;
+    if (el) setClamped(el.scrollHeight > el.clientHeight + 1);
+  }, [text]);
+  return (
+    <div style={{
+      margin: '16px 24px 0', textAlign: 'left',
+      background: T.surface, border: `1px solid ${T.hairline}`, borderRadius: 14,
+      padding: '11px 14px', display: 'flex', gap: 10, alignItems: 'flex-start',
+    }}>
+      <Icon name="info" size={15} color={T.violetText} stroke={2} style={{ flexShrink: 0, marginTop: 3 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div ref={clampRef} style={{
+          fontFamily: T.sans, fontSize: 13, lineHeight: 1.5, color: T.inkSoft, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{text}</div>
+        {clamped && (
+          <button onClick={() => setOpen(true)} style={{
+            background: 'none', border: 'none', padding: 0, marginTop: 5, cursor: 'pointer',
+            fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: T.violetText,
+            WebkitTapHighlightColor: 'transparent',
+          }}>Show more</button>
+        )}
+      </div>
+      {open && (
+        <DrawerShell title="How to rate" subtitle={outcomeName} onClose={() => setOpen(false)}>
+          <div style={{
+            fontFamily: T.sans, fontSize: 15, lineHeight: 1.6, color: T.ink,
+            whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
+            paddingBottom: 22, textAlign: 'left',
+          }}>{text}</div>
+        </DrawerShell>
+      )}
+    </div>
+  );
+}
+
 function RatingScreen({ exp, index, value, onChange, onBack, onNext, outcomes: outcomesProp, rescore }) {
   const outcomes = outcomesProp || exp.outcomes || [];
   const o = outcomes[index];
@@ -365,13 +409,15 @@ function RatingScreen({ exp, index, value, onChange, onBack, onNext, outcomes: o
         </div>
       </div>
 
-      <div style={{ padding: '44px 24px 0', textAlign: 'center' }}>
+      {o.description ? <RatingGuide text={o.description} outcomeName={o.name} /> : null}
+
+      <div style={{ padding: (o.description ? '26px' : '44px') + ' 24px 0', textAlign: 'center' }}>
         <div style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 84, color: T.ink, lineHeight: 1, letterSpacing: '-0.02em' }}>
           {fmt(value)}{o.unit ? <span style={{ fontSize: 30, color: T.inkSoft, marginLeft: 8 }}>{o.unit}</span> : null}
         </div>
       </div>
 
-      <div style={{ padding: '40px 24px 0' }}>
+      <div style={{ padding: (o.description ? '30px' : '40px') + ' 24px 0' }}>
         <SliderRow o={o} value={value} onChange={onChange} />
       </div>
     </Screen>

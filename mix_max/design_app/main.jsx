@@ -13,7 +13,7 @@ const SEED = [
       { id: 'p4', name: 'Sweetener', type: 'choice', options: ['honey', 'sugar', 'none'] },
     ],
     outcomes: [
-      { id: 'o1', name: 'taste', min: 1, max: 10, step: 1, goal: 'maximize' },
+      { id: 'o1', name: 'taste', description: 'Sip after it cools for one minute, before any snacks. 10 = rich and balanced with zero bitterness, 7 = good but slightly flat or astringent, 4 = needs sweetener to be drinkable, 1 = undrinkable. Ignore temperature preference — judge flavor only.', min: 1, max: 10, step: 1, goal: 'maximize' },
       { id: 'o2', name: 'smell', min: 1, max: 10, step: 1, goal: 'maximize' },
       { id: 'o3', name: 'appearance', min: 1, max: 10, step: 1, goal: 'maximize' },
     ],
@@ -32,7 +32,7 @@ const SEED = [
     ],
     outcomes: [
       { id: 'co1', name: 'strength', min: 1, max: 10, step: 1, goal: 'maximize' },
-      { id: 'co2', name: 'bitterness', min: 1, max: 10, step: 1, goal: 'minimize' },
+      { id: 'co2', name: 'bitterness', description: 'Judge the bitter aftertaste on the first black sip — before adding milk or ice.', min: 1, max: 10, step: 1, goal: 'minimize' },
     ],
     runs: [
       { id: 'cr1', parameterValues: { cp1: 90, cp2: 16, cp3: 'medium' }, outcomeValues: { co1: 7, co2: 4 }, createdAt: _NOW - 8 * DAY - 1200, completedAt: _NOW - 8 * DAY },

@@ -1,10 +1,5 @@
 
 --- After testing ---
-- fix sharing not working on my own device
-
-- description of outcome (how to grade?)
-- notes of a run outcome (on differnt outcomes)
-
 - quick selection taste step should be .1 not 1
 - fix over all rating being a 6.7 if rating from 1 to 10 (maybe just make default quick select 0 to 10 same with others)
 

@@ -61,6 +61,26 @@ function Counter({ value, max }) {
   return <div style={{ textAlign: 'right', fontFamily: T.sans, fontSize: 12, color: T.inkFaint, marginTop: 6 }}>{(value || '').length}/{max}</div>;
 }
 
+function TextArea({ value, onChange, placeholder, maxLength, rows = 3 }) {
+  const [focus, setFocus] = useState(false);
+  return (
+    <textarea
+      value={value} onChange={e => onChange(e.target.value)}
+      placeholder={placeholder} maxLength={maxLength} rows={rows}
+      onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+      className="mm-scroll"
+      style={{
+        width: '100%', boxSizing: 'border-box', display: 'block', resize: 'none',
+        background: T.surface, color: T.ink,
+        border: `1.5px solid ${focus ? T.gold : T.hairline}`,
+        borderRadius: T.rField, padding: '13px 16px',
+        fontFamily: T.sans, fontSize: 15, fontWeight: 500, lineHeight: 1.5,
+        outline: 'none', transition: 'border-color .15s',
+      }}
+    ></textarea>
+  );
+}
+
 // segmented control (goal / generic)
 function Segmented({ options, value, onChange }) {
   return (
@@ -367,6 +387,7 @@ const OUTPUT_PRESETS = [
 function OutcomeDrawer({ initial, onSave, onDelete, onClose }) {
   const isEdit = !!initial;
   const [name, setName] = useState(initial?.name || '');
+  const [description, setDescription] = useState(initial?.description || '');
   const [unit, setUnit] = useState(initial?.unit || '');
   const [goal, setGoal] = useState(initial?.goal || 'maximize');
   const [min, setMin] = useState(initial?.min != null ? String(initial.min) : '1');
@@ -382,6 +403,7 @@ function OutcomeDrawer({ initial, onSave, onDelete, onClose }) {
 
   const save = () => onSave({
     id: isEdit ? initial.id : 'o' + Date.now(), name: name.trim(),
+    description: description.trim() || undefined,
     unit: unit.trim() || undefined,
     min: min !== '' ? Number(min) : undefined,
     max: max !== '' ? Number(max) : undefined,
@@ -419,6 +441,14 @@ function OutcomeDrawer({ initial, onSave, onDelete, onClose }) {
         <div style={{ flex: 1 }}><TextInput value={unit} onChange={setUnit} placeholder="Unit (optional)" /></div>
         <div style={{ flex: 1 }}><TextInput value={step} onChange={setStep} placeholder="Interval" type="number" /></div>
       </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, margin: '18px 0 9px' }}>
+        <Eyebrow color={T.inkFaint} style={{ margin: 0 }}>Description</Eyebrow>
+        <span style={{ fontFamily: T.sans, fontSize: 11.5, color: T.inkFaint, fontWeight: 500 }}>optional</span>
+      </div>
+      <TextArea value={description} onChange={setDescription} maxLength={2000} rows={3}
+        placeholder="How should this be graded? e.g. 10 = rich and balanced, 1 = undrinkable. Shown every time you rate a run." />
+      {description.length > 0 && <Counter value={description} max={2000} />}
       <div style={{ height: 6 }} />
     </DrawerShell>
   );
