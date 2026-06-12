@@ -1,7 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 part '../../generated/schema/parameter.g.dart';
 
-enum ParameterType { number, duration, toggle, choice, order }
+enum ParameterType { number, duration, temperature, toggle, choice, order }
 
 /// The time units a [ParameterType.duration] value can be expressed in. The
 /// parameter's [SchemaParameter.unit] holds one of these [label]s and its
@@ -25,6 +25,58 @@ enum DurationUnit {
         (u) => u.label == label,
         orElse: () => DurationUnit.minutes,
       );
+}
+
+/// The scales a [ParameterType.temperature] value can be expressed in. The
+/// parameter's [SchemaParameter.unit] holds one of these [label]s and its values
+/// are plain numbers on that scale (e.g. unit `fahrenheit`, value `212`). Unlike
+/// duration these are *affine* scales — converting between them shifts as well
+/// as stretches — so conversion goes through Celsius as the canonical pivot.
+/// [symbol] is the degree mark shown next to a value (`°F`, `°C`, `K`).
+enum TemperatureUnit {
+  celsius('celsius', '°C'),
+  fahrenheit('fahrenheit', '°F'),
+  kelvin('kelvin', 'K');
+
+  const TemperatureUnit(this.label, this.symbol);
+
+  final String label;
+  final String symbol;
+
+  /// The unit matching a stored [label], defaulting to [celsius] when the label
+  /// is missing or unrecognised.
+  static TemperatureUnit fromLabel(String? label) => values.firstWhere(
+        (u) => u.label == label,
+        orElse: () => TemperatureUnit.celsius,
+      );
+
+  /// [value] on this scale expressed in degrees Celsius (the canonical pivot).
+  double _toCelsius(double value) {
+    switch (this) {
+      case TemperatureUnit.celsius:
+        return value;
+      case TemperatureUnit.fahrenheit:
+        return (value - 32) * 5 / 9;
+      case TemperatureUnit.kelvin:
+        return value - 273.15;
+    }
+  }
+
+  /// A degrees-[celsius] value expressed on this scale.
+  double _fromCelsius(double celsius) {
+    switch (this) {
+      case TemperatureUnit.celsius:
+        return celsius;
+      case TemperatureUnit.fahrenheit:
+        return celsius * 9 / 5 + 32;
+      case TemperatureUnit.kelvin:
+        return celsius + 273.15;
+    }
+  }
+
+  /// Converts [value], read on the [from] scale, onto this one.
+  double convertFrom(double value, TemperatureUnit from) =>
+      _fromCelsius(from._toCelsius(value));
 }
 
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
@@ -123,6 +175,34 @@ class SchemaParameter {
     ];
     if (parts.isEmpty) parts.add('0${unit.short}');
     return '${negative ? '-' : ''}${parts.join(' ')}';
+  }
+
+  /// The scale a [ParameterType.temperature] parameter's values are stored on,
+  /// derived from [unit] and defaulting to Celsius. Only meaningful for the
+  /// temperature type.
+  TemperatureUnit get temperatureUnit => TemperatureUnit.fromLabel(unit);
+
+  /// The unit string shown beside a value: the degree symbol for a temperature
+  /// parameter (whose stored [unit] is a scale name like `fahrenheit`), else the
+  /// raw [unit] as typed. Lets the number-style displays read `92 °F` without
+  /// leaking the internal scale label.
+  String? get displayUnit =>
+      type == ParameterType.temperature ? temperatureUnit.symbol : unit;
+
+  /// Renders [value] — a number on this parameter's [temperatureUnit] — as a
+  /// `212 °F` string, optionally converted onto [to] first (the suggested-run
+  /// card uses this to let the reader flip between °C / °F / K without changing
+  /// the stored value). Rounds to one decimal, dropping a trailing `.0`; null /
+  /// NaN render as `—`.
+  String formatTemperature(num? value, {TemperatureUnit? to}) {
+    if (value == null || (value is double && value.isNaN)) return '—';
+    final target = to ?? temperatureUnit;
+    final converted = target.convertFrom(value.toDouble(), temperatureUnit);
+    final rounded = (converted * 10).round() / 10;
+    final text = rounded == rounded.roundToDouble()
+        ? rounded.toInt().toString()
+        : rounded.toString();
+    return '$text ${target.symbol}';
   }
 
   /// Snaps [value] to the increment grid (min + k×increment) when a positive

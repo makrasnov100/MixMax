@@ -144,6 +144,7 @@ class BayesianOptimizationService {
       switch (param.type) {
         case ParameterType.number:
         case ParameterType.duration:
+        case ParameterType.temperature:
           final v = (raw as num?)?.toDouble() ?? 0.0;
           final lo = param.min ?? 0.0;
           final hi = param.max ?? 1.0;
@@ -195,6 +196,7 @@ class BayesianOptimizationService {
       switch (param.type) {
         case ParameterType.number:
         case ParameterType.duration:
+        case ParameterType.temperature:
           final v = features[cursor++].clamp(0.0, 1.0);
           final lo = param.min ?? 0.0;
           final hi = param.max ?? 1.0;
@@ -266,6 +268,7 @@ class BayesianOptimizationService {
       switch (param.type) {
         case ParameterType.number:
         case ParameterType.duration:
+        case ParameterType.temperature:
           final lo = param.min ?? 0.0;
           final hi = param.max ?? 1.0;
           result[param.id] =
@@ -314,6 +317,7 @@ class BayesianOptimizationService {
       switch (param.type) {
         case ParameterType.number:
         case ParameterType.duration:
+        case ParameterType.temperature:
           candidate.add(rng.nextDouble());
 
         case ParameterType.toggle:

@@ -10,7 +10,15 @@ class ParamTypeMeta {
   final String label;
   final String blurb;
 
-  const ParamTypeMeta(this.glyph, this.label, this.blurb);
+  /// A compact label used only on the selectable pills, so the whole row of
+  /// types still fits on one line (e.g. 'Temp' for 'Temperature'). Defaults to
+  /// [label] when no shorter form is needed.
+  final String? shortLabel;
+
+  const ParamTypeMeta(this.glyph, this.label, this.blurb, {this.shortLabel});
+
+  /// The label to show on a picker pill — [shortLabel] if given, else [label].
+  String get pillLabel => shortLabel ?? label;
 }
 
 /// The "What kind of value?" picker — a wrapping button group of selectable
@@ -45,6 +53,8 @@ class MixMaxParamTypePicker extends StatelessWidget {
         return const ParamTypeMeta(MixMaxGlyph.hash, 'Number', 'A measured amount');
       case ParameterType.duration:
         return const ParamTypeMeta(MixMaxGlyph.timer, 'Duration', 'A length of time');
+      case ParameterType.temperature:
+        return const ParamTypeMeta(MixMaxGlyph.ruler, 'Temperature', 'Degrees, in °C / °F / K', shortLabel: 'Temp');
       case ParameterType.toggle:
         return const ParamTypeMeta(MixMaxGlyph.toggle, 'Toggle', 'On or off');
       case ParameterType.choice:
@@ -63,7 +73,7 @@ class MixMaxParamTypePicker extends StatelessWidget {
         for (final type in types)
           MixMaxSelectablePill(
             icon: metaFor(type).glyph,
-            label: metaFor(type).label,
+            label: metaFor(type).pillLabel,
             selected: type == value,
             onTap: () => onChanged(type),
           ),

@@ -113,6 +113,10 @@ class ShareCard extends StatelessWidget {
           // The unit is folded into the `1h 30m` value, so none is shown apart.
           value = raw is num ? p.formatDuration(raw) : '—';
           break;
+        case ParameterType.temperature:
+          // The degree symbol is folded into the `212 °F` value.
+          value = raw is num ? p.formatTemperature(raw) : '—';
+          break;
         case ParameterType.number:
         case null:
           value = raw is num
@@ -472,6 +476,8 @@ MixMaxGlyph _glyphForType(ParameterType? type) {
       return MixMaxGlyph.hash;
     case ParameterType.duration:
       return MixMaxGlyph.timer;
+    case ParameterType.temperature:
+      return MixMaxGlyph.ruler;
     case ParameterType.toggle:
       return MixMaxGlyph.toggle;
     case ParameterType.choice:

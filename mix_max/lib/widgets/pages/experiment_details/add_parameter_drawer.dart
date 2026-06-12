@@ -80,6 +80,10 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   // The unit a duration parameter is measured in — chosen from a segmented
   // picker rather than typed, so the value can be shown back as `1h 30m`.
   DurationUnit _durationUnit = DurationUnit.minutes;
+  // The scale a temperature parameter is measured on — also a segmented picker.
+  // Switching it converts the typed bounds (but not the step, which is plain
+  // granularity) so the range follows the reader to the new scale.
+  TemperatureUnit _temperatureUnit = TemperatureUnit.celsius;
   List<String> _options = [];
   List<String> _items = [];
 
@@ -107,6 +111,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
     _nameController.text = p.name ?? '';
     _type = p.type ?? ParameterType.number;
     _durationUnit = p.durationUnit;
+    _temperatureUnit = p.temperatureUnit;
     _unitController.text = p.unit ?? '';
     _minController.text = _fmtBound(p.min);
     _maxController.text = _fmtBound(p.max);
@@ -145,9 +150,11 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
 
   void _onChanged() => setState(() {});
 
-  /// number / duration carry a unit and an optional min/max range.
+  /// number / duration / temperature carry a unit and an optional min/max range.
   bool get _isRanged =>
-      _type == ParameterType.number || _type == ParameterType.duration;
+      _type == ParameterType.number ||
+      _type == ParameterType.duration ||
+      _type == ParameterType.temperature;
 
   /// The typed increment, or null when blank / non-positive (a smooth range).
   double? get _parsedIncrement {
@@ -165,12 +172,42 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
 
   void _selectType(ParameterType type) => setState(() => _type = type);
 
+  /// Switches the temperature scale, converting the typed Min/Max onto the new
+  /// scale so the range keeps describing the same real temperatures. The step is
+  /// left untouched — it's plain granularity ("tune every 5°"), not a point on
+  /// the scale, so it shouldn't shift when the unit does.
+  void _selectTemperatureUnit(TemperatureUnit next) {
+    if (next == _temperatureUnit) return;
+    setState(() {
+      _convertBound(_minController, _temperatureUnit, next);
+      _convertBound(_maxController, _temperatureUnit, next);
+      _temperatureUnit = next;
+    });
+  }
+
+  /// Reparses [controller]'s value from the [from] scale onto [to] and rewrites
+  /// the field; a blank or unparseable field is left as-is.
+  static void _convertBound(
+    TextEditingController controller,
+    TemperatureUnit from,
+    TemperatureUnit to,
+  ) {
+    final v = double.tryParse(controller.text.trim());
+    if (v == null) return;
+    // Round away floating-point fuzz from the affine conversion (e.g.
+    // 176.66666669) to a sane two decimals before re-displaying.
+    final converted = to.convertFrom(v, from);
+    controller.text = _fmtBound(double.parse(converted.toStringAsFixed(2)));
+  }
+
   void _applyPreset(_ParamPreset preset) {
     setState(() {
       _type = preset.type;
       _nameController.text = preset.name;
       if (preset.type == ParameterType.duration) {
         _durationUnit = DurationUnit.fromLabel(preset.unit);
+      } else if (preset.type == ParameterType.temperature) {
+        _temperatureUnit = TemperatureUnit.fromLabel(preset.unit);
       }
       _unitController.text = preset.unit ?? '';
       _minController.text = preset.min?.toString() ?? '';
@@ -182,9 +219,17 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
   void _save() {
     if (!_canSave) return;
     final name = _nameController.text.trim();
-    final isDuration = _type == ParameterType.duration;
-    // A duration's unit comes from the segmented picker; a number's is typed.
-    final unit = isDuration ? _durationUnit.label : _unitController.text.trim();
+    // Duration & temperature units come from a segmented picker; a number's is
+    // typed. Both segmented kinds store their scale's label (e.g. `fahrenheit`).
+    final String unit;
+    switch (_type) {
+      case ParameterType.duration:
+        unit = _durationUnit.label;
+      case ParameterType.temperature:
+        unit = _temperatureUnit.label;
+      default:
+        unit = _unitController.text.trim();
+    }
     final isToggle = _type == ParameterType.toggle;
     final onLabel = _onLabelController.text.trim();
     final offLabel = _offLabelController.text.trim();
@@ -194,7 +239,7 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
       name: name,
       type: _type,
       unit: _isRanged && unit.isNotEmpty ? unit : null,
-      // (a duration always carries one of the [DurationUnit] labels)
+      // (duration & temperature always carry one of their scale's labels)
       min: _isRanged ? double.tryParse(_minController.text.trim()) : null,
       max: _isRanged ? double.tryParse(_maxController.text.trim()) : null,
       // Only a positive step is meaningful; anything else is a smooth range.
@@ -347,6 +392,26 @@ class _AddParameterDrawerState extends State<AddParameterDrawer> {
                 MixMaxSegment(value: DurationUnit.seconds, label: 'Seconds'),
                 MixMaxSegment(value: DurationUnit.minutes, label: 'Minutes'),
                 MixMaxSegment(value: DurationUnit.hours, label: 'Hours'),
+              ],
+            ),
+          ),
+          _subHead('Range'),
+          ..._rangeFields(),
+          _subHead('Increment'),
+          ..._incrementSection(),
+        ];
+
+      case ParameterType.temperature:
+        return [
+          _subHead('Unit'),
+          _hpad(
+            MixMaxSegmented<TemperatureUnit>(
+              value: _temperatureUnit,
+              onChanged: _selectTemperatureUnit,
+              options: const [
+                MixMaxSegment(value: TemperatureUnit.fahrenheit, label: '°F'),
+                MixMaxSegment(value: TemperatureUnit.celsius, label: '°C'),
+                MixMaxSegment(value: TemperatureUnit.kelvin, label: 'K'),
               ],
             ),
           ),
@@ -633,8 +698,8 @@ const List<_ParamPreset> _presets = [
     hint: '°F',
     glyph: MixMaxGlyph.ruler,
     name: 'Temperature',
-    type: ParameterType.number,
-    unit: '°F',
+    type: ParameterType.temperature,
+    unit: 'fahrenheit',
     min: 32,
     max: 212,
     increment: 1,

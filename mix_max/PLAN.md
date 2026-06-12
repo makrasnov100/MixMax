@@ -1,6 +1,5 @@
 
 --- After testing ---
-- duration parameter value should have quick selection for unit type (seconds, minutes, hours) and should be formatted correctly  
 - show which walues were edited after editing parameters, allow to recalculate paramters after edited the values
 - temperature
 - sso sign in with prompts to save user data, delete user data section (account section)

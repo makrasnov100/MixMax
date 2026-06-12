@@ -50,6 +50,7 @@ Map<String, dynamic> _$SchemaParameterToJson(SchemaParameter instance) {
 const _$ParameterTypeEnumMap = {
   ParameterType.number: 'number',
   ParameterType.duration: 'duration',
+  ParameterType.temperature: 'temperature',
   ParameterType.toggle: 'toggle',
   ParameterType.choice: 'choice',
   ParameterType.order: 'order',

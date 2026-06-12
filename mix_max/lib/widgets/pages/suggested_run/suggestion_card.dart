@@ -33,7 +33,7 @@ import 'package:mix_max/widgets/design/molecules/slider_field.dart';
 /// fires [onDone] to collapse it again — always within the parameter's own spec.
 /// Left null the card is purely read-only and inert, as on the run-details
 /// screen.
-class SuggestionCard extends StatelessWidget {
+class SuggestionCard extends StatefulWidget {
   final SchemaParameter parameter;
   final dynamic value;
 
@@ -62,8 +62,42 @@ class SuggestionCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<SuggestionCard> createState() => _SuggestionCardState();
+}
+
+class _SuggestionCardState extends State<SuggestionCard> {
+  /// The scale a temperature value is *read* in here. It starts at the
+  /// parameter's stored scale and the reader can flip it (°C / °F / K) without
+  /// changing what's saved — purely a lens on the suggested-run screen. Ignored
+  /// for every other parameter type.
+  late TemperatureUnit _displayUnit;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayUnit = widget.parameter.temperatureUnit;
+  }
+
+  @override
+  void didUpdateWidget(covariant SuggestionCard old) {
+    super.didUpdateWidget(old);
+    // A different parameter (or a re-saved scale) reseeds the lens.
+    if (old.parameter.temperatureUnit != widget.parameter.temperatureUnit) {
+      _displayUnit = widget.parameter.temperatureUnit;
+    }
+  }
+
+  /// Offered only on the interactive (suggested-run) card and only for a
+  /// temperature parameter; null everywhere else suppresses the unit switcher.
+  ValueChanged<TemperatureUnit>? get _onDisplayUnitChanged {
+    if (widget.onChanged == null) return null;
+    if (widget.parameter.type != ParameterType.temperature) return null;
+    return (u) => setState(() => _displayUnit = u);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final onChanged = this.onChanged;
+    final onChanged = widget.onChanged;
     const padding = EdgeInsets.symmetric(horizontal: 18, vertical: 16);
 
     // Purely read-only (run details): no tap target.
@@ -73,10 +107,10 @@ class SuggestionCard extends StatelessWidget {
 
     // Adjustable but collapsed: the whole card is a tap target that opens the
     // editor, with a quiet pencil hint at the trailing edge.
-    if (!editing) {
+    if (!widget.editing) {
       return MixMaxCard(
         padding: padding,
-        onTap: onStartEdit,
+        onTap: widget.onStartEdit,
         child: _readOnly(showEditHint: true),
       );
     }
@@ -94,7 +128,7 @@ class SuggestionCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         MixMaxTile(
-          glyph: _glyphForType(parameter.type),
+          glyph: _glyphForType(widget.parameter.type),
           tone: MixMaxTileTone.sage,
           size: 46,
         ),
@@ -106,7 +140,12 @@ class SuggestionCard extends StatelessWidget {
             children: [
               _name(),
               const SizedBox(height: 4),
-              _SuggestedValue(parameter: parameter, value: value),
+              _SuggestedValue(
+                parameter: widget.parameter,
+                value: widget.value,
+                displayUnit: _displayUnit,
+                onDisplayUnitChanged: _onDisplayUnitChanged,
+              ),
             ],
           ),
         ),
@@ -133,23 +172,25 @@ class SuggestionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             MixMaxTile(
-              glyph: _glyphForType(parameter.type),
+              glyph: _glyphForType(widget.parameter.type),
               tone: MixMaxTileTone.sage,
               size: 46,
             ),
             const SizedBox(width: 15),
             Expanded(child: _name()),
-            if (onDone != null) ...[
+            if (widget.onDone != null) ...[
               const SizedBox(width: 12),
-              _DoneButton(onTap: onDone!),
+              _DoneButton(onTap: widget.onDone!),
             ],
           ],
         ),
         const SizedBox(height: 16),
         _SuggestedEditor(
-          parameter: parameter,
-          value: value,
+          parameter: widget.parameter,
+          value: widget.value,
           onChanged: onChanged,
+          displayUnit: _displayUnit,
+          onDisplayUnitChanged: _onDisplayUnitChanged,
         ),
       ],
     );
@@ -157,8 +198,8 @@ class SuggestionCard extends StatelessWidget {
 
   Widget _name() => CaptionText(
     text:
-        parameter.name?.isNotEmpty == true
-            ? parameter.name
+        widget.parameter.name?.isNotEmpty == true
+            ? widget.parameter.name
             : 'Untitled parameter',
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
@@ -204,7 +245,18 @@ class _SuggestedValue extends StatelessWidget {
   final SchemaParameter parameter;
   final dynamic value;
 
-  const _SuggestedValue({required this.parameter, required this.value});
+  /// The scale a temperature is shown in. Ignored for other types.
+  final TemperatureUnit displayUnit;
+
+  /// When non-null, a °C / °F / K switcher is shown beneath a temperature value.
+  final ValueChanged<TemperatureUnit>? onDisplayUnitChanged;
+
+  const _SuggestedValue({
+    required this.parameter,
+    required this.value,
+    required this.displayUnit,
+    this.onDisplayUnitChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -212,6 +264,28 @@ class _SuggestedValue extends StatelessWidget {
       case ParameterType.number:
       case ParameterType.duration:
         return DisplayText(text: _numberLabel(parameter, value), fontSize: 24);
+
+      case ParameterType.temperature:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DisplayText(
+              text: parameter.formatTemperature(
+                value is num ? value as num : null,
+                to: displayUnit,
+              ),
+              fontSize: 24,
+            ),
+            if (onDisplayUnitChanged != null) ...[
+              const SizedBox(height: 8),
+              _TempUnitSwitcher(
+                selected: displayUnit,
+                onChanged: onDisplayUnitChanged!,
+              ),
+            ],
+          ],
+        );
 
       case ParameterType.toggle:
         final on = value == true;
@@ -257,10 +331,18 @@ class _SuggestedEditor extends StatelessWidget {
   final dynamic value;
   final ValueChanged<dynamic> onChanged;
 
+  /// The scale a temperature is shown in while editing. Ignored for other types.
+  final TemperatureUnit displayUnit;
+
+  /// When non-null, a °C / °F / K switcher accompanies a temperature slider.
+  final ValueChanged<TemperatureUnit>? onDisplayUnitChanged;
+
   const _SuggestedEditor({
     required this.parameter,
     required this.value,
     required this.onChanged,
+    required this.displayUnit,
+    this.onDisplayUnitChanged,
   });
 
   @override
@@ -272,6 +354,15 @@ class _SuggestedEditor extends StatelessWidget {
           parameter: parameter,
           value: value,
           onChanged: onChanged,
+        );
+
+      case ParameterType.temperature:
+        return _TemperatureEditor(
+          parameter: parameter,
+          value: value,
+          onChanged: onChanged,
+          displayUnit: displayUnit,
+          onDisplayUnitChanged: onDisplayUnitChanged,
         );
 
       case ParameterType.toggle:
@@ -357,9 +448,10 @@ class _NumberEditor extends StatelessWidget {
           min: min,
           max: max,
           increment: increment,
-          format: parameter.type == ParameterType.duration
-              ? parameter.formatDuration
-              : null,
+          format:
+              parameter.type == ParameterType.duration
+                  ? parameter.formatDuration
+                  : null,
           onChanged: (v) => onChanged(parameter.snapToIncrement(v)),
         ),
       ],
@@ -415,7 +507,7 @@ class _NumberFieldFallbackState extends State<_NumberFieldFallback> {
 
   @override
   Widget build(BuildContext context) {
-    final unit = widget.parameter.unit;
+    final unit = widget.parameter.displayUnit;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -431,6 +523,124 @@ class _NumberFieldFallbackState extends State<_NumberFieldFallback> {
           const SizedBox(width: 12),
           CaptionText(text: unit, color: AppColors.inkSoft),
         ],
+      ],
+    );
+  }
+}
+
+/// A bounded slider for a temperature parameter. The slider, its bounds and the
+/// reported value all stay on the parameter's *stored* scale (so snapping to the
+/// increment is exact); only the hero label and the slider's end labels are
+/// converted into the reader-selected [displayUnit]. A °C / °F / K switcher sits
+/// below so the reader can flip the lens. Falls back to a clamped field (in the
+/// stored scale) when there's no usable range to slide within.
+class _TemperatureEditor extends StatelessWidget {
+  final SchemaParameter parameter;
+  final dynamic value;
+  final ValueChanged<dynamic> onChanged;
+  final TemperatureUnit displayUnit;
+  final ValueChanged<TemperatureUnit>? onDisplayUnitChanged;
+
+  const _TemperatureEditor({
+    required this.parameter,
+    required this.value,
+    required this.onChanged,
+    required this.displayUnit,
+    this.onDisplayUnitChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final min = parameter.min;
+    final max = parameter.max;
+    final hasRange = min != null && max != null && max > min;
+
+    final switcher =
+        onDisplayUnitChanged == null
+            ? null
+            : _TempUnitSwitcher(
+              selected: displayUnit,
+              onChanged: onDisplayUnitChanged!,
+            );
+
+    if (!hasRange) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _NumberFieldFallback(
+            parameter: parameter,
+            value: value,
+            onChanged: onChanged,
+          ),
+          if (switcher != null) ...[
+            const SizedBox(height: 14),
+            Align(alignment: Alignment.centerLeft, child: switcher),
+          ],
+        ],
+      );
+    }
+
+    final current = (value is num ? (value as num).toDouble() : min).clamp(
+      min,
+      max,
+    );
+    final increment =
+        (parameter.increment != null && parameter.increment! > 0)
+            ? parameter.increment!
+            : (max - min) / 100;
+
+    String fmt(num? v) => parameter.formatTemperature(v, to: displayUnit);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DisplayText(text: fmt(current), fontSize: 28),
+        const SizedBox(height: 10),
+        MixMaxSliderField(
+          value: current,
+          min: min,
+          max: max,
+          increment: increment,
+          format: fmt,
+          onChanged: (v) => onChanged(parameter.snapToIncrement(v)),
+        ),
+        if (switcher != null) ...[
+          const SizedBox(height: 14),
+          Align(alignment: Alignment.centerLeft, child: switcher),
+        ],
+      ],
+    );
+  }
+}
+
+/// The °F / °C / K lens toggle shown on a suggested temperature — a row of pill
+/// chips, the active scale filled sage. Tapping one re-reads the value on that
+/// scale; it never changes the stored value.
+class _TempUnitSwitcher extends StatelessWidget {
+  final TemperatureUnit selected;
+  final ValueChanged<TemperatureUnit> onChanged;
+
+  /// Presentation order, matching the add-parameter drawer's segmented picker.
+  static const List<TemperatureUnit> _order = [
+    TemperatureUnit.fahrenheit,
+    TemperatureUnit.celsius,
+    TemperatureUnit.kelvin,
+  ];
+
+  const _TempUnitSwitcher({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final u in _order)
+          MixMaxChip(
+            label: u.symbol,
+            tone: u == selected ? MixMaxChipTone.sage : MixMaxChipTone.outline,
+            onTap: () => onChanged(u),
+          ),
       ],
     );
   }
@@ -594,6 +804,8 @@ MixMaxGlyph _glyphForType(ParameterType? type) {
       return MixMaxGlyph.hash;
     case ParameterType.duration:
       return MixMaxGlyph.timer;
+    case ParameterType.temperature:
+      return MixMaxGlyph.ruler;
     case ParameterType.toggle:
       return MixMaxGlyph.toggle;
     case ParameterType.choice:

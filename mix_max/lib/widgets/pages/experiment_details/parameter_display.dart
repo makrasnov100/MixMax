@@ -87,14 +87,20 @@ class _ParameterValue extends StatelessWidget {
     switch (p.type) {
       case ParameterType.number:
       case ParameterType.duration:
-        final isDuration = p.type == ParameterType.duration;
+      case ParameterType.temperature:
+        // Duration and temperature fold their unit into each cap (`1m` / `10m`,
+        // `32 °F` / `212 °F`); a plain number shows its unit beside the pips.
+        final folded = p.type == ParameterType.duration
+            ? p.formatDuration
+            : p.type == ParameterType.temperature
+                ? p.formatTemperature
+                : null;
         if (p.min != null && p.max != null) {
           return RangePips(
             min: p.min,
             max: p.max,
-            // Durations fold the unit into each cap (`1m` / `10m`).
-            unit: isDuration ? null : p.unit,
-            format: isDuration ? p.formatDuration : null,
+            unit: folded == null ? p.unit : null,
+            format: folded,
           );
         }
         return CaptionText(text: _boundsLabel(p), fontSize: 13.5);
@@ -129,10 +135,16 @@ class _ParameterValue extends StatelessWidget {
   /// rendered as `1h 30m`, with the unit already folded in.
   String _boundsLabel(SchemaParameter p) {
     final isDuration = p.type == ParameterType.duration;
-    String fmt(double? v) =>
-        isDuration ? p.formatDuration(v) : MixMaxFormat.number(v);
+    final isTemperature = p.type == ParameterType.temperature;
+    // Duration and temperature fold their unit into the formatted value.
+    final folded = isDuration || isTemperature;
+    String fmt(double? v) => isDuration
+        ? p.formatDuration(v)
+        : isTemperature
+            ? p.formatTemperature(v)
+            : MixMaxFormat.number(v);
     final parts = <String>[
-      if (!isDuration && p.unit?.isNotEmpty == true) p.unit!,
+      if (!folded && p.unit?.isNotEmpty == true) p.unit!,
       if (p.min != null)
         '≥ ${fmt(p.min)}'
       else if (p.max != null)
@@ -151,6 +163,8 @@ MixMaxGlyph _glyphForType(ParameterType? type) {
       return MixMaxGlyph.hash;
     case ParameterType.duration:
       return MixMaxGlyph.timer;
+    case ParameterType.temperature:
+      return MixMaxGlyph.ruler;
     case ParameterType.toggle:
       return MixMaxGlyph.toggle;
     case ParameterType.choice:

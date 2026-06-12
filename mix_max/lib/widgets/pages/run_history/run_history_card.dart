@@ -382,6 +382,8 @@ String _formatParamValue(SchemaParameter p, dynamic v) {
       return v is List ? v.map((e) => e.toString()).join('  →  ') : '';
     case ParameterType.duration:
       return v is num ? p.formatDuration(v) : v.toString();
+    case ParameterType.temperature:
+      return v is num ? p.formatTemperature(v) : v.toString();
     case ParameterType.number:
     case null:
       final s = v is num

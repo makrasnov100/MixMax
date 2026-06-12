@@ -178,6 +178,8 @@ MixMaxGlyph _glyphForType(ParameterType? type) {
       return MixMaxGlyph.hash;
     case ParameterType.duration:
       return MixMaxGlyph.timer;
+    case ParameterType.temperature:
+      return MixMaxGlyph.ruler;
     case ParameterType.toggle:
       return MixMaxGlyph.toggle;
     case ParameterType.choice:
