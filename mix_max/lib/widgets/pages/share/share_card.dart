@@ -5,6 +5,7 @@ import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
+import 'package:mix_max/widgets/pages/experiment_details/weight_math.dart';
 
 /// One parameter, reduced to the few strings the share card draws: the sage
 /// type glyph, the parameter's name, its value and an optional unit.
@@ -22,27 +23,29 @@ class ShareMixEntry {
   });
 }
 
-/// One recorded outcome, with the bounds the card needs to draw its violet
-/// fill bar ([value] normalised between [min] and [max]).
+/// One recorded outcome reduced to what the "How it scored" breakdown draws:
+/// its name, recorded [value] and upper bound [max] (shown as a `value / max`
+/// pill), plus the weight-aware [weight] share and [points] contribution to the
+/// 0–10 rating — the same figures the in-app Rating breakdown shows, so the
+/// color-coded stacked bar and the rows agree.
 class ShareOutcomeEntry {
   final String name;
   final double? value;
-  final double min;
   final double max;
+
+  /// Share of the rating this outcome carries, in [0, 1].
+  final double weight;
+
+  /// Points contributed toward the 0–10 rating (`weight × norm × 10`).
+  final double points;
 
   const ShareOutcomeEntry({
     required this.name,
     required this.value,
-    required this.min,
     required this.max,
+    required this.weight,
+    required this.points,
   });
-
-  /// 0–1 position of [value] within [min]…[max], clamped. 0 when no value.
-  double get fraction {
-    final v = value;
-    if (v == null || max <= min) return 0;
-    return ((v - min) / (max - min)).clamp(0.0, 1.0);
-  }
 }
 
 /// The shareable run card — a fixed-width editorial image of a single run's
@@ -136,20 +139,44 @@ class ShareCard extends StatelessWidget {
   }
 
   /// Builds the card's [outcomes] entries from a run's outcome definitions and
-  /// recorded values, defaulting missing bounds to 0…10 (as `share-card.js`
-  /// `norm` does).
+  /// recorded values, computing each one's weight share and points contribution
+  /// the same way `RatingBreakdownCard` (and `SchemaRun.computeFinalRating`)
+  /// does: only measured outcomes are weighted, falling back to an equal split
+  /// when their weights are all zero, and the score is goal-aware. The per-row
+  /// points therefore sum to the run's 0–10 rating.
   static List<ShareOutcomeEntry> outcomesFrom(
     List<SchemaOutcome> outcomes,
     Map<String, double> values,
   ) {
-    return outcomes
-        .map((o) => ShareOutcomeEntry(
-              name: o.name?.isNotEmpty == true ? o.name! : 'Outcome',
-              value: values[o.id],
-              min: o.min ?? 0,
-              max: o.max ?? 10,
-            ))
-        .toList();
+    final measured = outcomes.where((o) => values[o.id] != null).toList();
+    final weightSum =
+        measured.fold<double>(0.0, (a, o) => a + (o.weight ?? 0.0));
+    final useEqualWeights = weightSum <= 0;
+    final denom =
+        useEqualWeights ? measured.length.toDouble() : weightSum;
+
+    return outcomes.map((o) {
+      final v = values[o.id];
+      double norm = 0.0;
+      if (v != null) {
+        final lo = o.min, hi = o.max;
+        if (lo != null && hi != null && hi > lo) {
+          norm = ((v - lo) / (hi - lo)).clamp(0.0, 1.0);
+        } else {
+          norm = v; // No usable bounds — mirror finalRating's raw fallback.
+        }
+        if (o.goal == OutcomeGoal.minimize) norm = 1.0 - norm;
+      }
+      final raw = useEqualWeights ? 1.0 : (o.weight ?? 0.0);
+      final weight = (v != null && denom > 0) ? raw / denom : 0.0;
+      return ShareOutcomeEntry(
+        name: o.name?.isNotEmpty == true ? o.name! : 'Outcome',
+        value: v,
+        max: o.max ?? 10,
+        weight: weight,
+        points: weight * norm * 10,
+      );
+    }).toList();
   }
 
   @override
@@ -244,8 +271,10 @@ class ShareCard extends StatelessWidget {
                       children: [
                         _sectionLabel('How it scored', outcomes.length),
                         const SizedBox(height: 3),
-                        _sub('How each outcome was rated.'),
+                        _sub("Each outcome's score, by weight, adds up to the rating."),
                         const SizedBox(height: 15),
+                        _CompositionBar(outcomes: outcomes),
+                        const SizedBox(height: 8),
                         _OutcomeRows(outcomes: outcomes),
                       ],
                     ),
@@ -706,7 +735,93 @@ class _MixListRow extends StatelessWidget {
   }
 }
 
-/// The violet outcome bars (`.orows` / `.orow`).
+/// The color-coded stacked rating bar (`.compbar`): one rounded track whose
+/// colored segments each span their outcome's contribution to the 0–10 rating
+/// (`points × 10`% of the track, labelled with the points). Outcomes that add
+/// nothing contribute no segment; the warm remainder reads as the distance to a
+/// perfect 10. Keyed to the rows beneath by the same [kWeightColors] swatch.
+class _CompositionBar extends StatelessWidget {
+  final List<ShareOutcomeEntry> outcomes;
+
+  const _CompositionBar({required this.outcomes});
+
+  @override
+  Widget build(BuildContext context) {
+    // Each segment's flex is its share of a 100-wide track (×100 for rounding
+    // headroom); the trailing spacer holds the gap up to a perfect rating.
+    final segments = <Widget>[];
+    var used = 0;
+    for (var i = 0; i < outcomes.length; i++) {
+      final w = (outcomes[i].points * 10).clamp(0.0, 100.0);
+      final flex = (w * 100).round();
+      if (flex <= 0) continue;
+      used += flex;
+      segments.add(
+        Expanded(
+          flex: flex,
+          child: _BarSegment(
+            color: weightColorAt(i),
+            label: w >= 11
+                ? MixMaxFormat.number(outcomes[i].points, decimals: 1)
+                : null,
+          ),
+        ),
+      );
+    }
+    final remaining = 10000 - used;
+    if (remaining > 0) {
+      segments.add(Expanded(flex: remaining, child: const SizedBox()));
+    }
+
+    return Container(
+      height: 24,
+      decoration: BoxDecoration(
+        color: AppColors.bgAlt,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.hairline, width: 1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Row(children: segments),
+    );
+  }
+}
+
+/// One stacked-bar segment (`.seg`): a solid [color] block, captioned with its
+/// points [label] in white when it is wide enough to read.
+class _BarSegment extends StatelessWidget {
+  final Color color;
+  final String? label;
+
+  const _BarSegment({required this.color, this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: color,
+      child: label == null
+          ? null
+          : Center(
+              child: Text(
+                label!,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                softWrap: false,
+                style: const TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  height: 1,
+                  letterSpacing: 11 * -0.01,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+/// The per-outcome contribution rows (`.orows` / `.orow`): a swatch dot keyed to
+/// the bar, the name + weight share, a violet value pill and the points added.
 class _OutcomeRows extends StatelessWidget {
   final List<ShareOutcomeEntry> outcomes;
 
@@ -714,84 +829,133 @@ class _OutcomeRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Widget>[];
-    for (var i = 0; i < outcomes.length; i++) {
-      if (i > 0) rows.add(const SizedBox(height: 13));
-      rows.add(_OutcomeRow(outcome: outcomes[i]));
-    }
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < outcomes.length; i++)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            decoration: i == 0
+                ? null
+                : const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: AppColors.hairline, width: 1),
+                    ),
+                  ),
+            child: _OutcomeRow(outcome: outcomes[i], color: weightColorAt(i)),
+          ),
+      ],
+    );
   }
 }
 
 class _OutcomeRow extends StatelessWidget {
   final ShareOutcomeEntry outcome;
+  final Color color;
 
-  const _OutcomeRow({required this.outcome});
+  const _OutcomeRow({required this.outcome, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                outcome.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  height: 1.1,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${(outcome.weight * 100).round()}% weight',
+                style: const TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  height: 1,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        _ValuePill(value: outcome.value, max: outcome.max),
+        const SizedBox(width: 12),
         SizedBox(
-          width: 104,
+          width: 42,
           child: Text(
-            outcome.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            '+${MixMaxFormat.number(outcome.points, decimals: 1)}',
+            textAlign: TextAlign.right,
             style: const TextStyle(
               fontFamily: AppFonts.sans,
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: AppColors.ink,
+              fontWeight: FontWeight.w700,
+              fontSize: 14.5,
+              height: 1,
+              color: AppColors.goldText,
             ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              height: 9,
-              color: AppColors.violetTint,
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: outcome.fraction,
-                child: Container(color: AppColors.violet),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 52),
-          child: Text.rich(
-            TextSpan(
-              text: outcome.value == null
-                  ? '—'
-                  : MixMaxFormat.number(outcome.value),
-              children: [
-                TextSpan(
-                  text: ' / ${MixMaxFormat.number(outcome.max)}',
-                  style: const TextStyle(
-                    fontFamily: AppFonts.sans,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                    color: AppColors.inkFaint,
-                  ),
-                ),
-              ],
-              style: const TextStyle(
-                fontFamily: AppFonts.sans,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: AppColors.violetText,
-              ),
-            ),
-            textAlign: TextAlign.right,
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The recorded value as a soft violet pill (`.ochip`), with a faint `/ max`.
+class _ValuePill extends StatelessWidget {
+  final double? value;
+  final double max;
+
+  const _ValuePill({required this.value, required this.max});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.violetTint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text.rich(
+        TextSpan(
+          text: value == null ? '—' : MixMaxFormat.number(value),
+          style: const TextStyle(
+            fontFamily: AppFonts.sans,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            height: 1,
+            color: AppColors.violetText,
+          ),
+          children: [
+            TextSpan(
+              text: ' / ${MixMaxFormat.number(max)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 11,
+                color: AppColors.inkFaint,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

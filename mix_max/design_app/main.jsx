@@ -13,7 +13,7 @@ const SEED = [
       { id: 'p4', name: 'Sweetener', type: 'choice', options: ['honey', 'sugar', 'none'] },
     ],
     outcomes: [
-      { id: 'o1', name: 'taste', description: 'Sip after it cools for one minute, before any snacks. 10 = rich and balanced with zero bitterness, 7 = good but slightly flat or astringent, 4 = needs sweetener to be drinkable, 1 = undrinkable. Ignore temperature preference — judge flavor only.', min: 1, max: 10, step: 1, goal: 'maximize', weight: 50 },
+      { id: 'o1', name: 'taste', description: 'Sip after it cools for one minute, before any snacks. 10 = rich and balanced with zero bitterness, 7 = good but slightly flat or astringent, 4 = needs sweetener to be drinkable, 0 = undrinkable. Ignore temperature preference — judge flavor only.', min: 1, max: 10, step: 1, goal: 'maximize', weight: 50 },
       { id: 'o2', name: 'smell', min: 1, max: 10, step: 1, goal: 'maximize', weight: 30 },
       { id: 'o3', name: 'appearance', min: 1, max: 10, step: 1, goal: 'maximize', weight: 20 },
     ],
@@ -274,7 +274,7 @@ function App() {
       num, rank,
       mix, outcomes: outs,
     };
-    try { localStorage.setItem('mm_share_run', JSON.stringify(data)); } catch (e) {}
+    try { localStorage.setItem('mm_share_run', JSON.stringify(data)); } catch (e) { }
     setDrawer(null);
     window.open('Share Run.html', '_blank');
   };

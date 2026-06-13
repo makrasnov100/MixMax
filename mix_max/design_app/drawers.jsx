@@ -239,12 +239,16 @@ function ChipEditor({ items, setItems, placeholder }) {
         <div style={{ flex: 1 }}>
           <input value={draft} onChange={e => setDraft(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && add()} placeholder={placeholder}
-            style={{ width: '100%', height: 48, boxSizing: 'border-box', background: T.surface, color: T.ink,
+            style={{
+              width: '100%', height: 48, boxSizing: 'border-box', background: T.surface, color: T.ink,
               border: `1.5px solid ${T.hairline}`, borderRadius: T.rField, padding: '0 14px',
-              fontFamily: T.sans, fontSize: 15, fontWeight: 500, outline: 'none' }} />
+              fontFamily: T.sans, fontSize: 15, fontWeight: 500, outline: 'none'
+            }} />
         </div>
-        <button onClick={add} style={{ width: 48, height: 48, flexShrink: 0, borderRadius: T.rField, border: 'none',
-          background: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={add} style={{
+          width: 48, height: 48, flexShrink: 0, borderRadius: T.rField, border: 'none',
+          background: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
           <Icon name="plus" size={20} color="#fff" stroke={2.2} />
         </button>
       </div>
@@ -447,7 +451,7 @@ function OutcomeDrawer({ initial, onSave, onDelete, onClose }) {
         <span style={{ fontFamily: T.sans, fontSize: 11.5, color: T.inkFaint, fontWeight: 500 }}>optional</span>
       </div>
       <TextArea value={description} onChange={setDescription} maxLength={2000} rows={3}
-        placeholder="How should this be graded? e.g. 10 = rich and balanced, 1 = undrinkable. Shown every time you rate a run." />
+        placeholder="How should this be graded? e.g. 10 = rich and balanced, 0 = undrinkable. Shown every time you rate a run." />
       {description.length > 0 && <Counter value={description} max={2000} />}
       <div style={{ height: 6 }} />
     </DrawerShell>
@@ -604,7 +608,7 @@ function ConfirmDeleteItemDrawer({ target = 'parameter', runCount = 0, onConfirm
 
 // ── 7. Account ───────────────────────────────────────────
 const LEGAL = {
-  terms:   'https://myfortuna.app/mix-max/terms-of-service',
+  terms: 'https://myfortuna.app/mix-max/terms-of-service',
   privacy: 'https://myfortuna.app/mix-max/privacy-policy',
 };
 

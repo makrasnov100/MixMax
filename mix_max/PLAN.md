@@ -1,8 +1,7 @@
 
 --- After testing ---
-
-- weighted outcomes and new bar chart in share card and run details
-
+-in the stacked bar chart if the bar is too small its not displayed need to display just without the number (both run page and in)
+-outcome score recorded but when displayed somtimes not rouded correctly to the tenth place or its step amount
 
 --- Publishing ---
 - Test sign in works to transfer anonyomous account data to signed in user

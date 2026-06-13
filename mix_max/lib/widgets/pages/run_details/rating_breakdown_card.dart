@@ -6,6 +6,7 @@ import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
+import 'package:mix_max/widgets/pages/experiment_details/weight_math.dart';
 
 /// One outcome's contribution to a run's final rating.
 class _RatingRow {
@@ -42,7 +43,10 @@ class _RatingRow {
 /// the per-row points sum to the same 0–10 rating shown in the hero card. Each
 /// outcome's share comes from its [SchemaOutcome.weight] (the Priorities split
 /// captured on the run), falling back to an equal share when the run carries no
-/// weights; the composition bar reads as "width = weight, fill = score".
+/// weights. The composition bar is a color-coded stacked chart: each segment
+/// spans its outcome's contribution to the rating (`points × 10`% of the track,
+/// labelled with the points), and the rows beneath are keyed to it by the same
+/// per-outcome [kWeightColors] swatch — so no separate legend is needed.
 class RatingBreakdownCard extends StatelessWidget {
   final SchemaExperiment experiment;
   final SchemaRun run;
@@ -112,7 +116,6 @@ class RatingBreakdownCard extends StatelessWidget {
             ? run.computeFinalRating()
             : run.computeFinalRating(experiment.outcomes ?? const [])) *
         10;
-    final measured = rows.where((r) => r.hasValue).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -126,58 +129,22 @@ class RatingBreakdownCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Composition bar: segment width = weight, fill = score.
+          // Composition bar: a color-coded stacked chart whose segments each
+          // span their outcome's contribution to the rating.
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 13),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (measured.isNotEmpty)
-                  SizedBox(
-                    height: 16,
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < measured.length; i++) ...[
-                          if (i > 0) const SizedBox(width: 3),
-                          Expanded(
-                            flex: (measured[i].weight * 1000).round().clamp(1, 1 << 20),
-                            child: _BarSegment(fill: measured[i].norm),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    _Legend(),
-                    Text(
-                      'width = weight',
-                      style: TextStyle(
-                        fontFamily: AppFonts.sans,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11.5,
-                        height: 1,
-                        color: AppColors.inkFaint,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            child: _CompositionBar(rows: rows),
           ),
           const _Hairline(),
 
-          // Per-outcome contribution rows.
+          // Per-outcome contribution rows, keyed to the bar by swatch colour.
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
               const Padding(
                 padding: EdgeInsets.only(left: 16),
                 child: _Hairline(),
               ),
-            _OutcomeRow(row: rows[i]),
+            _OutcomeRow(row: rows[i], color: weightColorAt(i)),
           ],
 
           // Final rating total.
@@ -188,93 +155,97 @@ class RatingBreakdownCard extends StatelessWidget {
   }
 }
 
-/// A single composition-bar segment: a violet-tint track filled to [fill] (the
-/// outcome's 0–1 score) in solid violet.
-class _BarSegment extends StatelessWidget {
-  final double fill;
-  const _BarSegment({required this.fill});
+/// The color-coded stacked rating bar: one rounded track whose colored segments
+/// each span their outcome's contribution to the 0–10 rating (`points × 10`% of
+/// the full width), labelled with that contribution. Outcomes that add nothing
+/// (unmeasured, or scoring zero) contribute no segment; the unfilled warm
+/// remainder reads as the rating's distance from a perfect 10.
+///
+/// Source: `design_app/screens.jsx` `RatingBreakdown` composition bar.
+class _CompositionBar extends StatelessWidget {
+  final List<_RatingRow> rows;
+  const _CompositionBar({required this.rows});
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: ColoredBox(
-        color: AppColors.violetTint,
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: fill.clamp(0.0, 1.0),
-            heightFactor: 1,
-            child: const ColoredBox(color: AppColors.violet),
+    // Each segment's flex is its share of a 100-wide track (×100 for rounding
+    // headroom); the trailing spacer holds the gap up to a perfect rating.
+    final segments = <Widget>[];
+    var used = 0;
+    for (var i = 0; i < rows.length; i++) {
+      final w = (rows[i].points * 10).clamp(0.0, 100.0);
+      final flex = (w * 100).round();
+      if (flex <= 0) continue;
+      used += flex;
+      segments.add(
+        Expanded(
+          flex: flex,
+          child: _BarSegment(
+            color: weightColorAt(i),
+            label: w >= 11
+                ? MixMaxFormat.number(rows[i].points, decimals: 1)
+                : null,
           ),
         ),
-      ),
-    );
-  }
-}
+      );
+    }
+    final remaining = 10000 - used;
+    if (remaining > 0) {
+      segments.add(Expanded(flex: remaining, child: const SizedBox()));
+    }
 
-/// The "■ score  ■ weight" key beneath the composition bar.
-class _Legend extends StatelessWidget {
-  const _Legend();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: const [
-        _Swatch(color: AppColors.violet),
-        SizedBox(width: 6),
-        _LegendLabel('score'),
-        SizedBox(width: 10),
-        _Swatch(color: AppColors.violetTint),
-        SizedBox(width: 6),
-        _LegendLabel('weight'),
-      ],
-    );
-  }
-}
-
-class _Swatch extends StatelessWidget {
-  final Color color;
-  const _Swatch({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      width: 9,
-      height: 9,
+      height: 24,
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(3),
+        color: AppColors.bgAlt,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.hairline, width: 1),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: Row(children: segments),
     );
   }
 }
 
-class _LegendLabel extends StatelessWidget {
-  final String text;
-  const _LegendLabel(this.text);
+/// One stacked-bar segment: a solid [color] block, captioned with its points
+/// [label] in white when it is wide enough to read.
+class _BarSegment extends StatelessWidget {
+  final Color color;
+  final String? label;
+  const _BarSegment({required this.color, this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontFamily: AppFonts.sans,
-        fontWeight: FontWeight.w500,
-        fontSize: 11.5,
-        height: 1,
-        color: AppColors.inkFaint,
-      ),
+    return ColoredBox(
+      color: color,
+      child: label == null
+          ? null
+          : Center(
+              child: Text(
+                label!,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                softWrap: false,
+                style: const TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  height: 1,
+                  letterSpacing: 11 * -0.01,
+                  color: Colors.white,
+                ),
+              ),
+            ),
     );
   }
 }
 
-/// One outcome row: a violet dot, the name + weight share, the recorded value
-/// pill, and the points it adds to the rating.
+/// One outcome row: a swatch dot matching its bar segment, the name + weight
+/// share, the recorded value pill, and the points it adds to the rating.
 class _OutcomeRow extends StatelessWidget {
   final _RatingRow row;
-  const _OutcomeRow({required this.row});
+  final Color color;
+  const _OutcomeRow({required this.row, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -289,8 +260,8 @@ class _OutcomeRow extends StatelessWidget {
           Container(
             width: 9,
             height: 9,
-            decoration: const BoxDecoration(
-              color: AppColors.violet,
+            decoration: BoxDecoration(
+              color: color,
               shape: BoxShape.circle,
             ),
           ),
