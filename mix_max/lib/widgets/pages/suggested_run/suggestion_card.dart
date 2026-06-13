@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
+import 'package:mix_max/services/get_it.dart';
+import 'package:mix_max/services/ui/duration_timer_service.dart';
 import 'package:mix_max/widgets/design/atoms/card.dart';
 import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
@@ -102,6 +106,17 @@ class _SuggestionCardState extends State<SuggestionCard> {
     return (u) => setState(() => _displayUnit = u);
   }
 
+  /// Whether to attach the start/pause/stop countdown to this value — only on
+  /// the interactive (suggested-run) card and only for a duration parameter that
+  /// carries a usable positive value. The read-only run-details card never shows
+  /// it.
+  bool get _showTimer {
+    if (widget.onChanged == null) return false;
+    if (widget.parameter.type != ParameterType.duration) return false;
+    final v = widget.value;
+    return v is num && v > 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final onChanged = widget.onChanged;
@@ -160,6 +175,7 @@ class _SuggestionCardState extends State<SuggestionCard> {
                 value: widget.value,
                 displayUnit: _displayUnit,
                 onDisplayUnitChanged: _onDisplayUnitChanged,
+                showTimer: _showTimer,
               ),
             ],
           ),
@@ -210,6 +226,7 @@ class _SuggestionCardState extends State<SuggestionCard> {
           onChanged: onChanged,
           displayUnit: _displayUnit,
           onDisplayUnitChanged: _onDisplayUnitChanged,
+          showTimer: _showTimer,
         ),
       ],
     );
@@ -270,19 +287,38 @@ class _SuggestedValue extends StatelessWidget {
   /// When non-null, a °C / °F / K switcher is shown beneath a temperature value.
   final ValueChanged<TemperatureUnit>? onDisplayUnitChanged;
 
+  /// When true, a countdown tag is shown beneath a duration value.
+  final bool showTimer;
+
   const _SuggestedValue({
     required this.parameter,
     required this.value,
     required this.displayUnit,
     this.onDisplayUnitChanged,
+    this.showTimer = false,
   });
 
   @override
   Widget build(BuildContext context) {
     switch (parameter.type) {
       case ParameterType.number:
-      case ParameterType.duration:
         return DisplayText(text: _numberLabel(parameter, value), fontSize: 24);
+
+      case ParameterType.duration:
+        final label = DisplayText(
+          text: _numberLabel(parameter, value),
+          fontSize: 24,
+        );
+        if (!showTimer) return label;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            label,
+            const SizedBox(height: 10),
+            _DurationTimerTag(parameter: parameter, value: value as num),
+          ],
+        );
 
       case ParameterType.temperature:
         return Column(
@@ -356,23 +392,46 @@ class _SuggestedEditor extends StatelessWidget {
   /// When non-null, a °C / °F / K switcher accompanies a temperature slider.
   final ValueChanged<TemperatureUnit>? onDisplayUnitChanged;
 
+  /// When true, a countdown tag is shown beneath a duration editor.
+  final bool showTimer;
+
   const _SuggestedEditor({
     required this.parameter,
     required this.value,
     required this.onChanged,
     required this.displayUnit,
     this.onDisplayUnitChanged,
+    this.showTimer = false,
   });
 
   @override
   Widget build(BuildContext context) {
     switch (parameter.type) {
       case ParameterType.number:
-      case ParameterType.duration:
         return _NumberEditor(
           parameter: parameter,
           value: value,
           onChanged: onChanged,
+        );
+
+      case ParameterType.duration:
+        final editor = _NumberEditor(
+          parameter: parameter,
+          value: value,
+          onChanged: onChanged,
+        );
+        if (!showTimer) return editor;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            editor,
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _DurationTimerTag(parameter: parameter, value: value as num),
+            ),
+          ],
         );
 
       case ParameterType.temperature:
@@ -663,6 +722,194 @@ class _TempUnitSwitcher extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A built-in countdown for a duration suggestion, shown beneath the value as a
+/// row of timer controls — the duration-type counterpart to [_TempUnitSwitcher].
+///
+/// Idle, it's a single "Start" chip. Running, it shows a live `mm:ss` / `h:mm:ss`
+/// count with "Pause" and "Reset"; once paused, "Resume" and "Reset". "Reset"
+/// returns the timer to its bare idle state (no count, just "Start timer"). The
+/// state itself lives in [DurationTimerService] (SharedPreferences), keyed by the
+/// parameter id, so the countdown keeps elapsing while the app is backgrounded or
+/// closed and resumes correctly on return. When it reaches zero the tag itself
+/// reads "Timer done". A local 1-second ticker only runs while the timer is
+/// actually counting.
+class _DurationTimerTag extends StatefulWidget {
+  final SchemaParameter parameter;
+  final num value;
+
+  const _DurationTimerTag({required this.parameter, required this.value});
+
+  @override
+  State<_DurationTimerTag> createState() => _DurationTimerTagState();
+}
+
+class _DurationTimerTagState extends State<_DurationTimerTag> {
+  final DurationTimerService _service = getIt<DurationTimerService>();
+  Timer? _ticker;
+  DurationTimerSnapshot _snap = DurationTimerSnapshot.idle;
+  bool _ready = false;
+
+  /// The timer's identity — one countdown per parameter, persisting across runs.
+  String get _key => widget.parameter.id;
+
+  /// The full countdown length in whole seconds, from the suggested value read in
+  /// the parameter's own time unit (e.g. value 1.5 of a `minutes` param → 90s).
+  int get _totalSeconds =>
+      (widget.value * widget.parameter.durationUnit.inSeconds).round();
+
+  @override
+  void initState() {
+    super.initState();
+    _service.ready.then((_) {
+      if (!mounted) return;
+      setState(() => _ready = true);
+      _sync();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  /// Pulls the latest snapshot from the store, pins the finished state on the
+  /// running→done edge, and keeps the 1-second ticker alive only while running.
+  void _sync() {
+    final previous = _snap.status;
+    final next = _service.read(_key);
+
+    if (previous == TimerStatus.running && next.status == TimerStatus.done) {
+      _service.markDone(_key);
+    }
+
+    if (next.status == TimerStatus.running) {
+      _ticker ??= Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => _sync(),
+      );
+    } else {
+      _ticker?.cancel();
+      _ticker = null;
+    }
+
+    if (mounted) setState(() => _snap = next);
+  }
+
+  void _start() {
+    _service.start(_key, seconds: _totalSeconds, total: _totalSeconds);
+    _sync();
+  }
+
+  void _resume() {
+    _service.start(
+      _key,
+      seconds: _snap.remainingSeconds,
+      total: _snap.totalSeconds,
+    );
+    _sync();
+  }
+
+  void _pause() {
+    _service.pause(_key);
+    _sync();
+  }
+
+  void _reset() {
+    _service.clear(_key);
+    _sync();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready || _totalSeconds <= 0) return const SizedBox.shrink();
+
+    switch (_snap.status) {
+      case TimerStatus.idle:
+        return MixMaxChip(
+          label: 'Start timer',
+          icon: MixMaxGlyph.play,
+          tone: MixMaxChipTone.sage,
+          onTap: _start,
+        );
+
+      case TimerStatus.running:
+        return _countRow(
+          remaining: _snap.remainingSeconds,
+          color: AppColors.sageText,
+          chips: [
+            MixMaxChip(label: 'Pause', tone: MixMaxChipTone.outline, onTap: _pause),
+            MixMaxChip(label: 'Reset', tone: MixMaxChipTone.outline, onTap: _reset),
+          ],
+        );
+
+      case TimerStatus.paused:
+        return _countRow(
+          remaining: _snap.remainingSeconds,
+          color: AppColors.inkSoft,
+          chips: [
+            MixMaxChip(
+              label: 'Resume',
+              icon: MixMaxGlyph.play,
+              tone: MixMaxChipTone.sage,
+              onTap: _resume,
+            ),
+            MixMaxChip(label: 'Reset', tone: MixMaxChipTone.outline, onTap: _reset),
+          ],
+        );
+
+      case TimerStatus.done:
+        return Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                MixMaxIcon(MixMaxGlyph.check, size: 16, color: AppColors.sageText),
+                SizedBox(width: 5),
+                DisplayText(text: 'Timer done', fontSize: 20, color: AppColors.sageText),
+              ],
+            ),
+            MixMaxChip(label: 'Reset', tone: MixMaxChipTone.outline, onTap: _reset),
+          ],
+        );
+    }
+  }
+
+  /// The live count rendered as the hero, with the given control [chips] wrapping
+  /// beneath it on narrow cards.
+  Widget _countRow({
+    required int remaining,
+    required Color color,
+    required List<Widget> chips,
+  }) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        DisplayText(text: _fmtClock(remaining), fontSize: 22, color: color),
+        ...chips,
+      ],
+    );
+  }
+}
+
+/// Formats whole [seconds] as a countdown clock: `mm:ss`, or `h:mm:ss` once past
+/// an hour. Minutes and seconds are zero-padded; hours are not.
+String _fmtClock(int seconds) {
+  final s = seconds < 0 ? 0 : seconds;
+  final h = s ~/ 3600;
+  final m = (s % 3600) ~/ 60;
+  final sec = s % 60;
+  final mm = m.toString().padLeft(2, '0');
+  final ss = sec.toString().padLeft(2, '0');
+  if (h > 0) return '$h:$mm:$ss';
+  return '$mm:$ss';
 }
 
 /// A single-select over a choice parameter's options, rendered as tap-to-pick

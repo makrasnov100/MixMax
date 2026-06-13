@@ -61,8 +61,10 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _unitController = TextEditingController();
-  // Seed the scale with the design's defaults (a 1–10, increment-1 scale).
-  final _minController = TextEditingController(text: '1');
+  // Seed the scale with the design's defaults (a 0–10, increment-1 scale).
+  // Starting at 0 keeps the picked value aligned with the 0–10 final rating,
+  // since ratings normalise as (value - min) / (max - min).
+  final _minController = TextEditingController(text: '0');
   final _maxController = TextEditingController(text: '10');
   final _incrementController = TextEditingController(text: '1');
 
@@ -154,15 +156,13 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: MixMaxDrawerContainer(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            _header(),
-            Flexible(child: _body()),
-            _footer(),
-          ],
+          children: [_header(), Flexible(child: _body()), _footer()],
         ),
       ),
     );
@@ -198,10 +198,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Quick add is for new outcomes only.
-          if (!_isEdit) ...[
-            _subHead('Quick add', topGap: 12),
-            _quickAddRow(),
-          ],
+          if (!_isEdit) ...[_subHead('Quick add', topGap: 12), _quickAddRow()],
 
           _subHead('Name', topGap: _isEdit ? 12 : 18),
           _hpad(
@@ -255,7 +252,9 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Expanded(child: _numberField(_incrementController, 'Increment')),
+                Expanded(
+                  child: _numberField(_incrementController, 'Increment'),
+                ),
               ],
             ),
           ),
@@ -267,7 +266,8 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
               controller: _descriptionController,
               maxLength: AddOutputDrawer.maxDescriptionLength,
               rows: 3,
-              placeholder: 'How should this be graded? e.g. 10 = rich and '
+              placeholder:
+                  'How should this be graded? e.g. 10 = rich and '
                   'balanced, 1 = undrinkable. Shown every time you rate a run.',
             ),
           ),
@@ -288,7 +288,11 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
         children: const [
           EyebrowText(text: 'Description', color: AppColors.inkFaint),
           SizedBox(width: 7),
-          CaptionText(text: 'optional', fontSize: 11.5, color: AppColors.inkFaint),
+          CaptionText(
+            text: 'optional',
+            fontSize: 11.5,
+            color: AppColors.inkFaint,
+          ),
         ],
       ),
     );
@@ -364,39 +368,42 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
-      child: _isEdit
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                save,
-                const SizedBox(height: 10),
-                MixMaxButton(
-                  label: 'Delete outcome',
-                  variant: MixMaxButtonVariant.ghost,
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    widget.onDelete?.call();
-                  },
-                  leading: const MixMaxIcon(
-                    MixMaxGlyph.trash,
-                    size: 20,
-                    color: AppColors.inkSoft,
+      child:
+          _isEdit
+              ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  save,
+                  const SizedBox(height: 10),
+                  MixMaxButton(
+                    label: 'Delete outcome',
+                    variant: MixMaxButtonVariant.ghost,
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onDelete?.call();
+                    },
+                    leading: const MixMaxIcon(
+                      MixMaxGlyph.trash,
+                      size: 20,
+                      color: AppColors.inkSoft,
+                    ),
                   ),
-                ),
-              ],
-            )
-          : save,
+                ],
+              )
+              : save,
     );
   }
 
   // ── Layout helpers ───────────────────────────────────────────────────────
-  Widget _hpad(Widget child) =>
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: child);
+  Widget _hpad(Widget child) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    child: child,
+  );
 
   Widget _subHead(String text, {double topGap = 18}) => Padding(
-        padding: EdgeInsets.fromLTRB(24, topGap, 24, 9),
-        child: EyebrowText(text: text, color: AppColors.inkFaint),
-      );
+    padding: EdgeInsets.fromLTRB(24, topGap, 24, 9),
+    child: EyebrowText(text: text, color: AppColors.inkFaint),
+  );
 }
 
 /// A "Quick add" preset — the card metadata plus the values it seeds.
@@ -428,18 +435,18 @@ class _OutcomePreset {
 const List<_OutcomePreset> _presets = [
   _OutcomePreset(
     title: 'Taste',
-    hint: '1–10, higher',
+    hint: '0–10, higher',
     glyph: MixMaxGlyph.spark2,
-    min: 1,
+    min: 0,
     max: 10,
-    increment: 1,
+    increment: 0.1,
     goal: OutcomeGoal.maximize,
   ),
   _OutcomePreset(
     title: 'Quality',
-    hint: '1–5, higher',
+    hint: '0–5, higher',
     glyph: MixMaxGlyph.trophy,
-    min: 1,
+    min: 0,
     max: 5,
     increment: 1,
     goal: OutcomeGoal.maximize,

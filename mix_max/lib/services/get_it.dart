@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/flutter_fire.dart';
 import 'package:mix_max/services/general_info_service.dart';
+import 'package:mix_max/services/ui/duration_timer_service.dart';
 import 'package:mix_max/widgets/pages/onboarding/onboarding_controller.dart';
 import 'package:get_it/get_it.dart';
 
@@ -42,4 +43,5 @@ void setupGetIt() {
   getIt.registerSingleton<FlutterFire>(FlutterFire());
   getIt.registerSingleton<GeneralInfoService>(GeneralInfoService());
   getIt.registerSingleton<OnboardingController>(OnboardingController());
+  getIt.registerSingleton<DurationTimerService>(DurationTimerService()..ready);
 }

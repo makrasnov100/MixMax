@@ -56,11 +56,11 @@ dev_dependencies:
   flutter_lints: ^2.0.0
 
 flutter_native_splash:
-  color: "#00e075"
-  image: "assets/icon/foreground_small.png"
+  color: "#322e3e"
+  image: "assets/icon/foreground.png"
   android_12:
-    icon_background_color: "#00e075"
-    image: "assets/icon/foreground_small.png"
+    icon_background_color: "#322e3e"
+    image: "assets/icon/foreground.png"
 
 flutter_launcher_icons:
   ios: true

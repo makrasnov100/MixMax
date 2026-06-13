@@ -20,7 +20,10 @@ AppNavigatorObserver<PageRoute> navigatorObserver = AppNavigatorObserver<PageRou
 void main() async {
   runZonedGuarded<Future<void>>(
     () async {
-      WidgetsFlutterBinding.ensureInitialized();
+      final WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+      // Hold the native splash on screen until Firebase + late singletons are
+      // ready, instead of letting it auto-dismiss on the first frame.
+      FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
       setupGetIt();
 
       SystemChrome.setPreferredOrientations([
@@ -34,9 +37,10 @@ void main() async {
       await getIt<FlutterFire>().onInitDone.future;
       initializeLateSingletons();
 
-      FlutterNativeSplash.remove();
-
       runApp(const MyApp());
+
+      // App is initialized and the first frame is being drawn — drop the splash.
+      FlutterNativeSplash.remove();
     },
     (error, stack) {
       print("Error: $error");
