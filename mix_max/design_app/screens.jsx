@@ -159,9 +159,164 @@ function ExperimentsListScreen({ experiments, onOpen, onAdd, onAccount, signedIn
 }
 
 // ════════════════════════════════════════════════════════
+// PRIORITIES (outcome weighting) — pie + 100%-budget sliders
+// ════════════════════════════════════════════════════════
+// muted, warm-leaning slice palette (shares the app's chroma/lightness)
+const WEIGHT_COLORS = ['#7E719A', '#B5872B', '#6E8A63', '#B0715B', '#5E8A86', '#9A6A8C', '#8A7A3E'];
+function weightAlpha(hex, a) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// donut: each outcome slice sized by its weight; any unallocated budget shows as
+// a muted slice so "space left up to 100%" reads at a glance. Center = total used.
+function WeightDonut({ slices, total }) {
+  const size = 156, sw = 26, r = (size - sw) / 2, c = 2 * Math.PI * r, cx = size / 2;
+  const gap = 2.2; // circumference px between segments
+  let segs;
+  if (total <= 0) segs = [{ color: T.hairlineStrong, frac: 1 }];
+  else if (total < 100) {
+    segs = slices.filter(s => s.value > 0).map(s => ({ color: s.color, frac: s.value / 100 }));
+    segs.push({ color: T.hairlineStrong, frac: (100 - total) / 100 });
+  } else {
+    segs = slices.filter(s => s.value > 0).map(s => ({ color: s.color, frac: s.value / total }));
+  }
+  const over = total > 100;
+  let off = 0;
+  return (
+    <div style={{ position: 'relative', width: size, height: size }}>
+      <svg width={size} height={size} style={{ display: 'block' }}>
+        <g transform={`rotate(-90 ${cx} ${cx})`}>
+          {segs.map((sg, i) => {
+            const full = sg.frac * c;
+            const len = Math.max(full - (segs.length > 1 ? gap : 0), 0.6);
+            const el = (
+              <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={sg.color} strokeWidth={sw}
+                strokeLinecap="butt" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-off} />
+            );
+            off += full;
+            return el;
+          })}
+        </g>
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 32, lineHeight: 1, letterSpacing: '-0.01em', color: over ? T.dangerText : T.ink }}>{total}%</div>
+        <div style={{ fontFamily: T.sans, fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: total === 100 ? T.goldText : T.inkFaint, marginTop: 5 }}>
+          {total === 100 ? 'Balanced' : over ? 'Over budget' : 'Allocated'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Rescale weights to sum to exactly 100 while preserving their proportions.
+// Already-balanced lists pass through unchanged; an all-zero list splits evenly.
+function normalizeWeightList(weights) {
+  const n = weights.length;
+  if (n === 0) return weights.slice();
+  const sum = weights.reduce((a, b) => a + b, 0);
+  if (sum === 100) return weights.slice();
+  let scaled;
+  if (sum === 0) { const base = Math.floor(100 / n); scaled = weights.map(() => base); }
+  else { scaled = weights.map(w => Math.round((w / sum) * 100)); }
+  // correct rounding drift so the total lands on exactly 100 — nudge the
+  // largest slices first so the proportions stay as faithful as possible.
+  let drift = 100 - scaled.reduce((a, b) => a + b, 0);
+  const order = scaled.map((_, i) => i).sort((a, b) => weights[b] - weights[a]);
+  let i = 0, guard = 0;
+  while (drift !== 0 && guard < 10000) {
+    const idx = order[i % n];
+    if (drift > 0) { scaled[idx] += 1; drift -= 1; }
+    else if (scaled[idx] > 0) { scaled[idx] -= 1; drift += 1; }
+    i++; guard++;
+  }
+  return scaled;
+}
+
+// When the budget is balanced this is a quiet "fully allocated" confirmation.
+// When it's over or under, it becomes the one-tap fix: a "Normalize to 100%"
+// button that rescales every slice proportionally up/down to a clean 100.
+function RemainingBanner({ remaining, onNormalize }) {
+  if (remaining === 0) {
+    return (
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: T.goldTint, color: T.goldText, borderRadius: 999, padding: '7px 14px', marginTop: 14, fontFamily: T.sans, fontSize: 13, fontWeight: 500 }}>
+        <Icon name="check" size={14} color={T.goldText} stroke={2.4} />
+        <span>Fully allocated</span>
+      </div>
+    );
+  }
+  const over = remaining < 0;
+  return (
+    <button onClick={onNormalize} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 14, cursor: 'pointer',
+      background: over ? T.dangerTint : T.bgAlt,
+      color: over ? T.dangerText : T.ink,
+      border: `1px solid ${over ? T.danger : T.hairlineStrong}`,
+      borderRadius: 999, padding: '8px 15px', fontFamily: T.sans, fontSize: 13, fontWeight: 600,
+      WebkitTapHighlightColor: 'transparent', transition: 'transform 0.12s ease',
+    }}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+      <Icon name="sparkle" size={15} color={over ? T.dangerText : T.gold} stroke={2.2} />
+      <span>Normalize to 100%</span>
+    </button>
+  );
+}
+
+// 0–100 slider whose track shows: solid fill = this outcome's % of the rating,
+// light fill = the headroom still available before the 100% budget is used up.
+function WeightSlider({ value, color, remaining, onChange }) {
+  const headroomEnd = Math.min(100, value + Math.max(0, remaining));
+  return (
+    <div style={{ position: 'relative', height: 40 }}>
+      <div style={{ position: 'absolute', left: 15, right: 15, top: '50%', transform: 'translateY(-50%)', height: 6, borderRadius: 999, background: T.bgAlt, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${headroomEnd}%`, background: weightAlpha(color, 0.22) }} />
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${value}%`, background: color, borderRadius: 999 }} />
+      </div>
+      <input type="range" className="mm-range" min={0} max={100} step={1} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        style={{ position: 'absolute', inset: 0, width: '100%' }} />
+    </div>
+  );
+}
+
+function PrioritiesSection({ outcomes, onSetWeight, onNormalize }) {
+  const weights = outcomes.map(o => (o.weight != null ? o.weight : 0));
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const remaining = 100 - sum;
+  const slices = outcomes.map((o, i) => ({ color: WEIGHT_COLORS[i % WEIGHT_COLORS.length], value: weights[i] }));
+  return (
+    <GroupCard>
+      <div style={{ padding: '22px 16px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+        <WeightDonut slices={slices} total={sum} />
+        <RemainingBanner remaining={remaining} onNormalize={onNormalize} />
+      </div>
+      <div style={{ height: 1, background: T.hairline }} />
+      <div style={{ padding: '6px 16px 14px', display: 'flex', flexDirection: 'column' }}>
+        {outcomes.map((o, i) => {
+          const color = WEIGHT_COLORS[i % WEIGHT_COLORS.length];
+          return (
+            <div key={o.id} style={{ padding: '13px 0 6px', borderTop: i > 0 ? `1px solid ${T.hairline}` : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 0, fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
+                <span style={{ fontFamily: T.sans, fontWeight: 700, fontSize: 13.5, color: color, background: weightAlpha(color, 0.13), borderRadius: 999, padding: '4px 11px', minWidth: 48, textAlign: 'center', flexShrink: 0 }}>{weights[i]}%</span>
+              </div>
+              <WeightSlider value={weights[i]} color={color} remaining={remaining} onChange={(v) => onSetWeight(o.id, v)} />
+            </div>
+          );
+        })}
+      </div>
+    </GroupCard>
+  );
+}
+
+// ════════════════════════════════════════════════════════
 // 2. EXPERIMENT DETAILS
 // ════════════════════════════════════════════════════════
-function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun, onMenu, onHistory, onOpenBest, onEditParam, onEditOutput }) {
+function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutput, onRun, onMenu, onHistory, onOpenBest, onEditParam, onEditOutput, onSetWeight, onNormalize }) {
   const params = exp.parameters || [];
   const outcomes = exp.outcomes || [];
   const runs = recordedRuns(exp);
@@ -230,6 +385,15 @@ function ExperimentDetailsScreen({ exp, onBack, onRename, onAddParam, onAddOutpu
           ? <EmptyHint icon="target" title="No outcomes yet" body="Add a result to maximize or minimize." />
           : <GroupCard>{outcomes.map((o, i) => <React.Fragment key={o.id}>{i > 0 && <Divider />}<OutcomeRow o={o} onEdit={() => onEditOutput(o.id)} /></React.Fragment>)}</GroupCard>}
       </div>
+
+      {/* priorities — outcome weighting (only meaningful with 2+ outcomes) */}
+      {outcomes.length >= 2 && (
+        <div style={{ padding: '24px 20px 0' }}>
+          <SectionLabel>Priorities</SectionLabel>
+          <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginBottom: 13 }}>How much each outcome counts toward a run's rating. Saved with each run.</div>
+          <PrioritiesSection outcomes={outcomes} onSetWeight={onSetWeight} onNormalize={onNormalize} />
+        </div>
+      )}
       <div style={{ height: 8 }} />
     </Screen>
   );
@@ -449,21 +613,26 @@ function RunsPill({ count, onClick }) {
 }
 
 // score a single run, mirroring SchemaRun.finalRating (0..1, higher = better).
-// scored against the run's own snapshot of outcomes so its rating reflects what
-// was actually measured, even if outcomes were later changed or removed.
+// scored against the run's own snapshot of outcomes — INCLUDING the weights as
+// they were when the run was recorded — so its rating reflects what was actually
+// measured and prioritized, even if outcomes / weights were later changed.
 function runScore(exp, run) {
   const outcomes = runOutcomeDefs(exp, run);
   const vals = run.outcomeValues || {};
-  let total = 0, count = 0;
-  outcomes.forEach(o => {
+  const present = outcomes.filter(o => vals[o.id] != null);
+  let wsum = present.reduce((a, o) => a + (o.weight != null ? o.weight : 1), 0);
+  // if every present outcome has zero weight, fall back to an equal average
+  const useEqual = !(wsum > 0);
+  let total = 0, denom = 0;
+  present.forEach(o => {
     const v = vals[o.id];
-    if (v == null) return;
     const lo = o.min != null ? o.min : 0, hi = o.max != null ? o.max : 10;
     let n = hi > lo ? Math.min(Math.max((v - lo) / (hi - lo), 0), 1) : v;
     if (o.goal === 'minimize') n = 1 - n;
-    total += n; count++;
+    const w = useEqual ? 1 : (o.weight != null ? o.weight : 1);
+    total += n * w; denom += w;
   });
-  return count > 0 ? total / count : 0;
+  return denom > 0 ? total / denom : 0;
 }
 function bestRunId(exp) {
   // Best run is crowned across ALL recorded runs, so it never resets when the
@@ -655,7 +824,10 @@ function RunHistoryScreen({ exp, onBack, onOpenRun }) {
 function ratingRows(exp, run) {
   const outcomes = runOutcomeDefs(exp, run);
   const ov = run.outcomeValues || {};
-  const weights = outcomes.map(o => (o.weight != null ? o.weight : 1));
+  const rawWeights = outcomes.map(o => (o.weight != null ? o.weight : 1));
+  const rawSum = rawWeights.reduce((a, b) => a + b, 0);
+  // if all weights are zero, treat them as equal so the breakdown still sums sensibly
+  const weights = rawSum > 0 ? rawWeights : outcomes.map(() => 1);
   const wsum = weights.reduce((a, b) => a + b, 0) || 1;
   const rows = outcomes.map((o, i) => {
     const v = ov[o.id];
@@ -673,21 +845,18 @@ function RatingBreakdown({ exp, run }) {
   const { rows, rating } = ratingRows(exp, run);
   return (
     <div style={{ background: T.surface, borderRadius: T.rCard, border: `1px solid ${T.hairline}`, boxShadow: CARD_SHADOW, overflow: 'hidden' }}>
-      {/* composition bar: segment width = weight, fill = score */}
-      <div style={{ padding: '16px 16px 13px' }}>
-        <div style={{ display: 'flex', gap: 3, height: 16 }}>
-          {rows.map((r, i) => (
-            <div key={i} style={{ flex: r.weight, minWidth: 5, background: T.violetTint, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${r.norm * 100}%`, background: T.violet }} />
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: T.sans, fontSize: 11.5, color: T.inkFaint, fontWeight: 500 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: T.violet, display: 'inline-block' }} />score
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: T.violetTint, display: 'inline-block', marginLeft: 4 }} />weight
-          </span>
-          <span style={{ fontFamily: T.sans, fontSize: 11.5, color: T.inkFaint, fontWeight: 600 }}>width = weight</span>
+      {/* composition bar: one continuous track; each colored section's width =
+          that outcome's contribution to the rating, stacked up to the 100% possible */}
+      <div style={{ padding: '16px 16px 14px' }}>
+        <div style={{ display: 'flex', height: 24, borderRadius: 999, overflow: 'hidden', background: T.bgAlt, border: `1px solid ${T.hairline}` }}>
+          {rows.map((r, i) => {
+            const w = Math.min(r.points * 10, 100);
+            return (
+              <div key={i} style={{ width: `${w}%`, background: WEIGHT_COLORS[i % WEIGHT_COLORS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
+                {w >= 11 && <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>{fmt(r.points, 1)}</span>}
+              </div>
+            );
+          })}
         </div>
       </div>
       <Divider />
@@ -697,7 +866,7 @@ function RatingBreakdown({ exp, run }) {
           <React.Fragment key={o.id}>
             {i > 0 && <div style={{ height: 1, background: T.hairline, marginLeft: 16 }} />}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: T.violet, flexShrink: 0 }} />
+              <span style={{ width: 9, height: 9, borderRadius: 999, background: WEIGHT_COLORS[i % WEIGHT_COLORS.length], flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 15, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
@@ -764,7 +933,7 @@ function RunDetailsScreen({ exp, run, num, isBest, onBack, onMenu }) {
         <div style={{ minWidth: 0 }}>
           <Eyebrow color={T.inkFaint}>Overall rating</Eyebrow>
           <div style={{ fontFamily: T.sans, fontSize: 13, color: T.inkSoft, marginTop: 4, lineHeight: 1.4 }}>
-            Averaged across {outcomes.length} outcome{outcomes.length === 1 ? '' : 's'}.
+            Weighted across {outcomes.length} outcome{outcomes.length === 1 ? '' : 's'}.
           </div>
         </div>
       </div>
@@ -837,4 +1006,5 @@ Object.assign(window, {
   ExperimentsListScreen, ExperimentDetailsScreen, RunSuggestionScreen, RatingScreen,
   RunHistoryScreen, RunDetailsScreen, RunsPill, suggestValue, bestOutcomeLabel, runScore, bestRunId,
   recordedRuns, tunableRuns, isRunTunable, runParamDefs, runOutcomeDefs,
+  normalizeWeightList,
 });

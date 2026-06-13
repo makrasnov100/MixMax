@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
@@ -24,6 +27,8 @@ import 'package:mix_max/widgets/pages/experiment_details/confirm_delete_item_dra
 import 'package:mix_max/widgets/pages/experiment_details/experiment_actions_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/outcome_list_card.dart';
 import 'package:mix_max/widgets/pages/experiment_details/parameter_list_card.dart';
+import 'package:mix_max/widgets/pages/experiment_details/priorities_section.dart';
+import 'package:mix_max/widgets/pages/experiment_details/weight_math.dart';
 import 'package:mix_max/widgets/pages/experiment_details/rename_experiment_drawer.dart';
 import 'package:mix_max/widgets/pages/experiment_details/runs_pill.dart';
 import 'package:mix_max/widgets/pages/share/share_run_launcher.dart';
@@ -77,10 +82,27 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
   int _parametersShake = 0;
   int _outcomesShake = 0;
 
+  /// Debounce for persisting outcome-weight slider drags. Each drag updates the
+  /// weights in memory immediately (so the donut/sliders stay live) and resets
+  /// this timer; the experiment is only written ~5s after the last change, so a
+  /// long drag doesn't fire a write per frame.
+  Timer? _weightSaveDebounce;
+  static const Duration _weightSaveDelay = Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
     _experiment = widget.experiment;
+  }
+
+  @override
+  void dispose() {
+    // Flush any weight change the debounce hasn't written yet.
+    if (_weightSaveDebounce?.isActive ?? false) {
+      _weightSaveDebounce!.cancel();
+      _experiment.save();
+    }
+    super.dispose();
   }
 
   /// Opens the "Manage this experiment" actions drawer (rename / delete).
@@ -261,7 +283,17 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     );
   }
 
+  /// Adds a brand-new outcome. Its weight defaults to the highest priority
+  /// already in the set (or 100% when it's the first outcome), so adding a
+  /// second outcome gives an even 50/50 split after normalizing — the most
+  /// common intent. The user then redistributes via the Priorities sliders.
   Future<void> _saveOutcome(SchemaOutcome outcome) async {
+    final existing = _experiment.outcomes ?? const [];
+    final highest = existing.fold<double>(
+      0.0,
+      (a, o) => math.max(a, o.weight ?? 0.0),
+    );
+    outcome.weight = existing.isEmpty ? 100.0 : highest;
     _experiment.outcomes = [...(_experiment.outcomes ?? []), outcome];
     await _experiment.save();
     if (!mounted) return;
@@ -336,6 +368,37 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
     _experiment.save();
   }
 
+  /// Sets an outcome's weight (0–100) from a Priorities slider drag. Updates the
+  /// weight in memory immediately so the donut and sliders track the drag, then
+  /// debounces the Firestore write. The weight lives on the outcome itself and
+  /// tunes the NEXT run's score; past runs keep their own outcome snapshot.
+  void _setOutcomeWeight(String outcomeId, double weight) {
+    final w = weight.clamp(0.0, 100.0).roundToDouble();
+    final outcomes = _experiment.outcomes ?? const <SchemaOutcome>[];
+    final index = outcomes.indexWhere((o) => o.id == outcomeId);
+    if (index < 0 || outcomes[index].weight == w) return;
+    setState(() => outcomes[index].weight = w);
+    _weightSaveDebounce?.cancel();
+    _weightSaveDebounce = Timer(_weightSaveDelay, () => _experiment.save());
+  }
+
+  /// Rescales every outcome's weight so the priorities add up to exactly 100%,
+  /// keeping their relative proportions. Used by the "Normalize to 100%" banner
+  /// and run automatically when an experiment is launched. Persists immediately,
+  /// cancelling any pending debounced save.
+  Future<void> _normalizeWeights() async {
+    final outcomes = _experiment.outcomes ?? const [];
+    if (outcomes.isEmpty) return;
+    final normalised =
+        normalizeWeightList(outcomes.map((o) => o.weight ?? 0.0).toList());
+    for (var i = 0; i < outcomes.length; i++) {
+      outcomes[i].weight = normalised[i];
+    }
+    _weightSaveDebounce?.cancel();
+    if (mounted) setState(() {});
+    await _experiment.save();
+  }
+
   /// Opens the Run History page for this experiment.
   void _openRunHistory() {
     Navigation.goTo(
@@ -372,6 +435,14 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
         if (outcomesMissing) _outcomesShake++;
       });
       return;
+    }
+
+    // Outcome weights always sum to 100% for the run — normalise any over/under
+    // budget split (proportions intact) and persist before the run captures its
+    // outcome snapshot, so the run is scored with a clean priority split.
+    if ((_experiment.outcomes ?? const []).length >= 2) {
+      await _normalizeWeights();
+      if (!mounted) return;
     }
 
     // The run flow mutates [_experiment] in place (e.g. promoting a new best
@@ -521,6 +592,25 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                         ),
                       ),
                     ),
+
+                    // Priorities — outcome weighting. Only meaningful once
+                    // there are two or more outcomes to split the budget across.
+                    if (outcomes.length >= 2) ...[
+                      const SizedBox(height: 24),
+                      const _SectionHeader(label: 'Priorities'),
+                      const SizedBox(height: 4),
+                      const BodyText(
+                        text:
+                            "How much each outcome counts toward a run's rating. Saved with each run.",
+                        fontSize: 13,
+                      ),
+                      const SizedBox(height: 13),
+                      PrioritiesSection(
+                        outcomes: outcomes,
+                        onSetWeight: _setOutcomeWeight,
+                        onNormalize: _normalizeWeights,
+                      ),
+                    ],
                   ],
                 ),
               ),

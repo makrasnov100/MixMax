@@ -113,15 +113,23 @@
 }
 .mmcard .lrow .lv u{ text-decoration:none; font-family:var(--sans); font-size:10.5px; font-weight:500; color:var(--inkSoft); margin-left:2px; }
 
-/* outcome rows */
-.mmcard .orows{ display:flex; flex-direction:column; gap:13px; margin-top:15px; }
-.mmcard .orow{ display:flex; align-items:center; gap:14px; }
-.mmcard .oname{ width:104px; flex-shrink:0; font-family:var(--sans); font-weight:600; font-size:15px; color:var(--ink); }
-.mmcard .otrack{ flex:1; height:9px; border-radius:999px; background:var(--violetTint); overflow:hidden; }
-.mmcard .otrack > i{ display:block; height:100%; border-radius:999px; background:var(--violet); }
-.mmcard .oval{ flex-shrink:0; min-width:52px; text-align:right; font-family:var(--sans); }
-.mmcard .oval b{ font-weight:700; font-size:16px; color:var(--violetText); }
-.mmcard .oval s{ text-decoration:none; font-weight:500; font-size:12px; color:var(--inkFaint); }
+/* color-coded rating breakdown — mirrors the in-app Rating breakdown */
+.mmcard .compbar{
+  display:flex; height:24px; border-radius:999px; overflow:hidden;
+  background:var(--bgAlt); border:1px solid var(--hairline); margin-top:15px;
+}
+.mmcard .compbar .seg{ display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden; }
+.mmcard .compbar .seg span{ font-family:var(--sans); font-size:11px; font-weight:700; color:#fff; letter-spacing:-0.01em; }
+.mmcard .orows{ display:flex; flex-direction:column; margin-top:8px; }
+.mmcard .orow{ display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--hairline); }
+.mmcard .orow:first-child{ border-top:none; }
+.mmcard .odot{ width:9px; height:9px; border-radius:999px; flex-shrink:0; }
+.mmcard .oinfo{ flex:1; min-width:0; }
+.mmcard .oinfo .oname{ font-family:var(--sans); font-weight:600; font-size:15px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mmcard .oinfo .oweight{ font-family:var(--sans); font-size:12px; color:var(--inkSoft); margin-top:2px; }
+.mmcard .ochip{ font-family:var(--sans); font-weight:700; font-size:13px; color:var(--violetText); background:var(--violetTint); border-radius:999px; padding:5px 11px; white-space:nowrap; flex-shrink:0; }
+.mmcard .ochip s{ text-decoration:none; font-weight:500; font-size:11px; color:var(--inkFaint); }
+.mmcard .opts{ width:42px; text-align:right; flex-shrink:0; font-family:var(--sans); font-weight:700; font-size:14.5px; color:var(--goldText); }
 
 /* footer */
 .mmcard .foot{

@@ -39,9 +39,10 @@ class _RatingRow {
 ///
 /// Source: `design_app/screens.jsx` `RatingBreakdown`. Each outcome is scored
 /// 0–1 (goal-aware) exactly the way [SchemaRun.finalRating] normalises it, so
-/// the per-row points sum to the same 0–10 rating shown in the hero card. The
-/// app has no per-outcome weight yet, so every measured outcome carries an equal
-/// share; the composition bar still reads as "width = weight, fill = score".
+/// the per-row points sum to the same 0–10 rating shown in the hero card. Each
+/// outcome's share comes from its [SchemaOutcome.weight] (the Priorities split
+/// captured on the run), falling back to an equal share when the run carries no
+/// weights; the composition bar reads as "width = weight, fill = score".
 class RatingBreakdownCard extends StatelessWidget {
   final SchemaExperiment experiment;
   final SchemaRun run;
@@ -52,9 +53,11 @@ class RatingBreakdownCard extends StatelessWidget {
     required this.run,
   }) : super(key: key);
 
-  /// Builds the per-outcome contribution rows. Weights are split equally across
-  /// the outcomes that actually carry a recorded value, so the points total
-  /// matches [SchemaRun.finalRating] × 10.
+  /// Builds the per-outcome contribution rows. Each measured outcome's share is
+  /// its [SchemaOutcome.weight] over the total weight of all measured outcomes —
+  /// the same weighting [SchemaRun.computeFinalRating] applies — so the per-row
+  /// points sum to [SchemaRun.finalRating] × 10. When every measured outcome is
+  /// unweighted the shares fall back to an equal split, matching finalRating.
   /// The outcome definitions this run was scored against — its own captured
   /// snapshot, falling back to the experiment's current outcomes for legacy
   /// runs without one.
@@ -65,8 +68,15 @@ class RatingBreakdownCard extends StatelessWidget {
     final outcomes = _outcomeDefs;
     final values = run.outcomeValues ?? const <String, double>{};
 
-    final measured = outcomes.where((o) => values[o.id] != null).length;
-    final share = measured > 0 ? 1.0 / measured : 0.0;
+    // Mirror computeFinalRating: weight only the measured outcomes, falling back
+    // to an equal split when their weights are all zero/absent.
+    final measured = outcomes.where((o) => values[o.id] != null).toList();
+    final weightSum =
+        measured.fold<double>(0.0, (a, o) => a + (o.weight ?? 0.0));
+    final useEqualWeights = weightSum <= 0;
+    final denom = useEqualWeights
+        ? measured.length.toDouble()
+        : weightSum;
 
     return outcomes.map((o) {
       final v = values[o.id];
@@ -80,7 +90,8 @@ class RatingBreakdownCard extends StatelessWidget {
         }
         if (o.goal == OutcomeGoal.minimize) norm = 1.0 - norm;
       }
-      final weight = v != null ? share : 0.0;
+      final raw = useEqualWeights ? 1.0 : (o.weight ?? 0.0);
+      final weight = (v != null && denom > 0) ? raw / denom : 0.0;
       return _RatingRow(
         outcome: o,
         value: v,

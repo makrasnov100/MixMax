@@ -19,6 +19,14 @@ class SchemaOutcome {
   double? step;
   OutcomeGoal? goal;
 
+  /// How much this outcome counts toward a run's rating, on a 0–100 budget
+  /// shared across the experiment's outcomes (the Priorities section). Set via
+  /// the weight sliders and normalised to sum to 100 when an experiment is run.
+  /// Null is treated as 0 (no weight) and falls back to an equal split when
+  /// every outcome is unweighted. Captured onto each run's outcome snapshot so
+  /// a run keeps the priorities it was scored with.
+  double? weight;
+
   SchemaOutcome({
     required this.id,
     this.name,
@@ -28,6 +36,7 @@ class SchemaOutcome {
     this.max,
     this.step,
     this.goal,
+    this.weight,
   });
 
   SchemaOutcome.unknown({
@@ -39,6 +48,7 @@ class SchemaOutcome {
     this.max,
     this.step,
     this.goal,
+    this.weight,
   });
 
   bool isValid() {

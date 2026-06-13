@@ -13,9 +13,9 @@ const SEED = [
       { id: 'p4', name: 'Sweetener', type: 'choice', options: ['honey', 'sugar', 'none'] },
     ],
     outcomes: [
-      { id: 'o1', name: 'taste', description: 'Sip after it cools for one minute, before any snacks. 10 = rich and balanced with zero bitterness, 7 = good but slightly flat or astringent, 4 = needs sweetener to be drinkable, 1 = undrinkable. Ignore temperature preference — judge flavor only.', min: 1, max: 10, step: 1, goal: 'maximize' },
-      { id: 'o2', name: 'smell', min: 1, max: 10, step: 1, goal: 'maximize' },
-      { id: 'o3', name: 'appearance', min: 1, max: 10, step: 1, goal: 'maximize' },
+      { id: 'o1', name: 'taste', description: 'Sip after it cools for one minute, before any snacks. 10 = rich and balanced with zero bitterness, 7 = good but slightly flat or astringent, 4 = needs sweetener to be drinkable, 1 = undrinkable. Ignore temperature preference — judge flavor only.', min: 1, max: 10, step: 1, goal: 'maximize', weight: 50 },
+      { id: 'o2', name: 'smell', min: 1, max: 10, step: 1, goal: 'maximize', weight: 30 },
+      { id: 'o3', name: 'appearance', min: 1, max: 10, step: 1, goal: 'maximize', weight: 20 },
     ],
     runs: [
       { id: 'r1', parameterValues: { p1: 11, p2: 3, p3: false, p4: 'honey' }, outcomeValues: { o1: 5, o2: 6, o3: 5 }, createdAt: _NOW - 12 * DAY - 2400, completedAt: _NOW - 12 * DAY },
@@ -31,8 +31,8 @@ const SEED = [
       { id: 'cp3', name: 'Grind', type: 'choice', options: ['coarse', 'medium', 'fine'] },
     ],
     outcomes: [
-      { id: 'co1', name: 'strength', min: 1, max: 10, step: 1, goal: 'maximize' },
-      { id: 'co2', name: 'bitterness', description: 'Judge the bitter aftertaste on the first black sip — before adding milk or ice.', min: 1, max: 10, step: 1, goal: 'minimize' },
+      { id: 'co1', name: 'strength', min: 1, max: 10, step: 1, goal: 'maximize', weight: 60 },
+      { id: 'co2', name: 'bitterness', description: 'Judge the bitter aftertaste on the first black sip — before adding milk or ice.', min: 1, max: 10, step: 1, goal: 'minimize', weight: 40 },
     ],
     runs: [
       { id: 'cr1', parameterValues: { cp1: 90, cp2: 16, cp3: 'medium' }, outcomeValues: { co1: 7, co2: 4 }, createdAt: _NOW - 8 * DAY - 1200, completedAt: _NOW - 8 * DAY },
@@ -46,7 +46,7 @@ const SEED = [
       { id: 'rp2', name: 'Caffeine', type: 'toggle', onLabel: 'Yes', offLabel: 'No' },
     ],
     outcomes: [
-      { id: 'ro1', name: 'energy', min: 1, max: 10, step: 1, goal: 'maximize' },
+      { id: 'ro1', name: 'energy', min: 1, max: 10, step: 1, goal: 'maximize', weight: 100 },
     ],
     runs: [],
   },
@@ -160,7 +160,16 @@ function App() {
     setRoute({ name: 'list' });
   };
   const saveParam = (param) => { updateExp(route.expId, e => stampParams({ ...e, parameters: [...e.parameters, param] })); setDrawer(null); };
-  const saveOutput = (out) => { updateExp(route.expId, e => ({ ...e, outcomes: [...e.outcomes, out] })); setDrawer(null); };
+  // A new outcome's weight defaults to whatever is left of the 100% budget so
+  // adding outcomes never overshoots; the user redistributes via the sliders.
+  const saveOutput = (out) => {
+    updateExp(route.expId, e => {
+      const used = (e.outcomes || []).reduce((a, o) => a + (o.weight != null ? o.weight : 0), 0);
+      const weight = Math.max(0, Math.min(100, 100 - used));
+      return { ...e, outcomes: [...e.outcomes, { ...out, weight }] };
+    });
+    setDrawer(null);
+  };
 
   // every recorded run is kept & shown now — nothing is ever "outdated".
   const recordedCount = (e) => (e?.runs || []).filter(r => r.outcomeValues).length;
@@ -168,7 +177,28 @@ function App() {
   // ── edit a parameter / outcome — ALL fields are editable. (A parameter's
   //    TYPE is the one thing locked once created; the drawer enforces that.) ──
   const saveParamEdit = (edited) => { updateExp(current.id, e => stampParams({ ...e, parameters: e.parameters.map(p => p.id === edited.id ? edited : p) })); setDrawer(null); };
-  const saveOutcomeEdit = (edited) => { updateExp(current.id, e => ({ ...e, outcomes: e.outcomes.map(o => o.id === edited.id ? edited : o) })); setDrawer(null); };
+  // The outcome drawer never edits weight (weighting lives in its own Priorities
+  // section), so an edit must carry the existing weight through untouched.
+  const saveOutcomeEdit = (edited) => { updateExp(current.id, e => ({ ...e, outcomes: e.outcomes.map(o => o.id === edited.id ? { ...edited, weight: o.weight } : o) })); setDrawer(null); };
+
+  // Set an outcome's weight (0–100). Saved to the outcome itself — it tunes the
+  // NEXT run's score. Past runs are untouched: each run kept its own snapshot of
+  // the weights as they were when it was recorded.
+  const setOutcomeWeight = (outcomeId, weight) => {
+    const w = Math.max(0, Math.min(100, Math.round(weight)));
+    updateExp(current.id, e => ({ ...e, outcomes: e.outcomes.map(o => o.id === outcomeId ? { ...o, weight: w } : o) }));
+  };
+
+  // Rescale every outcome's weight so the priorities add up to exactly 100%,
+  // keeping their relative proportions. Used by the "Normalize to 100%" button
+  // and run automatically when an experiment is launched.
+  const normalizeWeights = () => {
+    updateExp(current.id, e => {
+      const outs = e.outcomes || [];
+      const nw = normalizeWeightList(outs.map(o => (o.weight != null ? o.weight : 0)));
+      return { ...e, outcomes: outs.map((o, i) => ({ ...o, weight: nw[i] })) };
+    });
+  };
 
   // ── delete a parameter / outcome — past runs keep their own snapshot, so
   //    nothing in history is lost. Incompatible runs simply stop tuning future runs. ──
@@ -187,6 +217,7 @@ function App() {
   const closeDelItem = () => setDrawer({ kind: drawer.target === 'parameter' ? 'editParam' : 'editOutput', id: drawer.id });
 
   const runExperiment = () => {
+    normalizeWeights(); // outcome weights always sum to 100% for the run, proportions intact
     const map = {};
     current.parameters.forEach(p => { map[p.id] = suggestValue(p); });
     setSuggestion(map);
@@ -220,7 +251,18 @@ function App() {
       else { value = v != null ? fmt(Number(v), 3) : '—'; unit = p.unit; }
       return { icon: PARAM_TYPES[p.type].icon, name: p.name, value: value == null || value === '' ? '—' : String(value), unit };
     });
-    const outs = outcomes.map(o => ({ name: o.name, value: ov[o.id], min: o.min != null ? o.min : 0, max: o.max != null ? o.max : 10 }));
+    // color-coded rating breakdown rows (weight-aware contribution), so the
+    // share card mirrors the in-app Rating breakdown exactly.
+    const { rows: ratRows } = ratingRows(current, run);
+    const outs = ratRows.map(r => ({
+      name: r.o.name,
+      value: r.v != null ? fmt(Number(r.v), 3) : '—',
+      min: r.o.min != null ? r.o.min : 0,
+      max: r.o.max != null ? r.o.max : 10,
+      weight: r.weight,
+      norm: r.norm,
+      points: r.points,
+    }));
     const ranked = [...chrono].sort((a, b) => runScore(current, b) - runScore(current, a));
     const rank = ranked.findIndex(r => r.id === run.id) + 1;
     const data = {
@@ -313,6 +355,8 @@ function App() {
       onOpenBest={() => { const id = bestRunId(current); if (id) openRunDetail(id, 'details'); }}
       onEditParam={(id) => setDrawer({ kind: 'editParam', id })}
       onEditOutput={(id) => setDrawer({ kind: 'editOutput', id })}
+      onSetWeight={setOutcomeWeight}
+      onNormalize={normalizeWeights}
       onRun={runExperiment} />;
   } else if (route.name === 'history' && current) {
     screen = <RunHistoryScreen exp={current} onBack={() => setRoute({ name: 'details', expId: current.id })}

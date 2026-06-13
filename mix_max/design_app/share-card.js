@@ -29,6 +29,28 @@
   const STAR   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/></svg>';
   const FOOTMARK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L5.5 17.5A2.5 2.5 0 0 0 7.7 21h8.6a2.5 2.5 0 0 0 2.2-3.5L14 9V3"/><path d="M7.7 14h8.6"/></svg>';
 
+  // weight-aware contribution palette — matches the in-app Rating breakdown
+  const WEIGHT_COLORS = ['#7E719A', '#B5872B', '#6E8A63', '#B0715B', '#5E8A86', '#9A6A8C', '#8A7A3E'];
+
+  // each outcome's contribution to the rating (weight × normalized score × 10).
+  // Uses values supplied by the app; falls back to computing them for static demos.
+  function ratingRows(outs) {
+    const hasPoints = outs.length && outs[0].points != null;
+    if (hasPoints) {
+      return outs.map(o => ({
+        o,
+        weight: o.weight != null ? o.weight : 1 / outs.length,
+        points: o.points,
+      }));
+    }
+    const rawW = outs.map(o => (o.weight != null ? o.weight : 1));
+    const sum = rawW.reduce((a, b) => a + b, 0) || 1;
+    return outs.map((o, i) => {
+      const w = rawW[i] / sum;
+      return { o, weight: w, points: w * norm(o) * 10 };
+    });
+  }
+
   function renderShareCard(mount, run) {
     const isBest = run.isBest !== false;
     const mix = Array.isArray(run.mix) ? run.mix : [];
@@ -60,11 +82,21 @@
       ? `<div class="mixlist">${listRows}</div>`
       : `<div class="mixgrid">${chips}</div>`;
 
-    const outRows = outs.map(o => `
+    const ratRows = ratingRows(outs);
+    const compSegs = ratRows.map((r, i) => {
+      const w = Math.min(r.points * 10, 100);
+      return `<div class="seg" style="width:${w}%;background:${WEIGHT_COLORS[i % WEIGHT_COLORS.length]}">${w >= 11 ? `<span>${r.points.toFixed(1)}</span>` : ''}</div>`;
+    }).join('');
+
+    const outRows = ratRows.map((r, i) => `
       <div class="orow">
-        <div class="oname">${esc(o.name)}</div>
-        <div class="otrack"><i style="width:${(norm(o) * 100).toFixed(0)}%"></i></div>
-        <div class="oval"><b>${esc(o.value)}</b><s> / ${esc(o.max == null ? 10 : o.max)}</s></div>
+        <span class="odot" style="background:${WEIGHT_COLORS[i % WEIGHT_COLORS.length]}"></span>
+        <div class="oinfo">
+          <div class="oname">${esc(r.o.name)}</div>
+          <div class="oweight">${Math.round(r.weight * 100)}% weight</div>
+        </div>
+        <div class="ochip">${esc(r.o.value)}<s> / ${esc(r.o.max == null ? 10 : r.o.max)}</s></div>
+        <div class="opts">+${r.points.toFixed(1)}</div>
       </div>`).join('');
 
     mount.classList.add('mmcard');
@@ -94,7 +126,8 @@
 
       <div class="pad" style="margin-top:24px">
         <div class="section"><span class="lbl">How it scored</span><span class="cnt">${outs.length}</span></div>
-        <div class="sub">How each outcome was rated.</div>
+        <div class="sub">Each outcome's score, by weight, adds up to the rating.</div>
+        <div class="compbar">${compSegs}</div>
         <div class="orows">${outRows}</div>
       </div>
 

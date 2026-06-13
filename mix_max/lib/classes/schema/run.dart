@@ -85,7 +85,11 @@ class SchemaRun {
   /// Each outcome is normalised to [0, 1] using its declared `min`/`max` bounds
   /// and then flipped when its goal is to minimise. Outcomes without usable
   /// bounds fall back to their raw value. The contributing outcomes are then
-  /// averaged. Returns 0.0 when none have a recorded value.
+  /// combined as a weighted average using each outcome's [SchemaOutcome.weight]
+  /// (the Priorities section's 0–100 budget). When every measured outcome is
+  /// unweighted — all weights null or zero — they fall back to an equal average,
+  /// so a run still scores sensibly before any priorities are set. Returns 0.0
+  /// when none have a recorded value.
   ///
   /// This recomputes live from the run's values; the persisted [finalRating]
   /// field is a frozen copy of this result, written when the run is recorded or
@@ -95,8 +99,15 @@ class SchemaRun {
     final values = outcomeValues;
     if (values == null) return 0.0;
 
+    // If every measured outcome has a zero/absent weight, weight them equally so
+    // the rating doesn't collapse to 0 before any priorities have been set.
+    final weightSum = ranked
+        .where((o) => values[o.id] != null)
+        .fold<double>(0.0, (a, o) => a + (o.weight ?? 0.0));
+    final useEqualWeights = weightSum <= 0;
+
     double total = 0.0;
-    int count = 0;
+    double denom = 0.0;
 
     for (final outcome in ranked) {
       final value = values[outcome.id];
@@ -118,11 +129,12 @@ class SchemaRun {
         normalised = 1.0 - normalised;
       }
 
-      total += normalised;
-      count++;
+      final weight = useEqualWeights ? 1.0 : (outcome.weight ?? 0.0);
+      total += normalised * weight;
+      denom += weight;
     }
 
-    return count > 0 ? total / count : 0.0;
+    return denom > 0 ? total / denom : 0.0;
   }
 
   factory SchemaRun.fromJson(Map<String, dynamic> json) => _$SchemaRunFromJson(json);

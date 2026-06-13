@@ -1,8 +1,8 @@
 
 --- After testing ---
-- weighted outcomes (in outcome details) show graph
 
-- timer built in for duration type  parameters in suggested run
+- weighted outcomes and new bar chart in share card and run details
+
 
 --- Publishing ---
 - Test sign in works to transfer anonyomous account data to signed in user
