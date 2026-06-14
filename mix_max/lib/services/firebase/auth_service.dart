@@ -21,7 +21,10 @@ class AuthService extends ChangeNotifier {
 
   bool isLoading = true;
 
-  String? oldUserSecret;
+  /// The anonymous account's Firebase ID token, captured (while still signed in
+  /// as that account) right before a federated sign-in. The backend verifies it
+  /// to prove ownership of the old account before migrating its data across.
+  String? oldUserIdToken;
   SchemaUser? _lastNotNullUser; // to be used only for user change tracking in this file
 
   SchemaUser user = SchemaUser.initial();
@@ -91,15 +94,30 @@ class AuthService extends ChangeNotifier {
       SchemaUser? currentUser = userDocSnap.data();
 
       if (currentUser != null) {
-        if (_lastNotNullUser != null && _lastNotNullUser!.id != currentUser.id) {
+        final previousUserId = _lastNotNullUser?.id;
+        // Only ask the backend to migrate data when we're switching users AND we
+        // hold an ID token for the old account. The token is captured (while
+        // still signed in as that account) right before a federated sign-in, so
+        // its presence is what marks a genuine anonymous -> signed-in transfer.
+        // Without it the call would just be rejected — e.g. a guest -> guest
+        // switch after signing out, which carries no data to migrate.
+        if (previousUserId != null &&
+            previousUserId.isNotEmpty &&
+            previousUserId != currentUser.id &&
+            oldUserIdToken != null &&
+            oldUserIdToken!.isNotEmpty) {
+          final oldToken = oldUserIdToken!;
           runCloudFunction(
             functionName: "onAppUserChanged",
-            input: {"oldUserID": _lastNotNullUser!.id, "oldUserSecret": oldUserSecret},
+            input: {"oldUserID": previousUserId, "oldUserIdToken": oldToken},
             onError: (e, jsonResponse) {
               print("Unable to processes app user change: $e");
             },
             onSuccess: (jsonResponse) {
               print("Successfully processed app user change!");
+              // The token was single-use for this transfer; drop it so a later
+              // unrelated user switch can't replay it.
+              oldUserIdToken = null;
             },
           );
         }
@@ -162,17 +180,16 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> getUserSecret() async {
-    await runCloudFunction(
-      functionName: "getUserSecret",
-      input: {},
-      onError: (e, jsonResponse) {
-        print("Unable to get user secret: $e");
-      },
-      onSuccess: (jsonResponse) {
-        oldUserSecret = jsonResponse?["token"] as String?;
-      },
-    );
+  /// Captures the *current* (anonymous) account's Firebase ID token so the
+  /// backend can verify ownership of it after we've signed into the federated
+  /// account. Must be called while still signed in as the account to migrate.
+  Future<void> captureOldUserIdToken() async {
+    try {
+      oldUserIdToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+    } catch (e) {
+      print("Unable to capture old user ID token: $e");
+      oldUserIdToken = null;
+    }
   }
 
   //Custom handle to check if user can use federated sign in (if null then allowed)
@@ -188,10 +205,10 @@ class AuthService extends ChangeNotifier {
         return result;
       }
 
-      // The secret is only needed to transfer data off an existing (anonymous)
-      // user — and the cloud call would be rejected while signed out anyway.
-      if (hasAccount) {
-        await getUserSecret();
+      // The token is only needed to transfer data off a guest (anonymous)
+      // account — capture it while still signed in as that account.
+      if (isGuest) {
+        await captureOldUserIdToken();
       }
 
       // Trigger the authentication flow
@@ -232,8 +249,8 @@ class AuthService extends ChangeNotifier {
         return result;
       }
 
-      if (hasAccount) {
-        await getUserSecret();
+      if (isGuest) {
+        await captureOldUserIdToken();
       }
 
       waitForSignInComplete(timeout: Duration(seconds: 10));
@@ -449,7 +466,7 @@ class AuthService extends ChangeNotifier {
     firebaseUser = null;
     lastProvider = null;
     _lastNotNullUser = null;
-    oldUserSecret = null;
+    oldUserIdToken = null;
     notifyListeners();
     return SignInResult(success: true, message: "", userCredential: null);
   }
@@ -481,11 +498,26 @@ class AuthService extends ChangeNotifier {
     return userCredential;
   }
 
+  /// Signs the user out completely and returns to the pre-choice state — *no*
+  /// anonymous (guest) account is created in their place. The next time they
+  /// want to use a gated feature they must choose again in the account drawer
+  /// (Google / Apple / continue as guest), exactly like a brand-new user.
   Future<void> signOut() async {
-    await FirebaseAuth.instance.signOut();
-    await GoogleSignIn().signOut();
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      print(e);
+    }
+    try {
+      await GoogleSignIn().signOut();
+    } catch (e) {
+      print(e);
+    }
     await unsubscribeFromUserStream();
-    await signInAnonymous();
+    firebaseUser = null;
+    lastProvider = null;
+    _lastNotNullUser = null;
+    oldUserIdToken = null;
     notifyListeners();
   }
 

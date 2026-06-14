@@ -274,7 +274,14 @@ class _RecordingViewState extends State<_RecordingView> {
     if (range <= 0) return _sliderMin;
     final increments = ((v - _sliderMin) / _increment).round();
     final snapped = _sliderMin + increments * _increment;
-    return snapped.clamp(_sliderMin, _sliderMax);
+    // `min + n * step` accumulates float error (e.g. 2.4000000000000004), which
+    // would be stored verbatim and shown raw by the display sites. Round to the
+    // precision the step/min imply so the snapped value lands exactly on a step.
+    final dp = MixMaxFormat.decimalsOf(_increment) > MixMaxFormat.decimalsOf(_sliderMin)
+        ? MixMaxFormat.decimalsOf(_increment)
+        : MixMaxFormat.decimalsOf(_sliderMin);
+    final clean = double.parse(snapped.toStringAsFixed(dp));
+    return clean.clamp(_sliderMin, _sliderMax).toDouble();
   }
 
   @override

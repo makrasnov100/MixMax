@@ -341,7 +341,7 @@ class _OutcomeValueChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text.rich(
             TextSpan(
-              text: MixMaxFormat.number(value),
+              text: MixMaxFormat.number(value, step: outcome.step),
               style: TextStyle(
                 fontFamily: AppFonts.sans,
                 fontWeight: FontWeight.w700,

@@ -15,12 +15,14 @@ import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/services/ui/size_config.dart';
 import 'package:mix_max/widgets/pages/onboarding/onboarding_overlay.dart';
 
-AppNavigatorObserver<PageRoute> navigatorObserver = AppNavigatorObserver<PageRoute>();
+AppNavigatorObserver<PageRoute> navigatorObserver =
+    AppNavigatorObserver<PageRoute>();
 
 void main() async {
   runZonedGuarded<Future<void>>(
     () async {
-      final WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+      final WidgetsBinding widgetsBinding =
+          WidgetsFlutterBinding.ensureInitialized();
       // Hold the native splash on screen until Firebase + late singletons are
       // ready, instead of letting it auto-dismiss on the first frame.
       FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -53,7 +55,8 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-  static FirebaseAnalyticsObserver analyticsObserver = FirebaseAnalyticsObserver(analytics: analytics);
+  static FirebaseAnalyticsObserver analyticsObserver =
+      FirebaseAnalyticsObserver(analytics: analytics);
 
   const MyApp({super.key});
 
@@ -97,7 +100,9 @@ class MyApp extends StatelessWidget {
       navigatorKey: Navigation.navigatorKey,
       navigatorObservers: [navigatorObserver, analyticsObserver],
       // Float the first-launch onboarding tour above every route.
-      builder: (context, child) => OnboardingHost(child: child ?? const SizedBox.shrink()),
+      builder:
+          (context, child) =>
+              OnboardingHost(child: child ?? const SizedBox.shrink()),
     );
   }
 }

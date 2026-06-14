@@ -3,7 +3,6 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { getUser } = require("../../utils/users/getUser");
 const { transferAnonymousUserData } = require("./function/transferAnonymousUserData");
-const { checkUserSecret } = require("./function/checkUserSecret");
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -17,13 +16,25 @@ exports.onAppUserChanged = functions.https.onCall(async (data, context) => {
     }
 
     //Check arguments
-    const { oldUserID, oldUserSecret } = data || {};
-    if (!oldUserID || !oldUserSecret) {
+    const { oldUserID, oldUserIdToken } = data || {};
+    if (!oldUserID) {
       throw Error("No oldUserID present in the request!");
     }
+    if (!oldUserIdToken) {
+      throw Error("No oldUserIdToken present in the request!");
+    }
 
-    if (!checkUserSecret({ userID: oldUserID, userSecret: oldUserSecret })) {
-      throw Error("Invalid old user secret!");
+    //Prove the caller actually controlled the old (anonymous) account: the ID
+    //token was minted for it while still signed in, so only its owner could
+    //hand it over. This replaces the old pre-shared UserTokens secret.
+    let oldUserToken;
+    try {
+      oldUserToken = await admin.auth().verifyIdToken(oldUserIdToken);
+    } catch (e) {
+      throw Error("Invalid old user token!");
+    }
+    if (oldUserToken.uid !== oldUserID) {
+      throw Error("Old user token does not match oldUserID!");
     }
 
     //Check users to be different

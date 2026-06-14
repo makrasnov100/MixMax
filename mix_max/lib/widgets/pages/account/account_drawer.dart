@@ -9,7 +9,6 @@ import 'package:mix_max/services/ui/link_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/drawer_container.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
-import 'package:mix_max/widgets/design/atoms/progress_overlay.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -63,10 +62,14 @@ class AccountDrawer extends StatefulWidget {
 class _AccountDrawerState extends State<AccountDrawer> {
   late final AuthService _authService;
 
-  /// True while a sign-in / sign-out is in flight. The full-screen
-  /// [MixMaxProgressOverlay] already blocks every tap; this is a re-entry
-  /// guard for the gap before the overlay mounts.
+  /// True while a sign-in / sign-out is in flight. The drawer swaps its body
+  /// for an in-place spinner ([_loadingBody]) and a [PopScope] keeps it open
+  /// until the operation settles, so the loading state lives in the drawer
+  /// rather than as a separate full-screen overlay.
   bool _busy = false;
+
+  /// What the in-drawer spinner says while [_busy] (e.g. 'Signing in…').
+  String? _busyMessage;
 
   /// Inline failure message under the actions (a snackbar would hide behind
   /// the modal sheet).
@@ -81,25 +84,23 @@ class _AccountDrawerState extends State<AccountDrawer> {
   Future<void> _signIn(AuthButtonProvider provider) async {
     setState(() {
       _busy = true;
+      _busyMessage = 'Signing in…';
       _error = null;
     });
 
-    final result = await MixMaxProgressOverlay.during(
-      context: context,
-      message: 'Signing in…',
-      operation: () => provider == AuthButtonProvider.google
-          ? _authService.signInWithGoogle()
-          : _authService.signInWithApple(),
-    );
+    final result = await (provider == AuthButtonProvider.google
+        ? _authService.signInWithGoogle()
+        : _authService.signInWithApple());
     if (!mounted) return;
 
     if (result.success) {
       Navigator.of(context).pop(AccountDrawerResult.chose);
       return;
     }
-    // Failure: the overlay is gone — offer the sign-in options again.
+    // Failure: drop the spinner and offer the sign-in options again.
     setState(() {
       _busy = false;
+      _busyMessage = null;
       // A null auth token means the user dismissed the platform sheet — that's
       // a cancel, not an error worth surfacing.
       _error = result.message.contains('Auth token is null') ? null : result.message;
@@ -109,14 +110,11 @@ class _AccountDrawerState extends State<AccountDrawer> {
   Future<void> _continueAsGuest() async {
     setState(() {
       _busy = true;
+      _busyMessage = 'Setting up your account…';
       _error = null;
     });
 
-    final success = await MixMaxProgressOverlay.during(
-      context: context,
-      message: 'Setting up your account…',
-      operation: _authService.signInAsGuest,
-    );
+    final success = await _authService.signInAsGuest();
     if (!mounted) return;
 
     if (success) {
@@ -125,17 +123,17 @@ class _AccountDrawerState extends State<AccountDrawer> {
     }
     setState(() {
       _busy = false;
+      _busyMessage = null;
       _error = 'Could not continue as guest. Please try again.';
     });
   }
 
   Future<void> _signOut() async {
-    setState(() => _busy = true);
-    await MixMaxProgressOverlay.during(
-      context: context,
-      message: 'Signing out…',
-      operation: _authService.signOut,
-    );
+    setState(() {
+      _busy = true;
+      _busyMessage = 'Signing out…';
+    });
+    await _authService.signOut();
     if (!mounted) return;
     Navigator.of(context).pop(AccountDrawerResult.signedOut);
   }
@@ -144,16 +142,49 @@ class _AccountDrawerState extends State<AccountDrawer> {
   Widget build(BuildContext context) {
     final signedIn = _authService.isSignedIn();
 
-    return MixMaxDrawerContainer(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _header(signedIn: signedIn, guest: _authService.isGuest),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 26),
-              child: signedIn ? _signedInBody() : _signedOutBody(),
+    return PopScope(
+      // Block dismissal (back gesture / barrier tap) while an auth call is in
+      // flight, so the in-drawer spinner can't be swiped away mid-operation.
+      canPop: !_busy,
+      child: MixMaxDrawerContainer(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _header(signedIn: signedIn, guest: _authService.isGuest),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 26),
+                child: _busy
+                    ? _loadingBody()
+                    : (signedIn ? _signedInBody() : _signedOutBody()),
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── In-flight: a centered spinner + message that lives inside the drawer
+  //    surface, replacing the action buttons (no full-screen overlay). ──
+  Widget _loadingBody() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 26),
+      child: Column(
+        children: [
+          const SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.6,
+              valueColor: AlwaysStoppedAnimation(AppColors.gold),
+            ),
+          ),
+          const SizedBox(height: 16),
+          CaptionText(
+            text: _busyMessage ?? 'Working…',
+            fontSize: 14,
+            textAlign: TextAlign.center,
           ),
         ],
       ),

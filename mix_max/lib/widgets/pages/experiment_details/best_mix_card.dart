@@ -86,7 +86,7 @@ class BestMixCard extends StatelessWidget {
     final parts = outcomes
         .take(3)
         .where((o) => values[o.id] != null)
-        .map((o) => '${o.name} ${MixMaxFormat.number(values[o.id])}')
+        .map((o) => '${o.name} ${MixMaxFormat.number(values[o.id], step: o.step)}')
         .toList();
 
     return parts.isEmpty ? null : parts.join('  ·  ');

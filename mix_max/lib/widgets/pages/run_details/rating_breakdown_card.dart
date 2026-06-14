@@ -75,12 +75,12 @@ class RatingBreakdownCard extends StatelessWidget {
     // Mirror computeFinalRating: weight only the measured outcomes, falling back
     // to an equal split when their weights are all zero/absent.
     final measured = outcomes.where((o) => values[o.id] != null).toList();
-    final weightSum =
-        measured.fold<double>(0.0, (a, o) => a + (o.weight ?? 0.0));
+    final weightSum = measured.fold<double>(
+      0.0,
+      (a, o) => a + (o.weight ?? 0.0),
+    );
     final useEqualWeights = weightSum <= 0;
-    final denom = useEqualWeights
-        ? measured.length.toDouble()
-        : weightSum;
+    final denom = useEqualWeights ? measured.length.toDouble() : weightSum;
 
     return outcomes.map((o) {
       final v = values[o.id];
@@ -112,7 +112,8 @@ class RatingBreakdownCard extends StatelessWidget {
     // Use finalRating directly for the headline total so it is exactly the
     // number shown by the hero card and run-history list, scored against the
     // run's own outcome snapshot.
-    final rating = (run.outcomes != null
+    final rating =
+        (run.outcomes != null
             ? run.computeFinalRating()
             : run.computeFinalRating(experiment.outcomes ?? const [])) *
         10;
@@ -168,32 +169,6 @@ class _CompositionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Each segment's flex is its share of a 100-wide track (×100 for rounding
-    // headroom); the trailing spacer holds the gap up to a perfect rating.
-    final segments = <Widget>[];
-    var used = 0;
-    for (var i = 0; i < rows.length; i++) {
-      final w = (rows[i].points * 10).clamp(0.0, 100.0);
-      final flex = (w * 100).round();
-      if (flex <= 0) continue;
-      used += flex;
-      segments.add(
-        Expanded(
-          flex: flex,
-          child: _BarSegment(
-            color: weightColorAt(i),
-            label: w >= 11
-                ? MixMaxFormat.number(rows[i].points, decimals: 1)
-                : null,
-          ),
-        ),
-      );
-    }
-    final remaining = 10000 - used;
-    if (remaining > 0) {
-      segments.add(Expanded(flex: remaining, child: const SizedBox()));
-    }
-
     return Container(
       height: 24,
       decoration: BoxDecoration(
@@ -202,10 +177,49 @@ class _CompositionBar extends StatelessWidget {
         border: Border.all(color: AppColors.hairline, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Row(children: segments),
+      // Measure the track so segments get real pixel widths: any nonzero
+      // contribution renders at least [_kMinSegmentPx] wide, so even a sliver
+      // is visible. The unfilled remainder reads as the warm track background.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final track = constraints.maxWidth;
+          final segments = <Widget>[];
+          for (var i = 0; i < rows.length; i++) {
+            if (rows[i].points <= 0) continue; // adds nothing — no segment.
+            final ideal = (rows[i].points / 10).clamp(0.0, 1.0) * track;
+            final width = ideal < _kMinSegmentPx ? _kMinSegmentPx : ideal;
+            segments.add(
+              SizedBox(
+                width: width,
+                child: _BarSegment(
+                  color: weightColorAt(i),
+                  // Only label a segment wide enough to actually read it.
+                  label:
+                      ideal >= _kLabelMinPx
+                          ? MixMaxFormat.number(rows[i].points, decimals: 1)
+                          : null,
+                ),
+              ),
+            );
+          }
+          // Stretch so each segment fills the track height — a label-less
+          // sliver's ColoredBox would otherwise collapse to zero height.
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: segments,
+          );
+        },
+      ),
     );
   }
 }
+
+/// Minimum rendered width (px) for any segment carrying a real contribution, so
+/// a tiny share still shows as a visible colored sliver. Tweak to taste.
+const double _kMinSegmentPx = 1;
+
+/// A segment must be at least this wide (px) before its points number is drawn.
+const double _kLabelMinPx = 26;
 
 /// One stacked-bar segment: a solid [color] block, captioned with its points
 /// [label] in white when it is wide enough to read.
@@ -218,24 +232,25 @@ class _BarSegment extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: color,
-      child: label == null
-          ? null
-          : Center(
-              child: Text(
-                label!,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                softWrap: false,
-                style: const TextStyle(
-                  fontFamily: AppFonts.sans,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                  height: 1,
-                  letterSpacing: 11 * -0.01,
-                  color: Colors.white,
+      child:
+          label == null
+              ? null
+              : Center(
+                child: Text(
+                  label!,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  softWrap: false,
+                  style: const TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    height: 1,
+                    letterSpacing: 11 * -0.01,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
     );
   }
 }
@@ -260,10 +275,7 @@ class _OutcomeRow extends StatelessWidget {
           Container(
             width: 9,
             height: 9,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -309,7 +321,12 @@ class _OutcomeRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _ValuePill(value: row.value, unit: o.unit),
+          _ValuePill(
+            value: row.value,
+            max: o.max ?? 10,
+            unit: o.unit,
+            step: o.step,
+          ),
           const SizedBox(width: 12),
           SizedBox(
             width: 44,
@@ -331,12 +348,21 @@ class _OutcomeRow extends StatelessWidget {
   }
 }
 
-/// The recorded value as a soft violet pill, with the outcome's unit trailing.
+/// The recorded value as a soft violet pill, shown as `value / max` so the
+/// total possible is visible alongside what was scored (mirrors the share
+/// card's value pill), with the outcome's unit trailing.
 class _ValuePill extends StatelessWidget {
   final double? value;
+  final double max;
   final String? unit;
+  final double? step;
 
-  const _ValuePill({required this.value, required this.unit});
+  const _ValuePill({
+    required this.value,
+    required this.max,
+    required this.unit,
+    this.step,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +374,7 @@ class _ValuePill extends StatelessWidget {
       ),
       child: Text.rich(
         TextSpan(
-          text: MixMaxFormat.number(value),
+          text: value == null ? '—' : MixMaxFormat.number(value, step: step),
           style: const TextStyle(
             fontFamily: AppFonts.sans,
             fontWeight: FontWeight.w700,
@@ -357,12 +383,21 @@ class _ValuePill extends StatelessWidget {
             color: AppColors.violetText,
           ),
           children: [
+            TextSpan(
+              text: ' / ${MixMaxFormat.number(max)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 11,
+                color: AppColors.inkFaint,
+              ),
+            ),
             if (unit?.isNotEmpty == true)
               TextSpan(
                 text: ' $unit',
                 style: const TextStyle(
                   fontWeight: FontWeight.w500,
                   fontSize: 11,
+                  color: AppColors.violetText,
                 ),
               ),
           ],

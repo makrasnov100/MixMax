@@ -33,6 +33,9 @@ class ShareOutcomeEntry {
   final double? value;
   final double max;
 
+  /// The outcome's rating step, used to render [value] at its own precision.
+  final double? step;
+
   /// Share of the rating this outcome carries, in [0, 1].
   final double weight;
 
@@ -43,6 +46,7 @@ class ShareOutcomeEntry {
     required this.name,
     required this.value,
     required this.max,
+    this.step,
     required this.weight,
     required this.points,
   });
@@ -108,9 +112,7 @@ class ShareCard extends StatelessWidget {
           break;
         case ParameterType.order:
           value =
-              raw is List
-                  ? raw.map((e) => e.toString()).join('  →  ')
-                  : '—';
+              raw is List ? raw.map((e) => e.toString()).join('  →  ') : '—';
           break;
         case ParameterType.duration:
           // The unit is folded into the `1h 30m` value, so none is shown apart.
@@ -122,9 +124,10 @@ class ShareCard extends StatelessWidget {
           break;
         case ParameterType.number:
         case null:
-          value = raw is num
-              ? MixMaxFormat.number(raw.toDouble(), decimals: 3)
-              : '—';
+          value =
+              raw is num
+                  ? MixMaxFormat.number(raw.toDouble(), decimals: 3)
+                  : '—';
           unit = p.unit?.isNotEmpty == true ? p.unit : null;
           break;
       }
@@ -149,11 +152,12 @@ class ShareCard extends StatelessWidget {
     Map<String, double> values,
   ) {
     final measured = outcomes.where((o) => values[o.id] != null).toList();
-    final weightSum =
-        measured.fold<double>(0.0, (a, o) => a + (o.weight ?? 0.0));
+    final weightSum = measured.fold<double>(
+      0.0,
+      (a, o) => a + (o.weight ?? 0.0),
+    );
     final useEqualWeights = weightSum <= 0;
-    final denom =
-        useEqualWeights ? measured.length.toDouble() : weightSum;
+    final denom = useEqualWeights ? measured.length.toDouble() : weightSum;
 
     return outcomes.map((o) {
       final v = values[o.id];
@@ -173,6 +177,7 @@ class ShareCard extends StatelessWidget {
         name: o.name?.isNotEmpty == true ? o.name! : 'Outcome',
         value: v,
         max: o.max ?? 10,
+        step: o.step,
         weight: weight,
         points: weight * norm * 10,
       );
@@ -192,7 +197,11 @@ class ShareCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: AppColors.hairline, width: 1),
           boxShadow: const [
-            BoxShadow(color: Color(0x0D221F2A), offset: Offset(0, 1), blurRadius: 2),
+            BoxShadow(
+              color: Color(0x0D221F2A),
+              offset: Offset(0, 1),
+              blurRadius: 2,
+            ),
             BoxShadow(
               color: Color(0x66221F2A),
               offset: Offset(0, 40),
@@ -253,13 +262,18 @@ class ShareCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _sectionLabel('The mix', mix.length),
+                        _sectionLabel("How it's done", mix.length),
                         const SizedBox(height: 3),
-                        _sub(isBest
-                            ? 'The exact values that won.'
-                            : 'The full mix, exactly as set.'),
+                        _sub(
+                          isBest
+                              ? 'The exact values that won.'
+                              : 'Every input that went into this run.',
+                        ),
                         const SizedBox(height: 14),
-                        if (listMode) _MixList(mix: mix) else _MixGrid(mix: mix),
+                        if (listMode)
+                          _MixList(mix: mix)
+                        else
+                          _MixGrid(mix: mix),
                       ],
                     ),
                   ),
@@ -271,7 +285,9 @@ class ShareCard extends StatelessWidget {
                       children: [
                         _sectionLabel('How it scored', outcomes.length),
                         const SizedBox(height: 3),
-                        _sub("Each outcome's score, by weight, adds up to the rating."),
+                        _sub(
+                          "Each outcome's score, by weight, adds up to the rating.",
+                        ),
                         const SizedBox(height: 15),
                         _CompositionBar(outcomes: outcomes),
                         const SizedBox(height: 8),
@@ -310,13 +326,23 @@ class ShareCard extends StatelessWidget {
   Widget _ratingPanel() {
     return Container(
       margin: const EdgeInsets.fromLTRB(30, 22, 30, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      // Optical padding: the serif's baseline sits high in its em box, leaving
+      // empty descender space below the digits. A symmetric pad would float the
+      // whole number+label block upward, so we shift ~7px of the vertical pad
+      // from the bottom to the top (total unchanged, so panel height is the
+      // same) to optically centre the block.
+      padding: const EdgeInsets.fromLTRB(24, 23, 24, 9),
       decoration: BoxDecoration(
         color: AppColors.goldTint,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        // Align the number's and label's text baselines so "OVERALL RATING"
+        // sits flush on the foot of the digits. Baseline alignment uses the
+        // fonts' own metrics (no paint nudges / magic offsets), so it stays
+        // correct across font, size and the number's tightened line height.
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
           Text.rich(
             TextSpan(
@@ -326,6 +352,7 @@ class ShareCard extends StatelessWidget {
                 fontWeight: FontWeight.w500,
                 fontSize: 62,
                 height: 0.86,
+                leadingDistribution: TextLeadingDistribution.even,
                 letterSpacing: 62 * -0.02,
                 color: AppColors.goldDeep,
               ),
@@ -409,11 +436,7 @@ class ShareCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                MixMaxIcon(
-                  MixMaxGlyph.flask,
-                  size: 16,
-                  color: AppColors.gold,
-                ),
+                MixMaxIcon(MixMaxGlyph.flask, size: 16, color: AppColors.gold),
                 SizedBox(width: 9),
                 Flexible(
                   child: Text(
@@ -435,10 +458,7 @@ class ShareCard extends StatelessWidget {
           Text.rich(
             TextSpan(
               children: [
-                TextSpan(
-                  text: 'Mix',
-                  style: TextStyle(color: AppColors.gold),
-                ),
+                TextSpan(text: 'Mix', style: TextStyle(color: AppColors.gold)),
                 TextSpan(text: ' Max'),
               ],
               style: TextStyle(
@@ -535,21 +555,27 @@ class _MixGrid extends StatelessWidget {
     for (var i = 0; i < mix.length; i += 2) {
       final left = _MixChip(entry: mix[i]);
       final hasRight = i + 1 < mix.length;
-      rows.add(IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: left),
-            const SizedBox(width: 8),
-            Expanded(
-              child: hasRight ? _MixChip(entry: mix[i + 1]) : const SizedBox(),
-            ),
-          ],
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: left),
+              const SizedBox(width: 8),
+              Expanded(
+                child:
+                    hasRight ? _MixChip(entry: mix[i + 1]) : const SizedBox(),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
       if (i + 2 < mix.length) rows.add(const SizedBox(height: 8));
     }
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
+    );
   }
 }
 
@@ -644,18 +670,24 @@ class _MixList extends StatelessWidget {
     final rows = <Widget>[];
     for (var i = 0; i < mix.length; i += 2) {
       final hasRight = i + 1 < mix.length;
-      rows.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _MixListRow(entry: mix[i])),
-          const SizedBox(width: 28),
-          Expanded(
-            child: hasRight ? _MixListRow(entry: mix[i + 1]) : const SizedBox(),
-          ),
-        ],
-      ));
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _MixListRow(entry: mix[i])),
+            const SizedBox(width: 28),
+            Expanded(
+              child:
+                  hasRight ? _MixListRow(entry: mix[i + 1]) : const SizedBox(),
+            ),
+          ],
+        ),
+      );
     }
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
+    );
   }
 }
 
@@ -747,32 +779,6 @@ class _CompositionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Each segment's flex is its share of a 100-wide track (×100 for rounding
-    // headroom); the trailing spacer holds the gap up to a perfect rating.
-    final segments = <Widget>[];
-    var used = 0;
-    for (var i = 0; i < outcomes.length; i++) {
-      final w = (outcomes[i].points * 10).clamp(0.0, 100.0);
-      final flex = (w * 100).round();
-      if (flex <= 0) continue;
-      used += flex;
-      segments.add(
-        Expanded(
-          flex: flex,
-          child: _BarSegment(
-            color: weightColorAt(i),
-            label: w >= 11
-                ? MixMaxFormat.number(outcomes[i].points, decimals: 1)
-                : null,
-          ),
-        ),
-      );
-    }
-    final remaining = 10000 - used;
-    if (remaining > 0) {
-      segments.add(Expanded(flex: remaining, child: const SizedBox()));
-    }
-
     return Container(
       height: 24,
       decoration: BoxDecoration(
@@ -781,10 +787,49 @@ class _CompositionBar extends StatelessWidget {
         border: Border.all(color: AppColors.hairline, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Row(children: segments),
+      // Measure the track so segments get real pixel widths: any nonzero
+      // contribution renders at least [_kMinSegmentPx] wide, so even a sliver
+      // is visible. The unfilled remainder reads as the warm track background.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final track = constraints.maxWidth;
+          final segments = <Widget>[];
+          for (var i = 0; i < outcomes.length; i++) {
+            if (outcomes[i].points <= 0) continue; // adds nothing — no segment.
+            final ideal = (outcomes[i].points / 10).clamp(0.0, 1.0) * track;
+            final width = ideal < _kMinSegmentPx ? _kMinSegmentPx : ideal;
+            segments.add(
+              SizedBox(
+                width: width,
+                child: _BarSegment(
+                  color: weightColorAt(i),
+                  // Only label a segment wide enough to actually read it.
+                  label:
+                      ideal >= _kLabelMinPx
+                          ? MixMaxFormat.number(outcomes[i].points, decimals: 1)
+                          : null,
+                ),
+              ),
+            );
+          }
+          // Stretch so each segment fills the track height — a label-less
+          // sliver's ColoredBox would otherwise collapse to zero height.
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: segments,
+          );
+        },
+      ),
     );
   }
 }
+
+/// Minimum rendered width (px) for any segment carrying a real contribution, so
+/// a tiny share still shows as a visible colored sliver. Tweak to taste.
+const double _kMinSegmentPx = 1;
+
+/// A segment must be at least this wide (px) before its points number is drawn.
+const double _kLabelMinPx = 26;
 
 /// One stacked-bar segment (`.seg`): a solid [color] block, captioned with its
 /// points [label] in white when it is wide enough to read.
@@ -798,24 +843,25 @@ class _BarSegment extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: color,
-      child: label == null
-          ? null
-          : Center(
-              child: Text(
-                label!,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                softWrap: false,
-                style: const TextStyle(
-                  fontFamily: AppFonts.sans,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                  height: 1,
-                  letterSpacing: 11 * -0.01,
-                  color: Colors.white,
+      child:
+          label == null
+              ? null
+              : Center(
+                child: Text(
+                  label!,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  softWrap: false,
+                  style: const TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    height: 1,
+                    letterSpacing: 11 * -0.01,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
     );
   }
 }
@@ -835,13 +881,14 @@ class _OutcomeRows extends StatelessWidget {
         for (var i = 0; i < outcomes.length; i++)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 11),
-            decoration: i == 0
-                ? null
-                : const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: AppColors.hairline, width: 1),
+            decoration:
+                i == 0
+                    ? null
+                    : const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: AppColors.hairline, width: 1),
+                      ),
                     ),
-                  ),
             child: _OutcomeRow(outcome: outcomes[i], color: weightColorAt(i)),
           ),
       ],
@@ -898,7 +945,7 @@ class _OutcomeRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        _ValuePill(value: outcome.value, max: outcome.max),
+        _ValuePill(value: outcome.value, max: outcome.max, step: outcome.step),
         const SizedBox(width: 12),
         SizedBox(
           width: 42,
@@ -923,8 +970,9 @@ class _OutcomeRow extends StatelessWidget {
 class _ValuePill extends StatelessWidget {
   final double? value;
   final double max;
+  final double? step;
 
-  const _ValuePill({required this.value, required this.max});
+  const _ValuePill({required this.value, required this.max, this.step});
 
   @override
   Widget build(BuildContext context) {
@@ -936,7 +984,7 @@ class _ValuePill extends StatelessWidget {
       ),
       child: Text.rich(
         TextSpan(
-          text: value == null ? '—' : MixMaxFormat.number(value),
+          text: value == null ? '—' : MixMaxFormat.number(value, step: step),
           style: const TextStyle(
             fontFamily: AppFonts.sans,
             fontWeight: FontWeight.w700,
