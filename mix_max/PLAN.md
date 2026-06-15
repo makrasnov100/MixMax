@@ -1,20 +1,19 @@
-### Publishing
-
-- Create privacy policy and terms of use on main website, simple site no downnlaod links, add to app general info
-
-- Test on tablet screen (all things work)
-  - cosntrain to vertical orientions
-  - text size and sizign of elements
-
-- Simplify and make more intuitive text on the play store and app store pages, post to the stores
-
+### MVP
 - Start app store page upload existing assets
-- (After creating iOS page) implment sign in with apple on apple
-
-- Generate great ASO title subtitles, tags, description, give ai my notes and
-
-- (When verified) Start play store page
+- implement sign in with apple on apple
+- perform security rule audit
+  - security rules to prevent infinite items in the database for one user (check count in securiy rules) 
 - (if nothng else to be done) Test simple experiment start to finish 1 - 3 parameters, sharing works
+
+### Store Page Started
+- Screenshots generate
+  - generate ios size screenshots for phone and tablet (on mac)
+  - pick best 4-5 
+  - generte marketing type overlays for the the stores 
+  - generate the exact size needed for both stores 
+  - upload to stores to be ready
+- Generate great ASO title subtitles, tags, description, give ai my notes and
+- submit for review
 
 ### Once Published
 
