@@ -1,18 +1,19 @@
 ### MVP
 
-- Start app store page upload existing assets
+- Start app store page upload existing assets and version
+- disable multi tasking support apple so that horizontal orientation only can be supported
 - implement sign in with apple on apple
 - perform security rule audit
-  - security rules to prevent infinite items in the database for one user (check count in securiy rules) 
+  - security rules to prevent infinite items in the database for one user (check count in securiy rules)
 - (if nothng else to be done) Test simple experiment start to finish 1 - 3 parameters, sharing works
 
 ### Store Page Started
 
 - Screenshots generate
   - generate ios size screenshots for phone and tablet (on mac)
-  - pick best 4-5 
-  - generte marketing type overlays for the the stores 
-  - generate the exact size needed for both stores 
+  - pick best 4-5
+  - generte marketing type overlays for the the stores
+  - generate the exact size needed for both stores
   - upload to stores to be ready
 - Generate great ASO title subtitles, tags, description, give ai my notes and
 - submit for review
@@ -22,7 +23,8 @@
 - Update download links on the website
 
 ### Updates
-- Hiding experiments top bar as user navigates up 
+
+- Hiding experiments top bar as user navigates up
 - Search feature for expirements
 - Deal with the migration in process anonymous to signed in user that already has an account (the expirements diapear for a bit)
 - Large rating text is a bit grainy (install more detailed font)
