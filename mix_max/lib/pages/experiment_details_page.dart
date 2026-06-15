@@ -51,10 +51,11 @@ class ExperimentDetailsPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
   /// Spotlight targets for the onboarding tour, attached to the Parameters /
-  /// Outcomes / best-mix sections so the tour can highlight each. Null in
-  /// normal use.
+  /// Outcomes / "Run experiment" / best-mix sections so the tour can highlight
+  /// each. Null in normal use.
   final Key? parametersKey;
   final Key? outcomesKey;
+  final Key? runButtonKey;
   final Key? bestMixKey;
 
   const ExperimentDetailsPage({
@@ -62,6 +63,7 @@ class ExperimentDetailsPage extends StatefulWidget {
     required this.experiment,
     this.parametersKey,
     this.outcomesKey,
+    this.runButtonKey,
     this.bestMixKey,
   });
 
@@ -633,14 +635,17 @@ class _ExperimentDetailsPageState extends State<ExperimentDetailsPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      MixMaxButton(
-                        label: 'Run experiment',
-                        variant: MixMaxButtonVariant.gold,
-                        onPressed: _runExperiment,
-                        trailing: const MixMaxIcon(
-                          MixMaxGlyph.play,
-                          size: 20,
-                          color: Colors.white,
+                      KeyedSubtree(
+                        key: widget.runButtonKey,
+                        child: MixMaxButton(
+                          label: 'Run experiment',
+                          variant: MixMaxButtonVariant.gold,
+                          onPressed: _runExperiment,
+                          trailing: const MixMaxIcon(
+                            MixMaxGlyph.play,
+                            size: 20,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),

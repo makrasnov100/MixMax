@@ -192,6 +192,21 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Backfills the Firestore user doc with the auth profile (email / name /
+  /// photo) after a federated sign-in. Needed because a guest who *links*
+  /// Google/Apple keeps the same uid, so `onUserCreated` never re-fires and the
+  /// doc would otherwise keep the anonymous account's empty email. The user
+  /// stream then pushes the updated doc, so the account card shows the email.
+  Future<void> syncUserProfile() async {
+    await runCloudFunction(
+      functionName: "syncUserProfile",
+      input: {},
+      onError: (e, jsonResponse) {
+        print("Unable to sync user profile: $e");
+      },
+    );
+  }
+
   //Custom handle to check if user can use federated sign in (if null then allowed)
   Future<SignInResult?> checkCanSignIn() async {
     return null;
@@ -234,6 +249,8 @@ class AuthService extends ChangeNotifier {
     );
     if (signInResult.success != true) {
       signOut();
+    } else {
+      await syncUserProfile();
     }
 
     notifyListeners();
@@ -263,6 +280,8 @@ class AuthService extends ChangeNotifier {
 
       if (signInResult.success != true) {
         signOut();
+      } else {
+        await syncUserProfile();
       }
 
       notifyListeners();

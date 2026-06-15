@@ -21,13 +21,14 @@ class OnboardingStep {
   });
 }
 
-/// The five-step script, in order. Indices line up with the controller's step
+/// The six-step script, in order. Indices line up with the controller's step
 /// index and spotlight targets:
 ///   0 → an experiment card on the list
 ///   1 → the Parameters card on details
 ///   2 → the Outcomes card on details
-///   3 → the suggested next run
-///   4 → the "Best mix so far" banner
+///   3 → the "Run experiment" button on details
+///   4 → the suggested next run
+///   5 → the "Best mix so far" banner
 const List<OnboardingStep> onboardingSteps = [
   OnboardingStep(
     eyebrow: 'The idea',
@@ -52,10 +53,18 @@ const List<OnboardingStep> onboardingSteps = [
   ),
   OnboardingStep(
     eyebrow: 'Step 3 · Run',
+    title: 'Start a new run',
+    body:
+        'When your knobs and measures are set, tap "Run experiment" here to '
+        'kick off the next batch. This is how you start every run.',
+  ),
+  OnboardingStep(
+    eyebrow: 'Step 4 · Suggested',
     title: 'Get a smart next batch',
     body:
-        'Tap "Run experiment" and Mix Max suggests the exact parameters to try '
-        'next, picked from everything your past runs have taught it.',
+        'Mix Max suggests the exact parameters to try next, picked from '
+        'everything your past runs have taught it. You may tweak any value to '
+        'your liking.',
   ),
   OnboardingStep(
     eyebrow: 'The payoff',

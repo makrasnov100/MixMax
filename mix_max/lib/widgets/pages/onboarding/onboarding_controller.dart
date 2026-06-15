@@ -22,7 +22,7 @@ class OnboardingController extends ChangeNotifier {
   /// Whether the tour is currently running (drives the overlay's visibility).
   bool active = false;
 
-  /// Zero-based index into [onboardingSteps] / the spotlight targets, 0–4.
+  /// Zero-based index into [onboardingSteps] / the spotlight targets, 0–5.
   int step = 0;
 
   int get totalSteps => onboardingSteps.length;
@@ -39,6 +39,7 @@ class OnboardingController extends ChangeNotifier {
   final GlobalKey listItemKey = GlobalKey(debugLabel: 'onboarding-list-item');
   final GlobalKey parametersKey = GlobalKey(debugLabel: 'onboarding-parameters');
   final GlobalKey outcomesKey = GlobalKey(debugLabel: 'onboarding-outcomes');
+  final GlobalKey runButtonKey = GlobalKey(debugLabel: 'onboarding-run-button');
   final GlobalKey tryTheseKey = GlobalKey(debugLabel: 'onboarding-try-these');
   final GlobalKey bestMixKey = GlobalKey(debugLabel: 'onboarding-best-mix');
 
@@ -52,8 +53,10 @@ class OnboardingController extends ChangeNotifier {
       case 2:
         return outcomesKey;
       case 3:
-        return tryTheseKey;
+        return runButtonKey;
       case 4:
+        return tryTheseKey;
+      case 5:
         return bestMixKey;
       default:
         return null;
@@ -102,19 +105,22 @@ class OnboardingController extends ChangeNotifier {
           experiment: _demo,
           parametersKey: parametersKey,
           outcomesKey: outcomesKey,
+          runButtonKey: runButtonKey,
           bestMixKey: bestMixKey,
         )));
         break;
       case 2: // Outcomes — same page, scroll them into view.
         break;
-      case 3: // Suggested run — push the real suggested-run screen.
+      case 3: // Run experiment — same page, spotlight the footer button.
+        break;
+      case 4: // Suggested run — push the real suggested-run screen.
         _navigator?.push(_route(SuggestedRunPage(
           experiment: _demo,
           demoSuggestion: suggestion,
           spotlightKey: tryTheseKey,
         )));
         break;
-      case 4: // Best mix — pop back to details and scroll to the banner.
+      case 5: // Best mix — pop back to details and scroll to the banner.
         _navigator?.pop();
         break;
     }

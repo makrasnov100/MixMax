@@ -58,6 +58,7 @@ class OnboardingDemoData {
           max: 10,
           step: 1,
           goal: OutcomeGoal.maximize,
+          weight: 60,
         ),
         SchemaOutcome(
           id: bitternessId,
@@ -66,6 +67,7 @@ class OnboardingDemoData {
           max: 10,
           step: 1,
           goal: OutcomeGoal.minimize,
+          weight: 40,
         ),
       ];
 
