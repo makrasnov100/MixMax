@@ -12,7 +12,7 @@ class GeneralInfoService with ChangeNotifier {
 
   // [App]
   bool inProduction = appFlavor != "dev";
-  String appVersion = "9.9.9";
+  String appVersion = "1.0.0";
 
   // [Social]
   late String appSuffix;
@@ -22,7 +22,7 @@ class GeneralInfoService with ChangeNotifier {
   late String appWebsiteUrl;
 
   GeneralInfoService() {
-    appSuffix = "template-flutter-app";
+    appSuffix = "mix-max";
     contactEmail = "support+$appSuffix@myfortuna.app";
     privacyPolicy = "https://myfortuna.app/privacy-policy/$appSuffix/";
     termsOfService = "https://myfortuna.app/terms-of-service/$appSuffix/";
@@ -40,7 +40,11 @@ class GeneralInfoService with ChangeNotifier {
 
     // - replace default data with cloud info
     try {
-      final appDocSnapshot = await FirebaseFirestore.instance.collection("General").doc("app").get();
+      final appDocSnapshot =
+          await FirebaseFirestore.instance
+              .collection("General")
+              .doc("app")
+              .get();
       if (!appDocSnapshot.exists) {
         throw Exception("App information not found in cloud firestore");
       }
