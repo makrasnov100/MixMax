@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
+import 'package:mix_max/scripts/demo_data_seeder.dart';
 import 'package:mix_max/services/firebase/auth_service.dart';
 import 'package:mix_max/services/firebase/database_service.dart';
 import 'package:mix_max/services/get_it.dart';
@@ -8,6 +9,9 @@ import 'package:mix_max/services/ui/navigation_service.dart';
 import 'package:mix_max/services/ui/onboarding_service.dart';
 import 'package:mix_max/widgets/pages/onboarding/onboarding_controller.dart';
 import 'package:mix_max/pages/experiment_details_page.dart';
+// Store-screenshot helper — comment this in together with the DemoSeedButton in
+// the footer below to populate the signed-in account with demo experiments.
+// import 'package:mix_max/scripts/demo_data_seeder.dart';
 import 'package:mix_max/services/ui/popup_service.dart';
 import 'package:mix_max/widgets/pages/account/account_drawer.dart';
 import 'package:mix_max/widgets/pages/account/confirm_delete_account_drawer.dart';
@@ -97,9 +101,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => CreateExperimentDrawer(
-        onSave: _createExperiment,
-      ),
+      builder: (_) => CreateExperimentDrawer(onSave: _createExperiment),
     );
   }
 
@@ -141,19 +143,22 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     if (!mounted) return;
 
     PopupService.showResultToast(
-      message: result.success
-          ? '✅ Your account and data have been deleted.'
-          : '❌ Could not delete your account. Please try again later.',
-      backgroundColor: result.success ? AppColors.addGreen : AppColors.dangerRed,
+      message:
+          result.success
+              ? '✅ Your account and data have been deleted.'
+              : '❌ Could not delete your account. Please try again later.',
+      backgroundColor:
+          result.success ? AppColors.addGreen : AppColors.dangerRed,
     );
   }
 
   Future<int> _countExperiments() async {
     try {
-      final aggregate = await DatabaseService.experimentsRef
-          .where('userId', isEqualTo: _authService.user.id)
-          .count()
-          .get();
+      final aggregate =
+          await DatabaseService.experimentsRef
+              .where('userId', isEqualTo: _authService.user.id)
+              .count()
+              .get();
       return aggregate.count ?? 0;
     } catch (_) {
       return 0;
@@ -261,15 +266,26 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
                     stops: [0.0, 0.22],
                   ),
                 ),
-                child: MixMaxButton(
-                  label: 'New experiment',
-                  variant: MixMaxButtonVariant.ink,
-                  leading: const MixMaxIcon(
-                    MixMaxGlyph.plus,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                  onPressed: _addExperiment,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Store-screenshot helper. Comment this block in (and the
+                    // demo_data_seeder import above) to fill the account with
+                    // demo experiments; it seeds Firestore and shows its own
+                    // loading spinner while writing. Remove again afterwards.
+                    // const DemoSeedButton(),
+                    // const SizedBox(height: 10),
+                    MixMaxButton(
+                      label: 'New experiment',
+                      variant: MixMaxButtonVariant.ink,
+                      leading: const MixMaxIcon(
+                        MixMaxGlyph.plus,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                      onPressed: _addExperiment,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -303,10 +319,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
         );
       }
       return const Center(
-        child: BodyText(
-          text: 'Signing you in…',
-          textAlign: TextAlign.center,
-        ),
+        child: BodyText(text: 'Signing you in…', textAlign: TextAlign.center),
       );
     }
 
@@ -332,10 +345,11 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
           );
         }
 
-        final experiments = (snapshot.data?.docs ?? [])
-            .map((d) => d.data())
-            .where((e) => e.isValid())
-            .toList();
+        final experiments =
+            (snapshot.data?.docs ?? [])
+                .map((d) => d.data())
+                .where((e) => e.isValid())
+                .toList();
 
         // Leave room at the bottom for the floating footer button.
         return ExperimentsList(

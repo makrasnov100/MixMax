@@ -21,7 +21,8 @@
 - Update download links on the website
 
 ### Updates
-
+- Hiding experiments top bar as user navigates up 
+- Search feature for expirements
 - Deal with the migration in process anonymous to signed in user that already has an account (the expirements diapear for a bit)
 - Large rating text is a bit grainy (install more detailed font)
 - Submitt run outputs later, skipping a rating (secondary option during rating)
