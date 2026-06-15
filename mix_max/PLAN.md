@@ -1,4 +1,5 @@
 ### MVP
+
 - Start app store page upload existing assets
 - implement sign in with apple on apple
 - perform security rule audit
@@ -6,6 +7,7 @@
 - (if nothng else to be done) Test simple experiment start to finish 1 - 3 parameters, sharing works
 
 ### Store Page Started
+
 - Screenshots generate
   - generate ios size screenshots for phone and tablet (on mac)
   - pick best 4-5 
