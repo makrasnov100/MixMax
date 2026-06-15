@@ -1,32 +1,29 @@
---- Publishing ---
+### Publishing ###
+
 - Create privacy policy and terms of use on main website, simple site no downnlaod links, add to app general info
 
 - Add onboatding step for run expirement button 
-
-- Test on ios
-  - sign in with google
+- Sing in with google does not save emial of user so its not displayed in account info
 
 - Test on tablet screen (all things work)
   - cosntrain to vertical orinations
   - text size and sizign of elements
 
 - Simplify and make more intuitive text on the play store and app store pages, post to the stores
-- Generate great ASO title subtitles, tags, description, give ai my notes and 
 
 - Start app store page upload existing assets  
+- (After creating iOS page) implment sign in with apple on apple
+
+- Generate great ASO title subtitles, tags, description, give ai my notes and 
 
 - (When verified) Start play store page
-- (After creating iOS page) implment sign in with appl
-
 - (if nothng else to be done) Test simple experiment start to finish 1 - 3 parameters, sharing works
 
----
-
-Once Published ---
+### Once Published ###
 
 - Update download links on the website
 
---- Updates ---
+### Updates ###
 
 - Deal with the migration in process anonymous to signed in user that already has an account (the expirements diapear for a bit)
 - Large rating text is a bit grainy (install more detailed font)
