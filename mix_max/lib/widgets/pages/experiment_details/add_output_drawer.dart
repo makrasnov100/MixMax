@@ -267,8 +267,7 @@ class _AddOutputDrawerState extends State<AddOutputDrawer> {
               maxLength: AddOutputDrawer.maxDescriptionLength,
               rows: 3,
               placeholder:
-                  'How should this be graded? e.g. 10 = rich and '
-                  'balanced, 0 = undrinkable. Shown every time you rate a run.',
+                  'How should this be graded? Shown every time you rate a run.',
             ),
           ),
           if (_descriptionController.text.isNotEmpty) _hpad(_counter()),

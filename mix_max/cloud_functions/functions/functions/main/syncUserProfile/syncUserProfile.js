@@ -1,5 +1,8 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const {
+  getPlainProviderData,
+} = require("../../utils/users/getPlainProviderData");
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -25,7 +28,7 @@ exports.syncUserProfile = functions.https.onCall(async (data, context) => {
         email: authUser.email ?? null,
         displayName: authUser.displayName ?? null,
         photoURL: authUser.photoURL ?? null,
-        providerData: authUser.providerData,
+        providerData: getPlainProviderData(authUser.providerData),
         updatedAt: new Date().getTime(),
       },
       { merge: true },

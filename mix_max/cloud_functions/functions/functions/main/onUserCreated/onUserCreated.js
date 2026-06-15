@@ -1,5 +1,8 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const {
+  getPlainProviderData,
+} = require("../../utils/users/getPlainProviderData");
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -17,7 +20,7 @@ exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
     displayName: user.displayName,
     photoURL: user.photoURL,
     phoneNumber: user.phoneNumber,
-    providerData: user.providerData,
+    providerData: getPlainProviderData(user.providerData),
     createdAt: new Date().getTime(),
     updatedAt: new Date().getTime(),
   });

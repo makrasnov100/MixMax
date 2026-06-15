@@ -25,11 +25,13 @@ class AuthService extends ChangeNotifier {
   /// as that account) right before a federated sign-in. The backend verifies it
   /// to prove ownership of the old account before migrating its data across.
   String? oldUserIdToken;
-  SchemaUser? _lastNotNullUser; // to be used only for user change tracking in this file
+  SchemaUser?
+  _lastNotNullUser; // to be used only for user change tracking in this file
 
   SchemaUser user = SchemaUser.initial();
   Stream<DocumentSnapshot<SchemaUser>>? userStream;
-  StreamController<SchemaUser> userStreamController = StreamController<SchemaUser>();
+  StreamController<SchemaUser> userStreamController =
+      StreamController<SchemaUser>();
   StreamSubscription<DocumentSnapshot<SchemaUser>>? userStreamSubscription;
 
   User? firebaseUser;
@@ -50,25 +52,29 @@ class AuthService extends ChangeNotifier {
       waitForSignInComplete(timeout: Duration(seconds: 10));
       if (firebaseUser!.isAnonymous) {
         lastProvider = AcceptedProviders.anonymous;
-      } else if (firebaseUser!.providerData.isNotEmpty && firebaseUser!.providerData[0].providerId == 'google.com') {
+      } else if (firebaseUser!.providerData.isNotEmpty &&
+          firebaseUser!.providerData[0].providerId == 'google.com') {
         lastProvider = AcceptedProviders.google;
-      } else if (firebaseUser!.providerData.isNotEmpty && firebaseUser!.providerData[0].providerId == 'apple.com') {
+      } else if (firebaseUser!.providerData.isNotEmpty &&
+          firebaseUser!.providerData[0].providerId == 'apple.com') {
         lastProvider = AcceptedProviders.apple;
       } else {
         lastProvider = AcceptedProviders.google; // default fallback
       }
     }
 
-    firebaseUserStreamSubscription = FirebaseAuth.instance.authStateChanges().listen((User? newFirebaseUser) {
-      //If the signed in user is null, sing in anonymously
-      firebaseUser = newFirebaseUser;
-      if (newFirebaseUser != null) {
-        subscribeToUserStream(newFirebaseUser);
-      } else {
-        user = SchemaUser.unknown();
-        notifyListeners();
-      }
-    });
+    firebaseUserStreamSubscription = FirebaseAuth.instance
+        .authStateChanges()
+        .listen((User? newFirebaseUser) {
+          //If the signed in user is null, sing in anonymously
+          firebaseUser = newFirebaseUser;
+          if (newFirebaseUser != null) {
+            subscribeToUserStream(newFirebaseUser);
+          } else {
+            user = SchemaUser.unknown();
+            notifyListeners();
+          }
+        });
   }
 
   Future<void> subscribeToUserStream(User user) async {
@@ -152,13 +158,14 @@ class AuthService extends ChangeNotifier {
 
   //Get user from users collection with the user id (doc should exist due to auth triggers)
   Future<Stream<DocumentSnapshot<SchemaUser>>> getUserStream(User user) async {
-    DocumentReference<SchemaUser> userDoc = DatabaseService.usersRef.doc(user.uid);
+    DocumentReference<SchemaUser> userDoc = DatabaseService.usersRef.doc(
+      user.uid,
+    );
     return userDoc.snapshots();
   }
 
   Future<void> waitForSignInComplete({required Duration timeout}) async {
     isLoading = true;
-    String startID = user.id;
     notifyListeners();
 
     int timeElapsed = 0;
@@ -167,7 +174,7 @@ class AuthService extends ChangeNotifier {
       await Future.delayed(Duration(milliseconds: interval));
       timeElapsed += interval;
 
-      if (startID != user.id) {
+      if (authUserMatchesFirebaseUser()) {
         break;
       }
 
@@ -232,16 +239,29 @@ class AuthService extends ChangeNotifier {
       // Obtain the auth details from the request
       googleAuth = await googleUser?.authentication;
     } catch (e) {
-      return SignInResult(success: false, message: "Sign in failed - ${e.toString()}", userCredential: null);
+      return SignInResult(
+        success: false,
+        message: "Sign in failed - ${e.toString()}",
+        userCredential: null,
+      );
     }
     waitForSignInComplete(timeout: Duration(seconds: 10));
 
-    if (googleAuth == null || googleAuth.accessToken == null || googleAuth.idToken == null) {
-      return SignInResult(success: false, message: "Sign in failed - Auth token is null", userCredential: null);
+    if (googleAuth == null ||
+        googleAuth.accessToken == null ||
+        googleAuth.idToken == null) {
+      return SignInResult(
+        success: false,
+        message: "Sign in failed - Auth token is null",
+        userCredential: null,
+      );
     }
 
     // Create a new credential
-    final credential = GoogleAuthProvider.credential(accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
 
     SignInResult signInResult = await linkOauthCredentialToUser(
       credential: credential,
@@ -276,7 +296,10 @@ class AuthService extends ChangeNotifier {
             ..addScope('email')
             ..addScope('name');
 
-      SignInResult signInResult = await linkAppleProviderToUser(provider: appleProvider, type: AcceptedProviders.apple);
+      SignInResult signInResult = await linkAppleProviderToUser(
+        provider: appleProvider,
+        type: AcceptedProviders.apple,
+      );
 
       if (signInResult.success != true) {
         signOut();
@@ -289,7 +312,11 @@ class AuthService extends ChangeNotifier {
       // Once signed in, return the UserCredential
       return signInResult;
     } catch (e) {
-      return SignInResult(success: false, message: "Sign in failed, please try again later.", userCredential: null);
+      return SignInResult(
+        success: false,
+        message: "Sign in failed, please try again later.",
+        userCredential: null,
+      );
     }
   }
 
@@ -305,20 +332,29 @@ class AuthService extends ChangeNotifier {
         print("The provider has already been linked to the user.");
         AuthCredential? newCredential = credential ?? e.credential;
         if (newCredential != null) {
-          userCredential = await signInCredentialProvider(credential: newCredential, provider: provider);
+          userCredential = await signInCredentialProvider(
+            credential: newCredential,
+            provider: provider,
+          );
         } else {
           return SignInResult(
             success: false,
-            message: "A provider has already been linked to the user. Try to restart the app.",
+            message:
+                "A provider has already been linked to the user. Try to restart the app.",
             userCredential: null,
           );
         }
         break;
       case "credential-already-in-use":
-        print("The account corresponding to the credential already exists, or is already linked to a Firebase User.");
+        print(
+          "The account corresponding to the credential already exists, or is already linked to a Firebase User.",
+        );
         AuthCredential? newCredential = credential ?? e.credential;
         if (newCredential != null) {
-          userCredential = await signInCredentialProvider(credential: newCredential, provider: provider);
+          userCredential = await signInCredentialProvider(
+            credential: newCredential,
+            provider: provider,
+          );
         } else {
           return SignInResult(
             success: false,
@@ -329,9 +365,15 @@ class AuthService extends ChangeNotifier {
         break;
       case "invalid-credential":
         print("The provider's credential is not valid.");
-        return SignInResult(success: false, message: "The provider's credential is not valid.", userCredential: null);
+        return SignInResult(
+          success: false,
+          message: "The provider's credential is not valid.",
+          userCredential: null,
+        );
       case "email-already-in-use":
-        print("The email corresponding to the credential is already in use by another account.");
+        print(
+          "The email corresponding to the credential is already in use by another account.",
+        );
 
         return SignInResult(
           success: false,
@@ -342,13 +384,25 @@ class AuthService extends ChangeNotifier {
       // See the API reference for the full list of error codes.
       default:
         print("Unknown error - ${e.code}");
-        return SignInResult(success: false, message: "Unknown error - ${e.code}", userCredential: null);
+        return SignInResult(
+          success: false,
+          message: "Unknown error - ${e.code}",
+          userCredential: null,
+        );
     }
 
     if (userCredential != null) {
-      return SignInResult(success: true, message: "", userCredential: userCredential);
+      return SignInResult(
+        success: true,
+        message: "",
+        userCredential: userCredential,
+      );
     } else {
-      return SignInResult(success: false, message: "Unknown error! Please try again later.", userCredential: null);
+      return SignInResult(
+        success: false,
+        message: "Unknown error! Please try again later.",
+        userCredential: null,
+      );
     }
   }
 
@@ -359,7 +413,8 @@ class AuthService extends ChangeNotifier {
     UserCredential? userCredential;
     try {
       if (firebaseUser?.isAnonymous == true) {
-        userCredential = await FirebaseAuth.instance.currentUser?.linkWithProvider(provider);
+        userCredential = await FirebaseAuth.instance.currentUser
+            ?.linkWithProvider(provider);
         lastProvider = type;
         // userCredential = await signInAppleProvider(provider: provider);
       } else {
@@ -370,13 +425,25 @@ class AuthService extends ChangeNotifier {
       return handleFirebaseAuthErrors(e: e, provider: AcceptedProviders.apple);
     } catch (e) {
       print("Unknown error - $e");
-      return SignInResult(success: false, message: "Unknown error - $e", userCredential: null);
+      return SignInResult(
+        success: false,
+        message: "Unknown error - $e",
+        userCredential: null,
+      );
     }
 
     if (userCredential != null) {
-      return SignInResult(success: true, message: "", userCredential: userCredential);
+      return SignInResult(
+        success: true,
+        message: "",
+        userCredential: userCredential,
+      );
     } else {
-      return SignInResult(success: false, message: "Unknown error! Please try again later.", userCredential: null);
+      return SignInResult(
+        success: false,
+        message: "Unknown error! Please try again later.",
+        userCredential: null,
+      );
     }
   }
 
@@ -387,30 +454,50 @@ class AuthService extends ChangeNotifier {
     UserCredential? userCredential;
     try {
       if (firebaseUser?.isAnonymous == true) {
-        userCredential = await FirebaseAuth.instance.currentUser?.linkWithCredential(credential);
+        userCredential = await FirebaseAuth.instance.currentUser
+            ?.linkWithCredential(credential);
         lastProvider = provider;
-        userCredential = await signInCredentialProvider(credential: credential, provider: provider);
+        userCredential = await signInCredentialProvider(
+          credential: credential,
+          provider: provider,
+        );
       } else {
         await FirebaseAuth.instance.signOut();
-        userCredential = await signInCredentialProvider(credential: credential, provider: provider);
+        userCredential = await signInCredentialProvider(
+          credential: credential,
+          provider: provider,
+        );
       }
     } on FirebaseAuthException catch (e) {
       return handleFirebaseAuthErrors(e: e, provider: provider);
     } catch (e) {
       print("Unknown error - $e");
-      return SignInResult(success: false, message: "Unknown error - $e", userCredential: null);
+      return SignInResult(
+        success: false,
+        message: "Unknown error - $e",
+        userCredential: null,
+      );
     }
 
     if (userCredential != null) {
-      return SignInResult(success: true, message: "", userCredential: userCredential);
+      return SignInResult(
+        success: true,
+        message: "",
+        userCredential: userCredential,
+      );
     } else {
-      return SignInResult(success: false, message: "Unknown error! Please try again later.", userCredential: null);
+      return SignInResult(
+        success: false,
+        message: "Unknown error! Please try again later.",
+        userCredential: null,
+      );
     }
   }
 
   bool isSignedIn() {
     return firebaseUser != null &&
-        (lastProvider == AcceptedProviders.google || lastProvider == AcceptedProviders.apple);
+        (lastProvider == AcceptedProviders.google ||
+            lastProvider == AcceptedProviders.apple);
   }
 
   /// True once any account exists — a guest (anonymous) or a federated one.
@@ -418,7 +505,8 @@ class AuthService extends ChangeNotifier {
   bool get hasAccount => firebaseUser != null;
 
   /// True while using the app as a guest (anonymous account).
-  bool get isGuest => firebaseUser != null && lastProvider == AcceptedProviders.anonymous;
+  bool get isGuest =>
+      firebaseUser != null && lastProvider == AcceptedProviders.anonymous;
 
   bool authUserMatchesFirebaseUser() {
     return firebaseUser != null && firebaseUser!.uid == user.id;
@@ -426,9 +514,19 @@ class AuthService extends ChangeNotifier {
 
   Future<bool> signInAnonymous() async {
     try {
-      waitForSignInComplete(timeout: Duration(seconds: 10));
+      // Start polling for completion *before* the sign-in so it captures the
+      // pre-sign-in user id, then await it: the anonymous Firebase record exists
+      // the moment `signInAnonymously` resolves, but the Firestore user doc is
+      // created asynchronously by the `onUserCreated` trigger. We must not
+      // return until the user stream has delivered that doc (user.id flips to
+      // the new uid) — otherwise callers proceed to create an experiment before
+      // the account is usable and hit permission-denied errors.
+      final signInComplete = waitForSignInComplete(
+        timeout: Duration(seconds: 10),
+      );
       await FirebaseAuth.instance.signInAnonymously();
       lastProvider = AcceptedProviders.anonymous;
+      await signInComplete;
       return true;
     } catch (e) {
       lastProvider = null;
@@ -465,7 +563,9 @@ class AuthService extends ChangeNotifier {
     if (!success) {
       return SignInResult(
         success: false,
-        message: errorMessage ?? "Unable to delete your account. Please try again later.",
+        message:
+            errorMessage ??
+            "Unable to delete your account. Please try again later.",
         userCredential: null,
       );
     }
@@ -490,7 +590,9 @@ class AuthService extends ChangeNotifier {
     return SignInResult(success: true, message: "", userCredential: null);
   }
 
-  Future<UserCredential?> signInAppleProvider({required AppleAuthProvider provider}) async {
+  Future<UserCredential?> signInAppleProvider({
+    required AppleAuthProvider provider,
+  }) async {
     UserCredential? userCredential;
     try {
       userCredential = await FirebaseAuth.instance.signInWithProvider(provider);
@@ -508,7 +610,9 @@ class AuthService extends ChangeNotifier {
   }) async {
     UserCredential? userCredential;
     try {
-      userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       lastProvider = provider;
     } catch (e) {
       lastProvider = null;
@@ -542,9 +646,13 @@ class AuthService extends ChangeNotifier {
 
   // Generates a cryptographically secure random nonce, to be included in a credential request.
   String generateNonce([int length = 32]) {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   /// Returns the sha256 hash of [input] in hex notation.
