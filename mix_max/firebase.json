@@ -1,1 +1,84 @@
-{"flutter":{"platforms":{"android":{"buildConfigurations":{"src/prod":{"projectId":"mix-max-7a33e","appId":"1:124263762128:android:e8622bc7d3d243cbf776d5","fileOutput":"android/app/src/prod/google-services.json"}}},"dart":{"lib/flavors/prod/firebase_options.dart":{"projectId":"mix-max-7a33e","configurations":{"android":"1:124263762128:android:e8622bc7d3d243cbf776d5","ios":"1:124263762128:ios:3a0a2df1ffb96a40f776d5"}}}}},"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"storage":{"rules":"storage.rules"},"functions":[{"source":"cloud_functions/functions","codebase":"default","ignore":["node_modules",".git","firebase-debug.log","firebase-debug.*.log"],"predeploy":["npm --prefix \"$RESOURCE_DIR\" run lint"]}]}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "buildConfigurations": {
+          "src/prod": {
+            "projectId": "mix-max-7a33e",
+            "appId": "1:124263762128:android:e8622bc7d3d243cbf776d5",
+            "fileOutput": "android/app/src/prod/google-services.json"
+          }
+        }
+      },
+      "ios": {
+        "buildConfigurations": {
+          "Debug-dev": {
+            "projectId": "mix-max-7a33e",
+            "appId": "1:124263762128:ios:3a0a2df1ffb96a40f776d5",
+            "uploadDebugSymbols": true,
+            "fileOutput": "ios/Runner/GoogleInfoPlist/dev/GoogleService-Info.plist"
+          },
+          "Profile-dev": {
+            "projectId": "mix-max-7a33e",
+            "appId": "1:124263762128:ios:3a0a2df1ffb96a40f776d5",
+            "uploadDebugSymbols": true,
+            "fileOutput": "ios/Runner/GoogleInfoPlist/dev/GoogleService-Info.plist"
+          },
+          "Release-dev": {
+            "projectId": "mix-max-7a33e",
+            "appId": "1:124263762128:ios:3a0a2df1ffb96a40f776d5",
+            "uploadDebugSymbols": true,
+            "fileOutput": "ios/Runner/GoogleInfoPlist/dev/GoogleService-Info.plist"
+          },
+          "Debug-prod": {
+            "projectId": "mix-max-7a33e",
+            "appId": "1:124263762128:ios:3a0a2df1ffb96a40f776d5",
+            "uploadDebugSymbols": true,
+            "fileOutput": "ios/Runner/GoogleInfoPlist/prod/GoogleService-Info.plist"
+          },
+          "Profile-prod": {
+            "projectId": "mix-max-7a33e",
+            "appId": "1:124263762128:ios:3a0a2df1ffb96a40f776d5",
+            "uploadDebugSymbols": true,
+            "fileOutput": "ios/Runner/GoogleInfoPlist/prod/GoogleService-Info.plist"
+          },
+          "Release-prod": {
+            "projectId": "mix-max-7a33e",
+            "appId": "1:124263762128:ios:3a0a2df1ffb96a40f776d5",
+            "uploadDebugSymbols": true,
+            "fileOutput": "ios/Runner/GoogleInfoPlist/prod/GoogleService-Info.plist"
+          }
+        }
+      },
+      "dart": {
+        "lib/flavors/prod/firebase_options.dart": {
+          "projectId": "mix-max-7a33e",
+          "configurations": {
+            "android": "1:124263762128:android:e8622bc7d3d243cbf776d5",
+            "ios": "1:124263762128:ios:3a0a2df1ffb96a40f776d5"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [
+    {
+      "source": "cloud_functions/functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ],
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run lint"]
+    }
+  ]
+}

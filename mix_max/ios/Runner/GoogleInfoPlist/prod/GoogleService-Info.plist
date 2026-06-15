@@ -2,18 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>124263762128-55tcbjd4foiggilp5a7iftfnm3jahplv.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.124263762128-55tcbjd4foiggilp5a7iftfnm3jahplv</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>124263762128-jgn87j4psipnn1kguj5jaoo1b1ofbnsf.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyC7wD9SnoTquk5EAmUC6ogdijd4bVs-5Xk</string>
+	<string>AIzaSyAAfTLrsTgvQs_WqT5QhNcmPAaZIcQMT0A</string>
 	<key>GCM_SENDER_ID</key>
-	<string>204221789722</string>
+	<string>124263762128</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>app.myfortuna.mixMax</string>
 	<key>PROJECT_ID</key>
-	<string>template-app-4513a</string>
+	<string>mix-max-7a33e</string>
 	<key>STORAGE_BUCKET</key>
-	<string>template-app-4513a.firebasestorage.app</string>
+	<string>mix-max-7a33e.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:204221789722:ios:2aa49ac665dfe0a61703a3</string>
+	<string>1:124263762128:ios:3a0a2df1ffb96a40f776d5</string>
 </dict>
 </plist>
