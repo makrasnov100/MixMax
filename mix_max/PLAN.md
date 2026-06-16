@@ -2,23 +2,20 @@
 
 - Start app store page upload existing asssets and version
 - disable multi tasking support apple so that horizontal orientation only can be supported
-- implement sign in with apple on apple
-
-- (if nothng else to be done) Test simple experiment start to finish 1 - 3 parameters, sharing works
 
 ### Store Page Started
 
 - Screenshots generate
   - generate ios size screenshots for phone and tablet (on mac)
   - pick best 4-5
-  - generte marketing type overlays for the the stores
+  - generate marketing type overlays for the the stores
   - generate the exact size needed for both stores
   - upload to stores to be ready
 - Generate great ASO title subtitles, tags, description, give ai my notes and
+- (if nothng else to be done) Test simple experiment start to finish 1 - 3 parameters, sharing works
 - submit for review
 
 ### Once Published
-
 - Update download links on the website
 
 ### Updates
