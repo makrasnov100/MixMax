@@ -1,9 +1,6 @@
 ### MVP
 
 - perform security rule audit
-  - add limits to list quereis in the app and load virtually not all at once
-    - if runs filtered locally filter using custom indexes
-  - make update operations not able to change the userId of a document from the app (see if picabook does this)
   - setup app check for the app, find easiest way to allow debug deices through
 
 - Start app store page upload existing asssets and version
@@ -28,7 +25,7 @@
 - Update download links on the website
 
 ### Updates
-
+- Update entire firebase suite to latest, make sure app builds and queries work
 - Hiding experiments top bar as user navigates up
 - Search feature for expirements
 - Deal with the migration in process anonymous to signed in user that already has an account (the expirements diapear for a bit)

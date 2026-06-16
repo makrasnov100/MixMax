@@ -33,6 +33,7 @@ dependencies:
   cloud_firestore: ^5.0.0
   firebase_storage: ^12.0.0
   cloud_functions: ^5.0.0
+  firebase_app_check: ^0.3.2+10
 
   ### [Utilities] ###
   crypto: ^3.0.3
