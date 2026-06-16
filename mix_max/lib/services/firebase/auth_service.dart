@@ -268,7 +268,7 @@ class AuthService extends ChangeNotifier {
       provider: AcceptedProviders.google,
     );
     if (signInResult.success != true) {
-      signOut();
+      _signOutIfNotGuest();
     } else {
       await syncUserProfile();
     }
@@ -302,7 +302,7 @@ class AuthService extends ChangeNotifier {
       );
 
       if (signInResult.success != true) {
-        signOut();
+        _signOutIfNotGuest();
       } else {
         await syncUserProfile();
       }
@@ -371,6 +371,7 @@ class AuthService extends ChangeNotifier {
           userCredential: null,
         );
       case "email-already-in-use":
+      case "account-exists-with-different-credential":
         print(
           "The email corresponding to the credential is already in use by another account.",
         );
@@ -378,7 +379,7 @@ class AuthService extends ChangeNotifier {
         return SignInResult(
           success: false,
           message:
-              "The email corresponding to the credential is already in use by another account. Try other sign in options.",
+              "This email already has an account. Try a different sign-in option.",
           userCredential: null,
         );
       // See the API reference for the full list of error codes.
@@ -619,6 +620,18 @@ class AuthService extends ChangeNotifier {
       print(e);
     }
     return userCredential;
+  }
+
+  /// Clears a half-finished *fresh* federated sign-in, but never a guest. A
+  /// failed link leaves the anonymous account still signed in; signing it out
+  /// is irreversible and would orphan its experiments/runs forever, so we keep
+  /// the guest intact and let them try another option.
+  Future<void> _signOutIfNotGuest() async {
+    if (FirebaseAuth.instance.currentUser?.isAnonymous == true) {
+      oldUserIdToken = null;
+      return;
+    }
+    await signOut();
   }
 
   /// Signs the user out completely and returns to the pre-choice state — *no*
