@@ -14,7 +14,7 @@ import 'package:mix_max/widgets/design/ions/format.dart';
 ///
 /// Source: `design_app/screens.jsx` `RunHistoryCard`. The leading (highest
 /// rated) run is highlighted: it takes a gold-tinted fill, a gold border and a
-/// warmer shadow, swaps the "RUN n" kicker for a "BEST RUN" trophy badge, and
+/// warmer shadow, carries a "BEST RUN" trophy badge above the timestamp, and
 /// recolors its rating, chips and footer to the gold family. Every other run
 /// reads as a calm white card.
 class RunHistoryCard extends StatelessWidget {
@@ -24,10 +24,6 @@ class RunHistoryCard extends StatelessWidget {
 
   /// The run to render.
   final SchemaRun run;
-
-  /// 1-based chronological position, shown as the "RUN n" kicker on non-best
-  /// runs.
-  final int number;
 
   /// Whether this is the experiment's highest-rated run (the gold treatment).
   final bool isBest;
@@ -39,7 +35,6 @@ class RunHistoryCard extends StatelessWidget {
     Key? key,
     required this.experiment,
     required this.run,
-    required this.number,
     required this.isBest,
     required this.onOpen,
   }) : super(key: key);
@@ -178,21 +173,10 @@ class RunHistoryCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isBest)
-          _BestBadge()
-        else
-          Text(
-            'RUN $number',
-            style: const TextStyle(
-              fontFamily: AppFonts.sans,
-              fontWeight: FontWeight.w600,
-              fontSize: 11.5,
-              letterSpacing: 11.5 * 0.08,
-              height: 1,
-              color: AppColors.inkFaint,
-            ),
-          ),
-        SizedBox(height: isBest ? 9 : 6),
+        if (isBest) ...[
+          _BestBadge(),
+          const SizedBox(height: 9),
+        ],
         Text(
           _relTime(when),
           style: const TextStyle(

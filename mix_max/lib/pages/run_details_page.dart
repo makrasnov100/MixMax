@@ -26,8 +26,8 @@ import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
 /// History list or from the "Best mix so far" banner on Experiment Details.
 ///
 /// Source: `design_app/screens.jsx` `RunDetailsScreen`. It opens on a header
-/// (an optional "Best run" chip, the run's number + relative/absolute time, the
-/// experiment name), then the [RunOverallRatingCard] hero, the
+/// (an optional "Best run" chip and relative/absolute time, the experiment
+/// name), then the [RunOverallRatingCard] hero, the
 /// [RatingBreakdownCard] that shows how the rating was reached, and finally the
 /// exact mix of parameter values the run used (reusing [SuggestionCard]).
 ///
@@ -43,11 +43,6 @@ class RunDetailsPage extends StatefulWidget {
   /// The run to detail.
   final SchemaRun run;
 
-  /// 1-based chronological position, shown in the eyebrow. Null when the caller
-  /// doesn't know it (e.g. opening the cached best run from Experiment Details,
-  /// where the full run list isn't loaded).
-  final int? number;
-
   /// Whether this is the experiment's highest-rated run — shows the gold chip.
   final bool isBest;
 
@@ -55,7 +50,6 @@ class RunDetailsPage extends StatefulWidget {
     super.key,
     required this.experiment,
     required this.run,
-    this.number,
     this.isBest = false,
   });
 
@@ -79,7 +73,6 @@ class _RunDetailsPageState extends State<RunDetailsPage> {
       isScrollControlled: true,
       builder:
           (_) => RunActionsDrawer(
-            number: widget.number,
             onShare: _share,
             onRescore: _rescore,
             onDelete: _showConfirmDelete,
@@ -122,7 +115,6 @@ class _RunDetailsPageState extends State<RunDetailsPage> {
           (_) => ConfirmDeleteRunDrawer(
             experiment: _experiment,
             run: _run,
-            number: widget.number,
             isBest: _isBest,
             onConfirm: _delete,
           ),
@@ -257,15 +249,12 @@ class _RunDetailsPageState extends State<RunDetailsPage> {
     );
   }
 
-  /// The gold kicker over the title: the run number (when known) and how long
-  /// ago it happened — e.g. "Run 3 · 2 days ago". Falls back to "Best run" or
-  /// just the relative time when no number is available.
+  /// The gold kicker over the title: how long ago the run happened, led by
+  /// "Best run" when this is the experiment's leading run — e.g.
+  /// "Best run · 2 days ago".
   String _eyebrow(int? when) {
     final rel = MixMaxTimeFormat.relative(when);
-    final lead =
-        widget.number != null
-            ? 'Run ${widget.number}'
-            : (_isBest ? 'Best run' : null);
+    final lead = _isBest ? 'Best run' : null;
     if (lead == null) return rel;
     return rel.isEmpty ? lead : '$lead · $rel';
   }

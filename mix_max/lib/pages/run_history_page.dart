@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/pages/run_details_page.dart';
@@ -19,19 +21,23 @@ import 'package:mix_max/widgets/pages/run_history/run_sort_toggle.dart';
 import 'package:mix_max/widgets/wrappers/orientation_scaffold.dart';
 import 'package:mix_max/widgets/wrappers/sticky_top_bar.dart';
 
-enum _RunHistoryPhase { loading, ready, error }
+/// How many runs are fetched per page as the history list scrolls.
+const int _pageSize = 20;
 
 /// The Run History screen — every completed run of an experiment, scored and
 /// ordered, reached from the run-count pill on the Experiment Details page.
 ///
 /// Source: `design_app/screens.jsx` `RunHistoryScreen`. The runs are loaded from
 /// the Runs collection (the experiment only caches its best run and a count), so
-/// this page owns the fetch and a loading / error / ready state. Once loaded the
-/// user can re-order between "Most recent" and "Highest rated" via the
-/// [RunSortToggle]; the highest-scoring run is highlighted as the best run.
+/// this page paginates them 20 at a time via [PagingController]. The user can
+/// re-order between "Most recent" (by `completedAt`) and "Highest rated" (by the
+/// persisted `finalRating`) via the [RunSortToggle]; both orderings are served
+/// straight from indexed queries, and the experiment's cached
+/// [SchemaExperiment.bestRun] supplies the gold "best run" highlight without
+/// loading every run.
 ///
-/// Tapping a run opens the [RunDetailsPage], carrying that card's number and
-/// best-run flag so the details header matches it.
+/// Tapping a run opens the [RunDetailsPage], carrying whether it is the best run
+/// so the details header matches it.
 class RunHistoryPage extends StatefulWidget {
   final SchemaExperiment experiment;
 
@@ -42,215 +48,181 @@ class RunHistoryPage extends StatefulWidget {
 }
 
 class _RunHistoryPageState extends State<RunHistoryPage> {
-  _RunHistoryPhase _phase = _RunHistoryPhase.loading;
-  String? _errorMessage;
+  late final PagingController<int, SchemaRun> _pagingController;
 
-  /// Completed runs (those with recorded outcomes), unsorted.
-  List<SchemaRun> _runs = const [];
+  /// Cursor for the next page — the last document of the page fetched so far.
+  /// Reset to null on [_refresh] so the next fetch starts from the top.
+  DocumentSnapshot<SchemaRun>? _lastRunDoc;
+
+  /// Whether the last fetched page was full, i.e. more pages may exist.
+  bool _runHasMore = true;
 
   RunSortMode _sort = RunSortMode.recent;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _pagingController = PagingController<int, SchemaRun>(
+      getNextPageKey: (state) => _runHasMore ? state.nextIntPageKey : null,
+      fetchPage: _fetchRunsPage,
+    );
   }
 
-  Future<void> _load() async {
-    if (!mounted) return;
-    setState(() {
-      _phase = _RunHistoryPhase.loading;
-      _errorMessage = null;
-    });
+  @override
+  void dispose() {
+    _pagingController.dispose();
+    super.dispose();
+  }
 
-    try {
-      final userId = getIt<AuthService>().user.id;
-      if (userId.isEmpty || userId == 'INITIAL') {
-        throw StateError('Not signed in yet. Please try again in a moment.');
-      }
+  /// The completed runs for this experiment in the currently selected order.
+  /// Ordering by `completedAt` / `finalRating` also excludes in-progress runs,
+  /// since those documents have neither field set yet.
+  Query<SchemaRun> _runsQuery() {
+    final userId = getIt<AuthService>().user.id;
+    final base = DatabaseService.runsRef
+        .where('userId', isEqualTo: userId)
+        .where('experimentId', isEqualTo: widget.experiment.id);
+    return _sort == RunSortMode.rated
+        ? base.orderBy('finalRating', descending: true)
+        : base.orderBy('completedAt', descending: true);
+  }
 
-      final snapshot =
-          await DatabaseService.runsRef
-              .where('userId', isEqualTo: userId)
-              .where('experimentId', isEqualTo: widget.experiment.id)
-              .get();
-
-      final runs =
-          snapshot.docs
-              .map((d) => d.data())
-              .where((r) => r.isValid() && r.outcomeValues != null)
-              .toList();
-
-      if (!mounted) return;
-      setState(() {
-        _runs = runs;
-        _phase = _RunHistoryPhase.ready;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Could not load run history.\n$e';
-        _phase = _RunHistoryPhase.error;
-      });
+  Future<List<SchemaRun>> _fetchRunsPage(int pageKey) async {
+    final userId = getIt<AuthService>().user.id;
+    if (userId.isEmpty || userId == 'INITIAL') {
+      throw StateError('Not signed in yet. Please try again in a moment.');
     }
+
+    Query<SchemaRun> query = _runsQuery().limit(_pageSize);
+    if (_lastRunDoc != null) {
+      query = query.startAfterDocument(_lastRunDoc!);
+    }
+
+    final snapshot = await query.get();
+    _runHasMore = snapshot.docs.length == _pageSize;
+    if (snapshot.docs.isNotEmpty) _lastRunDoc = snapshot.docs.last;
+
+    return snapshot.docs.map((d) => d.data()).where((r) => r.isValid()).toList();
   }
 
-  /// Opens the Run Details page for [run], carrying its chronological [number]
-  /// and whether it is the experiment's best run so the details header matches
-  /// the card the user tapped.
-  Future<void> _openRun(SchemaRun run, int number, bool isBest) async {
+  /// Restarts pagination from the top — resets the cursor and re-fetches the
+  /// first page. Used when the sort changes or a run is edited/deleted.
+  void _refresh() {
+    _lastRunDoc = null;
+    _runHasMore = true;
+    _pagingController.refresh();
+  }
+
+  void _onSortChanged(RunSortMode mode) {
+    if (mode == _sort) return;
+    setState(() => _sort = mode);
+    _refresh();
+  }
+
+  /// Opens the Run Details page for [run], carrying whether it is the
+  /// experiment's best run so the details header matches the card the user
+  /// tapped. The run may have been rescored or deleted there, so the list is
+  /// refreshed on return.
+  Future<void> _openRun(SchemaRun run) async {
+    final isBest = run.id == widget.experiment.bestRun?.id;
     await Navigation.goTo(
       context: context,
       page: RunDetailsPage(
         experiment: widget.experiment,
         run: run,
-        number: number,
         isBest: isBest,
       ),
     );
-    // The run may have been rescored or deleted on the details page; reload so
-    // the list, ordering and best-run highlight reflect the change.
     if (!mounted) return;
-    _load();
+    _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    return OrientationScaffold(
-      body: ColoredBox(
-        color: AppColors.bg,
-        child: switch (_phase) {
-          _RunHistoryPhase.loading => const _StatusView(
-            message: 'Loading runs…',
-          ),
-          _RunHistoryPhase.error => _ErrorView(
-            message: _errorMessage ?? 'Something went wrong.',
-            onRetry: _load,
-          ),
-          _RunHistoryPhase.ready => _ReadyView(
-            experiment: widget.experiment,
-            runs: _runs,
-            sort: _sort,
-            onSortChanged: (mode) => setState(() => _sort = mode),
-            onBack: () => Navigator.of(context).maybePop(),
-            onOpenRun: _openRun,
-          ),
-        },
-      ),
-    );
-  }
-}
-
-/// The loaded screen: top-bar back, eyebrow + serif name, then either an empty
-/// state or the sort toggle over the list of run cards.
-class _ReadyView extends StatelessWidget {
-  final SchemaExperiment experiment;
-  final List<SchemaRun> runs;
-  final RunSortMode sort;
-  final ValueChanged<RunSortMode> onSortChanged;
-  final VoidCallback onBack;
-  final void Function(SchemaRun run, int number, bool isBest) onOpenRun;
-
-  const _ReadyView({
-    required this.experiment,
-    required this.runs,
-    required this.sort,
-    required this.onSortChanged,
-    required this.onBack,
-    required this.onOpenRun,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+    final experiment = widget.experiment;
     final name =
         experiment.name?.isNotEmpty == true
             ? experiment.name!
             : 'Untitled experiment';
 
-    // Chronological numbering: oldest run is "Run 1".
-    final chrono = [...runs]..sort((a, b) => _whenOf(a).compareTo(_whenOf(b)));
-    final numberOf = <String, int>{};
-    for (var i = 0; i < chrono.length; i++) {
-      numberOf[chrono[i].id] = i + 1;
-    }
-
-    // Best run = highest final rating, each scored against its own snapshot.
-    String? bestId;
-    var bestScore = double.negativeInfinity;
-    for (final r in runs) {
-      final s = _scoreOf(r);
-      if (s > bestScore) {
-        bestScore = s;
-        bestId = r.id;
-      }
-    }
-
-    // Apply the selected ordering.
-    final ordered = [...runs]..sort((a, b) {
-      if (sort == RunSortMode.rated) {
-        final d = _scoreOf(b).compareTo(_scoreOf(a));
-        if (d != 0) return d;
-      }
-      return _whenOf(b).compareTo(_whenOf(a));
-    });
-
-    return StickyTopBar(
-      onBack: onBack,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          StickyTopBar.contentInset,
-          20,
-          40,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const EyebrowText(text: 'Run history', color: AppColors.gold),
-            const SizedBox(height: 8),
-            DisplayText(
-              text: name,
-              fontSize: 34,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-
-            if (runs.isEmpty)
-              const _EmptyState()
-            else ...[
-              const SizedBox(height: 22),
-              RunSortToggle(value: sort, onChanged: onSortChanged),
-              const SizedBox(height: 16),
-              for (var i = 0; i < ordered.length; i++) ...[
-                if (i > 0) const SizedBox(height: 12),
-                RunHistoryCard(
-                  experiment: experiment,
-                  run: ordered[i],
-                  number: numberOf[ordered[i].id] ?? (i + 1),
-                  isBest: ordered[i].id == bestId,
-                  onOpen:
-                      () => onOpenRun(
-                        ordered[i],
-                        numberOf[ordered[i].id] ?? (i + 1),
-                        ordered[i].id == bestId,
+    return OrientationScaffold(
+      body: ColoredBox(
+        color: AppColors.bg,
+        child: StickyTopBar(
+          onBack: () => Navigator.of(context).maybePop(),
+          child: PagingListener<int, SchemaRun>(
+            controller: _pagingController,
+            builder: (context, state, fetchNextPage) {
+              final hasItems = state.items?.isNotEmpty ?? false;
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        20,
+                        StickyTopBar.contentInset,
+                        20,
+                        0,
                       ),
-                ),
-              ],
-            ],
-          ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const EyebrowText(
+                            text: 'Run history',
+                            color: AppColors.gold,
+                          ),
+                          const SizedBox(height: 8),
+                          DisplayText(
+                            text: name,
+                            fontSize: 34,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          // Only offer the ordering toggle once there are runs
+                          // to order.
+                          if (hasItems) ...[
+                            const SizedBox(height: 22),
+                            RunSortToggle(value: _sort, onChanged: _onSortChanged),
+                            const SizedBox(height: 16),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                    sliver: PagedSliverList<int, SchemaRun>.separated(
+                      state: state,
+                      fetchNextPage: fetchNextPage,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      builderDelegate: PagedChildBuilderDelegate<SchemaRun>(
+                        itemBuilder: (context, run, index) {
+                          return RunHistoryCard(
+                            experiment: experiment,
+                            run: run,
+                            isBest: run.id == experiment.bestRun?.id,
+                            onOpen: () => _openRun(run),
+                          );
+                        },
+                        firstPageProgressIndicatorBuilder:
+                            (_) => const _StatusView(message: 'Loading runs…'),
+                        firstPageErrorIndicatorBuilder:
+                            (_) => _ErrorView(
+                              message: 'Could not load run history.',
+                              onRetry: _refresh,
+                            ),
+                        noItemsFoundIndicatorBuilder: (_) => const _EmptyState(),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
-
-  int _whenOf(SchemaRun r) => r.completedAt ?? r.createdAt ?? 0;
-
-  /// A run's 0–1 rating, scored against its own captured outcome snapshot and
-  /// falling back to the experiment's current outcomes for legacy runs.
-  double _scoreOf(SchemaRun r) =>
-      r.outcomes != null
-          ? r.computeFinalRating()
-          : r.computeFinalRating(experiment.outcomes ?? const []);
 }
 
 /// The "no runs yet" placeholder (source: `screens.jsx` `RunHistoryScreen`
@@ -296,7 +268,8 @@ class _StatusView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.only(top: 56),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -322,9 +295,8 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.fromLTRB(12, 56, 12, 0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BodyText(

@@ -10,6 +10,10 @@ service cloud.firestore {
       return request.auth != null && request.resource.data.userId == request.auth.uid;
     }
 
+    function userIdUnchanged() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
     function noRestrictedUserChanges(incoming) {
       return incoming.keys().hasOnly(['id', 'name', 'email']) &&
       incoming.diff(resource.data).affectedKeys().hasOnly(['name', 'email']);
@@ -33,14 +37,14 @@ service cloud.firestore {
     match /Experiments/{experimentId} {
       allow read: if isOwner();
       allow create: if isOwnerOnCreate();
-      allow update: if isOwner();
+      allow update: if isOwner() && userIdUnchanged();
       allow delete: if isOwner();
     }
 
     match /Runs/{runId} {
       allow read: if isOwner();
       allow create: if isOwnerOnCreate();
-      allow update: if isOwner();
+      allow update: if isOwner() && userIdUnchanged();
       allow delete: if isOwner();
     }
 

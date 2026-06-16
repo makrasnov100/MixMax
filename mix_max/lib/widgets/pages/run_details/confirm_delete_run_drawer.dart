@@ -26,10 +26,6 @@ class ConfirmDeleteRunDrawer extends StatelessWidget {
   final SchemaExperiment experiment;
   final SchemaRun run;
 
-  /// The run's chronological number, shown in the title. Null falls back to
-  /// "this run".
-  final int? number;
-
   /// Whether this run is the experiment's current best — switches the warning
   /// to explain the next-best run will be crowned.
   final bool isBest;
@@ -41,7 +37,6 @@ class ConfirmDeleteRunDrawer extends StatelessWidget {
     super.key,
     required this.experiment,
     required this.run,
-    required this.number,
     required this.isBest,
     required this.onConfirm,
   });
@@ -59,7 +54,7 @@ class ConfirmDeleteRunDrawer extends StatelessWidget {
               '${o.unit?.isNotEmpty == true ? ' ${o.unit}' : ''}',
     ];
 
-    final label = number != null ? 'Run $number' : 'this run';
+    const label = 'this run';
     final blurb = isBest
         ? 'This run is your current best. Deleting it removes it for good, and '
             'Mix Max will crown the next-highest run as best. This can’t be '
@@ -77,13 +72,13 @@ class ConfirmDeleteRunDrawer extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 style: TitleText.styleOf(fontSize: 25),
-                children: [
-                  const TextSpan(text: 'Delete '),
+                children: const [
+                  TextSpan(text: 'Delete '),
                   TextSpan(
                     text: label,
-                    style: const TextStyle(fontStyle: FontStyle.italic),
+                    style: TextStyle(fontStyle: FontStyle.italic),
                   ),
-                  const TextSpan(text: '?'),
+                  TextSpan(text: '?'),
                 ],
               ),
               textAlign: TextAlign.center,

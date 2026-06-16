@@ -38,7 +38,7 @@ class ExperimentsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (experiments.isEmpty) {
-      return const _EmptyState();
+      return const ExperimentsListEmptyState();
     }
 
     return ListView.separated(
@@ -62,9 +62,10 @@ class ExperimentsList extends StatelessWidget {
 /// Shown when the user has no experiments yet.
 ///
 /// Source: `screens.jsx` `ExperimentsListScreen` empty branch — a gold flask
-/// tile over a serif headline and a soft prompt.
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+/// tile over a serif headline and a soft prompt. Public so the paginated home
+/// list can reuse it as its "no items found" indicator.
+class ExperimentsListEmptyState extends StatelessWidget {
+  const ExperimentsListEmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {

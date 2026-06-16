@@ -22,42 +22,59 @@ import 'package:mix_max/widgets/design/ions/app_colors.dart';
 /// like any hand-made experiment.
 ///
 /// The seeded set deliberately spans different subjects (tea, running, studying,
-/// first dates) and exercises every [ParameterType] — number, duration,
-/// temperature, toggle, choice and order — with one experiment carrying eight
-/// parameters. Each experiment ships several completed runs with a cached best
-/// run, so cards, history and the optimizer all have real data to render.
+/// first dates, espresso) and exercises every [ParameterType] — number,
+/// duration, temperature, toggle, choice and order — with one experiment
+/// carrying eight parameters. Each experiment ships several completed runs with
+/// a cached best run, so cards, history and the optimizer all have real data to
+/// render; the espresso experiment carries 120 runs to exercise the
+/// large-history paths (pagination, scrolling, big run counts).
+///
+/// Which experiments get written is controllable via the `include` set, so a
+/// screenshot pass can seed just the ones it needs — see [seed] and
+/// [DemoSeedButton].
 class DemoDataSeeder {
   DemoDataSeeder._();
 
-  /// Builds the demo experiments and their runs and writes them all to
-  /// Firestore under the signed-in user. Throws if no real user is resolved yet
-  /// (the caller surfaces that as a toast).
-  static Future<void> seed() async {
+  /// The maps each [DemoExperiment] to the builder that produces it. Iterated in
+  /// enum-declaration order so the on-screen (newest-first) list matches the
+  /// order experiments are declared here.
+  static final Map<DemoExperiment, _ExperimentBuilder> _builders = {
+    DemoExperiment.tea: _teaExperiment,
+    DemoExperiment.running: _runningExperiment,
+    DemoExperiment.study: _studyExperiment,
+    DemoExperiment.date: _dateExperiment,
+    DemoExperiment.espresso: _espressoExperiment,
+  };
+
+  /// Builds the demo experiments named in [include] (default: all of them) and
+  /// their runs and writes them all to Firestore under the signed-in user.
+  /// Throws if no real user is resolved yet (the caller surfaces that as a
+  /// toast).
+  static Future<void> seed({Set<DemoExperiment>? include}) async {
     final userId = getIt<AuthService>().user.id;
     if (userId.isEmpty || userId == 'INITIAL') {
       throw StateError('Not signed in yet — open the app fully, then retry.');
     }
 
-    final builders = <_ExperimentBuilder>[
-      _teaExperiment,
-      _runningExperiment,
-      _studyExperiment,
-      _dateExperiment,
-    ];
+    final selected = include ?? DemoExperiment.values.toSet();
+    // Keep enum-declaration order regardless of how the set was built, so the
+    // staggered timestamps below match the order experiments are declared.
+    final ordered =
+        DemoExperiment.values.where(selected.contains).toList();
 
     // Stagger creation timestamps so the list orders naturally (newest first)
     // and the runs look like they were logged over the past few weeks. The list
     // is sorted newest-first, so seeding the first builder most recently puts it
-    // at the top — i.e. the on-screen order matches the [builders] order above
-    // ("Perfect cup of tea" first, "First date plan" last).
+    // at the top — i.e. the on-screen order matches the enum order above
+    // ("Perfect cup of tea" first, espresso last).
     final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     const daySeconds = 86400;
 
     final batch = <_SeededExperiment>[];
-    for (var i = 0; i < builders.length; i++) {
+    for (var i = 0; i < ordered.length; i++) {
       // Earlier builders are created more recently, so they sit higher up.
       final createdAt = nowSeconds - (i + 1) * 2 * daySeconds;
-      batch.add(builders[i](userId, createdAt));
+      batch.add(_builders[ordered[i]]!(userId, createdAt));
     }
 
     for (final seeded in batch) {
@@ -141,7 +158,7 @@ class DemoDataSeeder {
   // ---------------------------------------------------------------------------
 
   static _SeededExperiment _teaExperiment(String userId, int createdAt) {
-    const expId = 'demo_tea';
+    final expId = DatabaseService.experimentsRef.doc().id;
     const tempId = 'tea_temp';
     const steepId = 'tea_steep';
     const leafId = 'tea_leaf';
@@ -224,7 +241,6 @@ class DemoDataSeeder {
     ];
 
     SchemaRun mk(
-      String id,
       int dayOffset,
       double temp,
       double steep,
@@ -236,7 +252,7 @@ class DemoDataSeeder {
       double aroma,
     ) {
       return _run(
-        id: 'run_$id',
+        id: DatabaseService.runsRef.doc().id,
         experimentId: expId,
         userId: userId,
         createdAt: createdAt + dayOffset * 86400,
@@ -258,11 +274,11 @@ class DemoDataSeeder {
     }
 
     final runs = [
-      mk('tea1', 0, 95, 5.0, 4.0, 'Black', false, 6, 6, 5),
-      mk('tea2', 1, 80, 3.0, 3.0, 'Green', false, 5, 3, 6),
-      mk('tea3', 2, 85, 4.0, 5.0, 'Oolong', false, 8, 3, 8),
-      mk('tea4', 3, 100, 6.0, 6.0, 'Black', true, 7, 7, 4),
-      mk('tea5', 4, 88, 4.5, 5.0, 'Oolong', false, 9, 2, 9),
+      mk(0, 95, 5.0, 4.0, 'Black', false, 6, 6, 5),
+      mk(1, 80, 3.0, 3.0, 'Green', false, 5, 3, 6),
+      mk(2, 85, 4.0, 5.0, 'Oolong', false, 8, 3, 8),
+      mk(3, 100, 6.0, 6.0, 'Black', true, 7, 7, 4),
+      mk(4, 88, 4.5, 5.0, 'Oolong', false, 9, 2, 9),
     ];
 
     return _assemble(
@@ -282,7 +298,7 @@ class DemoDataSeeder {
   // ---------------------------------------------------------------------------
 
   static _SeededExperiment _runningExperiment(String userId, int createdAt) {
-    const expId = 'demo_run';
+    final expId = DatabaseService.experimentsRef.doc().id;
     const distId = 'run_dist';
     const warmId = 'run_warm';
     const paceId = 'run_pace';
@@ -398,7 +414,6 @@ class DemoDataSeeder {
     ];
 
     SchemaRun mk(
-      String id,
       int dayOffset,
       double dist,
       double warm,
@@ -414,7 +429,7 @@ class DemoDataSeeder {
       double enjoy,
     ) {
       return _run(
-        id: 'run_$id',
+        id: DatabaseService.runsRef.doc().id,
         experimentId: expId,
         userId: userId,
         createdAt: createdAt + dayOffset * 86400,
@@ -441,7 +456,6 @@ class DemoDataSeeder {
 
     final runs = [
       mk(
-        'r1',
         0,
         5.0,
         5,
@@ -457,7 +471,6 @@ class DemoDataSeeder {
         6,
       ),
       mk(
-        'r2',
         2,
         8.0,
         10,
@@ -473,7 +486,6 @@ class DemoDataSeeder {
         7,
       ),
       mk(
-        'r3',
         4,
         10.0,
         12,
@@ -489,7 +501,6 @@ class DemoDataSeeder {
         8,
       ),
       mk(
-        'r4',
         6,
         6.0,
         8,
@@ -505,7 +516,6 @@ class DemoDataSeeder {
         5,
       ),
       mk(
-        'r5',
         8,
         8.0,
         10,
@@ -539,7 +549,7 @@ class DemoDataSeeder {
   // ---------------------------------------------------------------------------
 
   static _SeededExperiment _studyExperiment(String userId, int createdAt) {
-    const expId = 'demo_study';
+    final expId = DatabaseService.experimentsRef.doc().id;
     const sessionId = 'study_session';
     const breakId = 'study_break';
     const soundId = 'study_sound';
@@ -620,7 +630,6 @@ class DemoDataSeeder {
     ];
 
     SchemaRun mk(
-      String id,
       int dayOffset,
       double session,
       double brk,
@@ -632,7 +641,7 @@ class DemoDataSeeder {
       double fatigue,
     ) {
       return _run(
-        id: 'run_$id',
+        id: DatabaseService.runsRef.doc().id,
         experimentId: expId,
         userId: userId,
         createdAt: createdAt + dayOffset * 86400,
@@ -654,10 +663,10 @@ class DemoDataSeeder {
     }
 
     final runs = [
-      mk('s1', 0, 60, 10, 'Silence', false, 72, 6, 6, 5),
-      mk('s2', 1, 45, 5, 'Lo-fi', true, 70, 8, 7, 4),
-      mk('s3', 3, 50, 10, 'White noise', true, 68, 9, 8, 3),
-      mk('s4', 5, 90, 15, 'Cafe', false, 74, 5, 6, 7),
+      mk(0, 60, 10, 'Silence', false, 72, 6, 6, 5),
+      mk(1, 45, 5, 'Lo-fi', true, 70, 8, 7, 4),
+      mk(3, 50, 10, 'White noise', true, 68, 9, 8, 3),
+      mk(5, 90, 15, 'Cafe', false, 74, 5, 6, 7),
     ];
 
     return _assemble(
@@ -677,7 +686,7 @@ class DemoDataSeeder {
   // ---------------------------------------------------------------------------
 
   static _SeededExperiment _dateExperiment(String userId, int createdAt) {
-    const expId = 'demo_date';
+    final expId = DatabaseService.experimentsRef.doc().id;
     const activityId = 'date_activity';
     const lengthId = 'date_length';
     const timeId = 'date_time';
@@ -755,7 +764,6 @@ class DemoDataSeeder {
     ];
 
     SchemaRun mk(
-      String id,
       int dayOffset,
       String activity,
       double length,
@@ -766,7 +774,7 @@ class DemoDataSeeder {
       double cost,
     ) {
       return _run(
-        id: 'run_$id',
+        id: DatabaseService.runsRef.doc().id,
         experimentId: expId,
         userId: userId,
         createdAt: createdAt + dayOffset * 86400,
@@ -787,10 +795,10 @@ class DemoDataSeeder {
     }
 
     final runs = [
-      mk('d1', 0, 'Dinner', 2.0, 'Evening', 90, 7, 6, 90),
-      mk('d2', 2, 'Coffee', 1.0, 'Afternoon', 15, 6, 8, 15),
-      mk('d3', 4, 'Walk in the park', 1.5, 'Afternoon', 5, 8, 9, 5),
-      mk('d4', 6, 'Museum', 2.5, 'Morning', 40, 9, 8, 40),
+      mk(0, 'Dinner', 2.0, 'Evening', 90, 7, 6, 90),
+      mk(2, 'Coffee', 1.0, 'Afternoon', 15, 6, 8, 15),
+      mk(4, 'Walk in the park', 1.5, 'Afternoon', 5, 8, 9, 5),
+      mk(6, 'Museum', 2.5, 'Morning', 40, 9, 8, 40),
     ];
 
     return _assemble(
@@ -803,7 +811,176 @@ class DemoDataSeeder {
       runs: runs,
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Experiment 5 — "Dialing in espresso" (number, temperature, duration, choice,
+  // toggle). The large-history showcase: 120 generated runs so pagination,
+  // scrolling and big run-count displays all have real data to render. Runs are
+  // generated around a sweet spot so the optimizer still has a clear best run.
+  // ---------------------------------------------------------------------------
+
+  static _SeededExperiment _espressoExperiment(String userId, int createdAt) {
+    final expId = DatabaseService.experimentsRef.doc().id;
+    const doseId = 'esp_dose';
+    const grindId = 'esp_grind';
+    const tempId = 'esp_temp';
+    const shotId = 'esp_shot';
+    const basketId = 'esp_basket';
+    const spritzId = 'esp_spritz';
+
+    final parameters = <SchemaParameter>[
+      SchemaParameter(
+        id: doseId,
+        name: 'Dose',
+        type: ParameterType.number,
+        unit: 'g',
+        min: 14,
+        max: 20,
+        increment: 0.5,
+      ),
+      SchemaParameter(
+        id: grindId,
+        name: 'Grind setting',
+        type: ParameterType.number,
+        min: 1,
+        max: 30,
+        increment: 1,
+      ),
+      SchemaParameter(
+        id: tempId,
+        name: 'Brew temperature',
+        type: ParameterType.temperature,
+        unit: TemperatureUnit.celsius.label,
+        min: 88,
+        max: 96,
+        increment: 1,
+      ),
+      SchemaParameter(
+        id: shotId,
+        name: 'Shot time',
+        type: ParameterType.duration,
+        unit: DurationUnit.seconds.label,
+        min: 20,
+        max: 40,
+        increment: 1,
+      ),
+      SchemaParameter(
+        id: basketId,
+        name: 'Basket',
+        type: ParameterType.choice,
+        options: const ['Single', 'Double', 'Ridgeless'],
+      ),
+      SchemaParameter(
+        id: spritzId,
+        name: 'WDT + spritz',
+        type: ParameterType.toggle,
+        onLabel: 'Spritzed',
+        offLabel: 'Dry',
+      ),
+    ];
+
+    final outcomes = <SchemaOutcome>[
+      SchemaOutcome(
+        id: 'esp_taste',
+        name: 'Taste',
+        description: 'Overall sweetness and balance in the cup.',
+        min: 0,
+        max: 10,
+        step: 1,
+        goal: OutcomeGoal.maximize,
+        weight: 50,
+      ),
+      SchemaOutcome(
+        id: 'esp_bitter',
+        name: 'Bitterness',
+        description: 'Harsh, ashy edge — lower is better.',
+        min: 0,
+        max: 10,
+        step: 1,
+        goal: OutcomeGoal.minimize,
+        weight: 30,
+      ),
+      SchemaOutcome(
+        id: 'esp_crema',
+        name: 'Crema',
+        min: 0,
+        max: 10,
+        step: 1,
+        goal: OutcomeGoal.maximize,
+        weight: 20,
+      ),
+    ];
+
+    // A triangular falloff: 1 at [ideal], dropping to 0 once [x] is [tol] away.
+    double bell(double x, double ideal, double tol) =>
+        (1 - (x - ideal).abs() / tol).clamp(0.0, 1.0);
+
+    const baskets = ['Single', 'Double', 'Ridgeless'];
+    const runCount = 120;
+    const stepSeconds = 43200; // ~12 h between logged shots
+
+    final runs = <SchemaRun>[];
+    for (var i = 0; i < runCount; i++) {
+      // Walk each parameter across its range on a different stride so the runs
+      // cover the space without ever leaving the increment grid.
+      final dose = 14 + (i % 13) * 0.5; // 14.0 .. 20.0
+      final grind = (1 + (i * 7) % 30).toDouble(); // 1 .. 30
+      final temp = (88 + i % 9).toDouble(); // 88 .. 96
+      final shot = (20 + (i * 3) % 21).toDouble(); // 20 .. 40
+      final basket = baskets[i % baskets.length];
+      final spritz = i % 2 == 0;
+
+      // Sweet spot: 18 g, grind 15, 93 °C, 28 s — shots near it score best, so
+      // the cached best run and optimizer behave like a real dial-in.
+      final quality = (bell(dose, 18, 6) +
+              bell(grind, 15, 14) +
+              bell(temp, 93, 6) +
+              bell(shot, 28, 12)) /
+          4;
+
+      runs.add(
+        _run(
+          id: DatabaseService.runsRef.doc().id,
+          experimentId: expId,
+          userId: userId,
+          // Newest shot lands on the experiment's createdAt; the rest trail back
+          // into the past so all 120 timestamps stay before "now".
+          createdAt: createdAt - (runCount - 1 - i) * stepSeconds,
+          parameterValues: {
+            doseId: dose,
+            grindId: grind,
+            tempId: temp,
+            shotId: shot,
+            basketId: basket,
+            spritzId: spritz,
+          },
+          outcomeValues: {
+            'esp_taste': (2 + 8 * quality).roundToDouble(),
+            'esp_bitter': (8 - 6 * quality).roundToDouble(),
+            'esp_crema': (3 + 7 * quality).roundToDouble(),
+          },
+          parameters: parameters,
+          outcomes: outcomes,
+        ),
+      );
+    }
+
+    return _assemble(
+      id: expId,
+      userId: userId,
+      name: 'Dialing In Espresso',
+      createdAt: createdAt,
+      parameters: parameters,
+      outcomes: outcomes,
+      runs: runs,
+    );
+  }
 }
+
+/// Identifies each demo experiment the seeder can produce, so callers can pick a
+/// subset via [DemoDataSeeder.seed]'s `include` set. Declared in the order the
+/// experiments should appear in the list (newest-first on screen).
+enum DemoExperiment { tea, running, study, date, espresso }
 
 /// One built experiment plus the runs that belong to it, waiting to be written.
 typedef _ExperimentBuilder =
@@ -822,8 +999,23 @@ class _SeededExperiment {
 ///
 /// Drop `const DemoSeedButton()` into the experiments-list footer (it is already
 /// there, commented out) when you need to populate an account for screenshots.
+/// Pass [include] to seed only some of them, e.g.
+/// `DemoSeedButton(include: {DemoExperiment.espresso})` for just the big-history
+/// one.
 class DemoSeedButton extends StatefulWidget {
-  const DemoSeedButton({super.key});
+  /// Which demo experiments this button creates. Defaults to all of them.
+  final Set<DemoExperiment> include;
+
+  const DemoSeedButton({
+    super.key,
+    this.include = const {
+      DemoExperiment.tea,
+      DemoExperiment.running,
+      DemoExperiment.study,
+      DemoExperiment.date,
+      DemoExperiment.espresso,
+    },
+  });
 
   @override
   State<DemoSeedButton> createState() => _DemoSeedButtonState();
@@ -836,7 +1028,7 @@ class _DemoSeedButtonState extends State<DemoSeedButton> {
     if (_seeding) return;
     setState(() => _seeding = true);
     try {
-      await DemoDataSeeder.seed();
+      await DemoDataSeeder.seed(include: widget.include);
       PopupService.showResultToast(
         message: '✅ Demo experiments created.',
         backgroundColor: AppColors.addGreen,

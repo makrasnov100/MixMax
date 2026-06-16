@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:mix_max/classes/schema/experiment.dart';
 import 'package:mix_max/scripts/demo_data_seeder.dart';
 import 'package:mix_max/services/firebase/auth_service.dart';
@@ -16,6 +19,7 @@ import 'package:mix_max/services/ui/popup_service.dart';
 import 'package:mix_max/widgets/pages/account/account_drawer.dart';
 import 'package:mix_max/widgets/pages/account/confirm_delete_account_drawer.dart';
 import 'package:mix_max/widgets/pages/experiments_list/create_experiment_drawer.dart';
+import 'package:mix_max/widgets/pages/experiments_list/experiment_list_item.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/progress_overlay.dart';
@@ -55,15 +59,46 @@ class ExperimentsListPage extends StatefulWidget {
   State<ExperimentsListPage> createState() => _ExperimentsListPageState();
 }
 
+/// How many experiments are fetched per page as the home list scrolls.
+const int _pageSize = 20;
+
 class _ExperimentsListPageState extends State<ExperimentsListPage> {
   late final AuthService _authService;
+
+  /// Drives the paginated home list. Each page is a cursor-based Firestore
+  /// `.get()`; new/migrated experiments arrive via [_liveSub] which refreshes
+  /// the controller (see [_resubscribeLive]).
+  late final PagingController<int, SchemaExperiment> _pagingController;
+
+  /// Cursor for the next page — the last document of the page fetched so far.
+  /// Reset to null on [_refresh] so the next fetch starts from the top.
+  DocumentSnapshot<SchemaExperiment>? _lastExpDoc;
+
+  /// Whether the last fetched page was full, i.e. more pages may exist.
+  bool _expHasMore = true;
+
+  /// Live listener over the first page of the current user's experiments. Its
+  /// only job is to refresh the paginated list when experiments change —
+  /// crucially, when a guest's experiments are migrated onto a freshly
+  /// signed-in provider account (the backend rewrites their userId
+  /// asynchronously, after sign-in completes).
+  StreamSubscription<QuerySnapshot<SchemaExperiment>>? _liveSub;
+
+  /// The userId [_liveSub] is currently bound to, so an auth change only
+  /// re-subscribes when the user actually switched.
+  String? _subscribedUserId;
 
   @override
   void initState() {
     super.initState();
     _authService = getIt<AuthService>();
+    _pagingController = PagingController<int, SchemaExperiment>(
+      getNextPageKey: (state) => _expHasMore ? state.nextIntPageKey : null,
+      fetchPage: _fetchExperimentsPage,
+    );
     _authService.addListener(_onAuthChanged);
     _maybeStartOnboarding();
+    if (!widget.isDemo) _resubscribeLive();
   }
 
   /// On the real home screen (not the tour's demo copy), auto-start the one-time
@@ -81,11 +116,90 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
   @override
   void dispose() {
     _authService.removeListener(_onAuthChanged);
+    _liveSub?.cancel();
+    _pagingController.dispose();
     super.dispose();
   }
 
   void _onAuthChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    // The user (and thus which experiments are theirs) may have changed — point
+    // the live listener at the new account and reload the list immediately.
+    // After an anonymous → provider sign-in this re-binds to the provider's
+    // experiments and refreshes again once the migrated docs land (a later
+    // snapshot emission).
+    final userChanged = _authService.user.id != _subscribedUserId;
+    _resubscribeLive();
+    if (userChanged) _refresh();
+    setState(() {});
+  }
+
+  /// The current user's experiments, newest first. Shared by the paginated
+  /// fetch and the live first-page listener.
+  Query<SchemaExperiment> _experimentsQuery(String userId) => DatabaseService
+      .experimentsRef
+      .where('userId', isEqualTo: userId)
+      .orderBy('createdAt', descending: true);
+
+  /// (Re)binds [_liveSub] to the current user and refreshes the list. Drops the
+  /// subscription while no real user is resolved yet.
+  void _resubscribeLive() {
+    final userId = _authService.user.id;
+    if (userId.isEmpty || userId == 'INITIAL') {
+      _liveSub?.cancel();
+      _liveSub = null;
+      _subscribedUserId = null;
+      return;
+    }
+    if (userId == _subscribedUserId && _liveSub != null) return;
+
+    _subscribedUserId = userId;
+    _liveSub?.cancel();
+    // The first emission carries the data the initial fetch / _refresh already
+    // loads, so skip it to avoid a redundant reload + spinner flash. Later
+    // emissions — a created experiment, or migrated docs arriving after
+    // sign-in — refresh the paginated list.
+    var skipFirst = true;
+    _liveSub = _experimentsQuery(userId).limit(_pageSize).snapshots().listen((
+      _,
+    ) {
+      if (skipFirst) {
+        skipFirst = false;
+        return;
+      }
+      if (mounted) _refresh();
+    });
+  }
+
+  /// Restarts pagination from the top — resets the cursor and re-fetches page
+  /// one. Called whenever the live listener reports a change.
+  void _refresh() {
+    _lastExpDoc = null;
+    _expHasMore = true;
+    _pagingController.refresh();
+  }
+
+  /// Fetches one page of experiments, advancing the [_lastExpDoc] cursor.
+  Future<List<SchemaExperiment>> _fetchExperimentsPage(int pageKey) async {
+    final userId = _authService.user.id;
+    if (userId.isEmpty || userId == 'INITIAL') {
+      _expHasMore = false;
+      return const [];
+    }
+
+    Query<SchemaExperiment> query = _experimentsQuery(userId).limit(_pageSize);
+    if (_lastExpDoc != null) {
+      query = query.startAfterDocument(_lastExpDoc!);
+    }
+
+    final snapshot = await query.get();
+    _expHasMore = snapshot.docs.length == _pageSize;
+    if (snapshot.docs.isNotEmpty) _lastExpDoc = snapshot.docs.last;
+
+    return snapshot.docs
+        .map((d) => d.data())
+        .where((e) => e.isValid())
+        .toList();
   }
 
   /// Gated on having an account: a brand-new user must first choose how to use
@@ -189,21 +303,8 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     );
   }
 
-  Stream<QuerySnapshot<SchemaExperiment>>? _experimentsStream() {
-    final userId = _authService.user.id;
-    if (userId.isEmpty || userId == 'INITIAL') {
-      return null;
-    }
-    return DatabaseService.experimentsRef
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final stream = widget.isDemo ? null : _experimentsStream();
-
     return OrientationScaffold(
       body: ColoredBox(
         color: AppColors.bg,
@@ -247,7 +348,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
                     ],
                   ),
                 ),
-                Expanded(child: _buildList(stream)),
+                Expanded(child: _buildList()),
               ],
             ),
 
@@ -295,9 +396,10 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     );
   }
 
-  /// Resolves the body for the current auth / stream state: a sign-in hint
-  /// while the user resolves, then the live experiment list.
-  Widget _buildList(Stream<QuerySnapshot<SchemaExperiment>>? stream) {
+  /// Resolves the body for the current auth state: the in-memory sample during
+  /// onboarding, a sign-in hint while the user resolves, then the paginated
+  /// live experiment list.
+  Widget _buildList() {
     // Onboarding tour: render the in-memory sample experiment directly.
     if (widget.isDemo) {
       return ExperimentsList(
@@ -308,7 +410,8 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
       );
     }
 
-    if (stream == null) {
+    final userId = _authService.user.id;
+    if (userId.isEmpty || userId == 'INITIAL') {
       // Signed out entirely (no account chosen yet): show the regular empty
       // state — the gate on "New experiment" handles the choice.
       if (!_authService.hasAccount && !_authService.isLoading) {
@@ -323,39 +426,39 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
       );
     }
 
-    return StreamBuilder<QuerySnapshot<SchemaExperiment>>(
-      stream: stream,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: BodyText(
-                text: 'Could not load experiments.',
-                color: AppColors.danger,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.gold),
-          );
-        }
-
-        final experiments =
-            (snapshot.data?.docs ?? [])
-                .map((d) => d.data())
-                .where((e) => e.isValid())
-                .toList();
-
-        // Leave room at the bottom for the floating footer button.
-        return ExperimentsList(
-          experiments: experiments,
-          onOpen: _openExperiment,
+    // Leave room at the bottom for the floating footer button.
+    return PagingListener<int, SchemaExperiment>(
+      controller: _pagingController,
+      builder: (context, state, fetchNextPage) {
+        return PagedListView<int, SchemaExperiment>.separated(
+          state: state,
+          fetchNextPage: fetchNextPage,
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 110),
+          separatorBuilder: (_, __) => const SizedBox(height: 13),
+          builderDelegate: PagedChildBuilderDelegate<SchemaExperiment>(
+            itemBuilder:
+                (context, experiment, index) => ExperimentListItem(
+                  experiment: experiment,
+                  onTap: () => _openExperiment(experiment),
+                ),
+            firstPageProgressIndicatorBuilder:
+                (_) => const Center(
+                  child: CircularProgressIndicator(color: AppColors.gold),
+                ),
+            firstPageErrorIndicatorBuilder:
+                (_) => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: BodyText(
+                      text: 'Could not load experiments.',
+                      color: AppColors.danger,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            noItemsFoundIndicatorBuilder:
+                (_) => const ExperimentsListEmptyState(),
+          ),
         );
       },
     );

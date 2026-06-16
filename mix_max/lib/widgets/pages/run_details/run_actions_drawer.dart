@@ -18,10 +18,6 @@ import 'package:mix_max/widgets/design/molecules/action_row.dart';
 /// [onRescore] or [onDelete] so the caller can immediately open the follow-up
 /// flow.
 class RunActionsDrawer extends StatelessWidget {
-  /// The run's chronological number, shown as the drawer title. Null falls back
-  /// to "this run" when the caller doesn't know the position.
-  final int? number;
-
   /// Opens the share flow (renders the run as a shareable image).
   final VoidCallback onShare;
 
@@ -33,7 +29,6 @@ class RunActionsDrawer extends StatelessWidget {
 
   const RunActionsDrawer({
     super.key,
-    required this.number,
     required this.onShare,
     required this.onRescore,
     required this.onDelete,
@@ -41,7 +36,7 @@ class RunActionsDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = number != null ? 'Run $number' : 'This run';
+    const title = 'This run';
 
     return MixMaxDrawerContainer(
       child: Column(
@@ -51,14 +46,14 @@ class RunActionsDrawer extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
             child: Column(
-              children: [
+              children: const [
                 TitleText(
                   text: title,
                   fontSize: 25,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 3),
-                const CaptionText(
+                SizedBox(height: 3),
+                CaptionText(
                   text: 'Manage this run',
                   fontSize: 13.5,
                   textAlign: TextAlign.center,
