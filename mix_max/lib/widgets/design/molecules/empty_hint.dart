@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -44,53 +45,54 @@ class MixMaxEmptyHint extends StatelessWidget {
         radius: 20, // rCard
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         // Surface fill sits inside the dashed ring (border-box in the design).
         decoration: BoxDecoration(
           color: error ? AppColors.dangerTint : AppColors.surface,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Row(
-          children: [
-            MixMaxTile(
-              glyph: glyph,
-              tone: error ? MixMaxTileTone.danger : MixMaxTileTone.neutral,
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LabelText(
-                    text: title,
-                    fontSize: 14.5,
-                    color: error ? AppColors.dangerText : AppColors.ink,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+        child: MixMaxInk(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                MixMaxTile(
+                  glyph: glyph,
+                  tone: error ? MixMaxTileTone.danger : MixMaxTileTone.neutral,
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      LabelText(
+                        text: title,
+                        fontSize: 14.5,
+                        color: error ? AppColors.dangerText : AppColors.ink,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 1),
+                      CaptionText(
+                        text: body,
+                        color: error ? AppColors.dangerText : AppColors.inkSoft,
+                        fontWeight: FontWeight.w400,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 1),
-                  CaptionText(
-                    text: body,
-                    color: error ? AppColors.dangerText : AppColors.inkSoft,
-                    fontWeight: FontWeight.w400,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
 
-    if (onTap == null) return panel;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: panel,
-    );
+    return panel;
   }
 }
 

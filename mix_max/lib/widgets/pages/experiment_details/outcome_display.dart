@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
-import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
 import 'package:mix_max/widgets/design/ions/text/label_text.dart';
@@ -64,16 +64,7 @@ class OutcomeDisplay extends StatelessWidget {
       ),
     );
 
-    if (onTap == null) return row;
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onTap: onTap,
-        splashColor: AppColors.bgAlt,
-        highlightColor: AppColors.bgAlt,
-        child: row,
-      ),
-    );
+    return MixMaxInk(onTap: onTap, child: row);
   }
 
   /// `unit · min–max · increment N`, dropping any part that isn't set. Mirrors

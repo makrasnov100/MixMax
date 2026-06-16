@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -41,9 +42,8 @@ class MixMaxQuickAddCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
+    return Container(
       width: width,
-      padding: const EdgeInsets.fromLTRB(13, 13, 13, 14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(15),
@@ -52,34 +52,35 @@ class MixMaxQuickAddCard extends StatelessWidget {
           BoxShadow(color: Color(0x08221F2A), offset: Offset(0, 1), blurRadius: 2),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MixMaxTile(glyph: icon, tone: tone, size: 34, radius: 10),
-          const SizedBox(height: 9),
-          LabelText(
-            text: title,
-            fontSize: 13.5,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(13, 13, 13, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MixMaxTile(glyph: icon, tone: tone, size: 34, radius: 10),
+              const SizedBox(height: 9),
+              LabelText(
+                text: title,
+                fontSize: 13.5,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              CaptionText(
+                text: hint,
+                fontSize: 11.5,
+                color: AppColors.inkFaint,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          CaptionText(
-            text: hint,
-            fontSize: 11.5,
-            color: AppColors.inkFaint,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        ),
       ),
-    );
-
-    if (onTap == null) return card;
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(cursor: SystemMouseCursors.click, child: card),
     );
   }
 }

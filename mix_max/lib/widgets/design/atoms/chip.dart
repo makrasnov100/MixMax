@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 
 /// Color voices for a [MixMaxChip], ported from `ui.jsx` `CHIP_TONES`:
 ///   • [soft]    quiet meta (warm fill, no border)
@@ -48,43 +49,43 @@ class MixMaxChip extends StatelessWidget {
         ? const EdgeInsets.fromLTRB(12, 6, 8, 6)
         : const EdgeInsets.symmetric(horizontal: 11, vertical: 5);
 
-    final pill = Container(
-      padding: padding,
+    return Container(
       decoration: BoxDecoration(
         color: palette.bg,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: palette.bd, width: 1),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            MixMaxIcon(icon!, size: 13, color: palette.fg),
-            const SizedBox(width: 5),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: AppFonts.sans,
-              fontWeight: FontWeight.w600,
-              fontSize: 12.5,
-              letterSpacing: 12.5 * 0.01,
-              color: palette.fg,
-              height: 1,
-            ),
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: padding,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                MixMaxIcon(icon!, size: 13, color: palette.fg),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
+                  letterSpacing: 12.5 * 0.01,
+                  color: palette.fg,
+                  height: 1,
+                ),
+              ),
+              if (onClose != null) ...[
+                const SizedBox(width: 5),
+                _CloseButton(color: palette.fg, onTap: onClose!),
+              ],
+            ],
           ),
-          if (onClose != null) ...[
-            const SizedBox(width: 5),
-            _CloseButton(color: palette.fg, onTap: onClose!),
-          ],
-        ],
+        ),
       ),
-    );
-
-    if (onTap == null) return pill;
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(cursor: SystemMouseCursors.click, child: pill),
     );
   }
 }
@@ -99,17 +100,17 @@ class _CloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 18,
-        height: 18,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Color(0x0D000000), // rgba(0,0,0,0.05)
-          shape: BoxShape.circle,
-        ),
-        child: MixMaxIcon(MixMaxGlyph.close, size: 11, color: color),
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: const BoxDecoration(
+        color: Color(0x0D000000), // rgba(0,0,0,0.05)
+        shape: BoxShape.circle,
+      ),
+      child: MixMaxInk(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Center(child: MixMaxIcon(MixMaxGlyph.close, size: 11, color: color)),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/widgets/design/atoms/card.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 import 'package:mix_max/widgets/pages/experiment_details/weight_math.dart';
@@ -290,38 +291,40 @@ class _RemainingBanner extends StatelessWidget {
     }
 
     final over = remaining < 0;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onNormalize,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        decoration: BoxDecoration(
-          color: over ? AppColors.dangerTint : AppColors.bgAlt,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: over ? AppColors.danger : AppColors.hairlineStrong,
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        color: over ? AppColors.dangerTint : AppColors.bgAlt,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: over ? AppColors.danger : AppColors.hairlineStrong,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            MixMaxIcon(
-              MixMaxGlyph.sparkle,
-              size: 15,
-              color: over ? AppColors.dangerText : AppColors.gold,
-            ),
-            const SizedBox(width: 7),
-            Text(
-              'Normalize to 100%',
-              style: TextStyle(
-                fontFamily: AppFonts.sans,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                height: 1,
-                color: over ? AppColors.dangerText : AppColors.ink,
+      ),
+      child: MixMaxInk(
+        onTap: onNormalize,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MixMaxIcon(
+                MixMaxGlyph.sparkle,
+                size: 15,
+                color: over ? AppColors.dangerText : AppColors.gold,
               ),
-            ),
-          ],
+              const SizedBox(width: 7),
+              Text(
+                'Normalize to 100%',
+                style: TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  height: 1,
+                  color: over ? AppColors.dangerText : AppColors.ink,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

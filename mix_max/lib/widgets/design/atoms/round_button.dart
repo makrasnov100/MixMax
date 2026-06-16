@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 
 /// A circular icon button — the top-bar back affordance and other single-glyph
@@ -31,28 +32,25 @@ class MixMaxRoundButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: size,
-          height: size,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.hairline, width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0D221F2A),
-                offset: Offset(0, 1),
-                blurRadius: 2,
-              ),
-            ],
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.hairline, width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D221F2A),
+            offset: Offset(0, 1),
+            blurRadius: 2,
           ),
-          child: MixMaxIcon(glyph, size: glyphSize, color: color),
-        ),
+        ],
+      ),
+      child: MixMaxInk(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Center(child: MixMaxIcon(glyph, size: glyphSize, color: color)),
       ),
     );
   }

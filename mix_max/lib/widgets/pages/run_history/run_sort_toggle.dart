@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 
@@ -68,28 +69,27 @@ class RunSortToggle extends StatelessWidget {
   }) {
     final active = mode == value;
 
-    return GestureDetector(
-      onTap: () => onChanged(mode),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          height: 38,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? AppColors.surface : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: active
-                ? const [
-                    BoxShadow(
-                      color: Color(0x1A221F2A), // rgba(34,31,42,0.10)
-                      offset: Offset(0, 1),
-                      blurRadius: 2,
-                    ),
-                  ]
-                : null,
-          ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      height: 38,
+      decoration: BoxDecoration(
+        color: active ? AppColors.surface : Colors.transparent,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: active
+            ? const [
+                BoxShadow(
+                  color: Color(0x1A221F2A), // rgba(34,31,42,0.10)
+                  offset: Offset(0, 1),
+                  blurRadius: 2,
+                ),
+              ]
+            : null,
+      ),
+      child: MixMaxInk(
+        onTap: () => onChanged(mode),
+        borderRadius: BorderRadius.circular(999),
+        child: Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

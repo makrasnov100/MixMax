@@ -7,6 +7,7 @@ import 'package:mix_max/services/ui/duration_timer_service.dart';
 import 'package:mix_max/widgets/design/atoms/card.dart';
 import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/atoms/inputs/text_input.dart';
 import 'package:mix_max/widgets/design/atoms/inputs/toggle_input.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
@@ -251,17 +252,17 @@ class _DoneButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: AppColors.sage,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: const Row(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.sage,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               MixMaxIcon(MixMaxGlyph.check, size: 15, color: Colors.white),

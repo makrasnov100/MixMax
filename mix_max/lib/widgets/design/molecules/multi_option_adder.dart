@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/chip.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
 import 'package:mix_max/widgets/design/atoms/inputs/text_input.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 
 /// A repeated text-entry field that builds a list of short strings — the
@@ -105,19 +106,18 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: 50,
-          height: 50,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.ink,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const MixMaxIcon(MixMaxGlyph.plus, size: 20, color: Colors.white),
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: const Center(
+          child: MixMaxIcon(MixMaxGlyph.plus, size: 20, color: Colors.white),
         ),
       ),
     );

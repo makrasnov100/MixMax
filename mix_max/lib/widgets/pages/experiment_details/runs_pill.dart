@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 
@@ -23,25 +24,25 @@ class RunsPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.hairline, width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0D221F2A), // rgba(34,31,42,0.05)
-                offset: Offset(0, 1),
-                blurRadius: 2,
-              ),
-            ],
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.hairline, width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D221F2A), // rgba(34,31,42,0.05)
+            offset: Offset(0, 1),
+            blurRadius: 2,
           ),
+        ],
+      ),
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -4,6 +4,7 @@ import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/parameter.dart';
 import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
@@ -51,22 +52,21 @@ class RunHistoryCard extends StatelessWidget {
         10;
     final mix = _mixSummary();
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onOpen,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
+    return Container(
+      decoration: BoxDecoration(
+        color: isBest ? AppColors.goldTint : AppColors.surface,
+        borderRadius: BorderRadius.circular(20), // rCard
+        border: Border.all(
+          color: isBest ? AppColors.gold : AppColors.hairline,
+          width: isBest ? 1.5 : 1,
+        ),
+        boxShadow: isBest ? _bestShadow : _cardShadow,
+      ),
+      child: MixMaxInk(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(17, 16, 17, 16),
-          decoration: BoxDecoration(
-            color: isBest ? AppColors.goldTint : AppColors.surface,
-            borderRadius: BorderRadius.circular(20), // rCard
-            border: Border.all(
-              color: isBest ? AppColors.gold : AppColors.hairline,
-              width: isBest ? 1.5 : 1,
-            ),
-            boxShadow: isBest ? _bestShadow : _cardShadow,
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

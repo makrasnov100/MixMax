@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 
 /// White elevated surface — the default container for content in the
@@ -56,7 +57,6 @@ class MixMaxCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = Container(
-      padding: padding,
       clipBehavior: clipContents ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
         color: color ?? AppColors.surface,
@@ -64,17 +64,14 @@ class MixMaxCard extends StatelessWidget {
         border: Border.all(color: borderColor ?? AppColors.hairline, width: 1),
         boxShadow: elevated ? _cardShadow : null,
       ),
-      child: child,
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_kRadius),
+        child: Padding(padding: padding, child: child),
+      ),
     );
 
-    final content = margin != null ? Padding(padding: margin!, child: card) : card;
-
-    if (onTap == null) return content;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: MouseRegion(cursor: SystemMouseCursors.click, child: content),
-    );
+    return margin != null ? Padding(padding: margin!, child: card) : card;
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mix_max/classes/schema/outcome.dart';
 import 'package:mix_max/classes/schema/run.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/format.dart';
@@ -32,45 +33,44 @@ class BestMixCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+    return Container(
       decoration: BoxDecoration(
         color: AppColors.goldTint,
         borderRadius: BorderRadius.circular(20), // rCard
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const MixMaxTile(glyph: MixMaxGlyph.trophy, tone: MixMaxTileTone.gold),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const EyebrowText(text: 'Best mix so far', color: AppColors.goldText),
-                const SizedBox(height: 3),
-                LabelText(text: label, fontSize: 15, maxLines: 2, overflow: TextOverflow.ellipsis),
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const MixMaxTile(glyph: MixMaxGlyph.trophy, tone: MixMaxTileTone.gold),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const EyebrowText(text: 'Best mix so far', color: AppColors.goldText),
+                    const SizedBox(height: 3),
+                    LabelText(text: label, fontSize: 15, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: 10),
+                const MixMaxIcon(
+                  MixMaxGlyph.chevRight,
+                  size: 19,
+                  color: AppColors.goldText,
+                ),
               ],
-            ),
+            ],
           ),
-          if (onTap != null) ...[
-            const SizedBox(width: 10),
-            const MixMaxIcon(
-              MixMaxGlyph.chevRight,
-              size: 19,
-              color: AppColors.goldText,
-            ),
-          ],
-        ],
+        ),
       ),
-    );
-
-    if (onTap == null) return card;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: MouseRegion(cursor: SystemMouseCursors.click, child: card),
     );
   }
 

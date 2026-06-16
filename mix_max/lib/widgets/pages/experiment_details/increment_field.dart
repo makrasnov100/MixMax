@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/inputs/text_input.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 
@@ -90,55 +91,56 @@ class _IncrementPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOut,
-          height: 42,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
+      height: 42,
+      decoration: BoxDecoration(
+        color: active ? AppColors.ink : AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: active ? AppColors.ink : AppColors.hairline,
+          width: 1.5,
+        ),
+      ),
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? AppColors.ink : AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: active ? AppColors.ink : AppColors.hairline,
-              width: 1.5,
-            ),
-          ),
           // Cells share the row width evenly; scale down if a label (e.g.
           // "1 whole") would be too wide on a narrow screen rather than overflow.
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: AppFonts.sans,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                    height: 1,
-                    color: active ? Colors.white : AppColors.ink,
-                  ),
-                ),
-                if (note != null) ...[
-                  const SizedBox(width: 6),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    note!,
+                    label,
                     style: TextStyle(
                       fontFamily: AppFonts.sans,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
                       height: 1,
-                      color: active ? Colors.white70 : AppColors.inkFaint,
+                      color: active ? Colors.white : AppColors.ink,
                     ),
                   ),
+                  if (note != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      note!,
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        height: 1,
+                        color: active ? Colors.white70 : AppColors.inkFaint,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

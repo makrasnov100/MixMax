@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 
@@ -53,23 +54,22 @@ class MixMaxSegmented<T> extends StatelessWidget {
     final selected = option.value == value;
     final fg = selected ? Colors.white : AppColors.inkSoft;
 
-    return GestureDetector(
-      onTap: () => onChanged(option.value),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOut,
-          height: 50,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.ink : AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? AppColors.ink : AppColors.hairline,
-              width: 1.5,
-            ),
-          ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
+      height: 50,
+      decoration: BoxDecoration(
+        color: selected ? AppColors.ink : AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: selected ? AppColors.ink : AppColors.hairline,
+          width: 1.5,
+        ),
+      ),
+      child: MixMaxInk(
+        onTap: () => onChanged(option.value),
+        borderRadius: BorderRadius.circular(14),
+        child: Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -9,6 +9,7 @@ import 'package:mix_max/services/ui/link_service.dart';
 import 'package:mix_max/widgets/design/atoms/button.dart';
 import 'package:mix_max/widgets/design/atoms/drawer_container.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/atoms/tile.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/text/caption_text.dart';
@@ -321,10 +322,11 @@ class _AccountDrawerState extends State<AccountDrawer> {
         ),
         const SizedBox(height: 14),
         Center(
-          child: GestureDetector(
+          child: MixMaxInk(
             onTap: _busy
                 ? null
                 : () => Navigator.of(context).pop(AccountDrawerResult.deleteRequested),
+            borderRadius: BorderRadius.circular(10),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mix_max/widgets/design/atoms/icon.dart';
+import 'package:mix_max/widgets/design/atoms/tap_ripple.dart';
 import 'package:mix_max/widgets/design/ions/app_colors.dart';
 import 'package:mix_max/widgets/design/ions/app_typography.dart';
 
@@ -38,10 +39,9 @@ class MixMaxSelectablePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pill = AnimatedContainer(
+    return AnimatedContainer(
       duration: const Duration(milliseconds: 140),
       curve: Curves.easeOut,
-      padding: const EdgeInsets.fromLTRB(12, 11, 15, 11),
       decoration: BoxDecoration(
         color: selected ? AppColors.ink : AppColors.surface,
         borderRadius: BorderRadius.circular(13),
@@ -50,33 +50,34 @@ class MixMaxSelectablePill extends StatelessWidget {
           width: 1.5,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MixMaxIcon(
-            icon,
-            size: 17,
-            color: selected ? iconColorActive : iconColorIdle,
+      child: MixMaxInk(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(13),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 15, 11),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MixMaxIcon(
+                icon,
+                size: 17,
+                color: selected ? iconColorActive : iconColorIdle,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14.5,
+                  color: selected ? Colors.white : AppColors.ink,
+                  height: 1,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: AppFonts.sans,
-              fontWeight: FontWeight.w600,
-              fontSize: 14.5,
-              color: selected ? Colors.white : AppColors.ink,
-              height: 1,
-            ),
-          ),
-        ],
+        ),
       ),
-    );
-
-    if (onTap == null) return pill;
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(cursor: SystemMouseCursors.click, child: pill),
     );
   }
 }

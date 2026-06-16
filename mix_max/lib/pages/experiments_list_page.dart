@@ -47,11 +47,7 @@ class ExperimentsListPage extends StatefulWidget {
   /// Spotlight target handed to the first card during the onboarding tour.
   final Key? spotlightFirstItemKey;
 
-  const ExperimentsListPage({
-    super.key,
-    this.demoExperiments,
-    this.spotlightFirstItemKey,
-  });
+  const ExperimentsListPage({super.key, this.demoExperiments, this.spotlightFirstItemKey});
 
   bool get isDemo => demoExperiments != null;
 
@@ -136,10 +132,8 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
 
   /// The current user's experiments, newest first. Shared by the paginated
   /// fetch and the live first-page listener.
-  Query<SchemaExperiment> _experimentsQuery(String userId) => DatabaseService
-      .experimentsRef
-      .where('userId', isEqualTo: userId)
-      .orderBy('createdAt', descending: true);
+  Query<SchemaExperiment> _experimentsQuery(String userId) =>
+      DatabaseService.experimentsRef.where('userId', isEqualTo: userId).orderBy('createdAt', descending: true);
 
   /// (Re)binds [_liveSub] to the current user and refreshes the list. Drops the
   /// subscription while no real user is resolved yet.
@@ -160,9 +154,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     // emissions — a created experiment, or migrated docs arriving after
     // sign-in — refresh the paginated list.
     var skipFirst = true;
-    _liveSub = _experimentsQuery(userId).limit(_pageSize).snapshots().listen((
-      _,
-    ) {
+    _liveSub = _experimentsQuery(userId).limit(_pageSize).snapshots().listen((_) {
       if (skipFirst) {
         skipFirst = false;
         return;
@@ -196,10 +188,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     _expHasMore = snapshot.docs.length == _pageSize;
     if (snapshot.docs.isNotEmpty) _lastExpDoc = snapshot.docs.last;
 
-    return snapshot.docs
-        .map((d) => d.data())
-        .where((e) => e.isValid())
-        .toList();
+    return snapshot.docs.map((d) => d.data()).where((e) => e.isValid()).toList();
   }
 
   /// Gated on having an account: a brand-new user must first choose how to use
@@ -236,10 +225,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     final count = await _countExperiments();
     if (!mounted) return;
 
-    final confirmed = await ConfirmDeleteAccountDrawer.show(
-      context,
-      experimentCount: count,
-    );
+    final confirmed = await ConfirmDeleteAccountDrawer.show(context, experimentCount: count);
     if (!mounted) return;
 
     if (!confirmed) {
@@ -261,18 +247,14 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
           result.success
               ? '✅ Your account and data have been deleted.'
               : '❌ Could not delete your account. Please try again later.',
-      backgroundColor:
-          result.success ? AppColors.addGreen : AppColors.dangerRed,
+      backgroundColor: result.success ? AppColors.addGreen : AppColors.dangerRed,
     );
   }
 
   Future<int> _countExperiments() async {
     try {
       final aggregate =
-          await DatabaseService.experimentsRef
-              .where('userId', isEqualTo: _authService.user.id)
-              .count()
-              .get();
+          await DatabaseService.experimentsRef.where('userId', isEqualTo: _authService.user.id).count().get();
       return aggregate.count ?? 0;
     } catch (_) {
       return 0;
@@ -290,17 +272,11 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
     await experiment.save();
 
     if (!mounted) return;
-    Navigation.goTo(
-      context: context,
-      page: ExperimentDetailsPage(experiment: experiment),
-    );
+    Navigation.goTo(context: context, page: ExperimentDetailsPage(experiment: experiment));
   }
 
   void _openExperiment(SchemaExperiment experiment) {
-    Navigation.goTo(
-      context: context,
-      page: ExperimentDetailsPage(experiment: experiment),
-    );
+    Navigation.goTo(context: context, page: ExperimentDetailsPage(experiment: experiment));
   }
 
   @override
@@ -330,20 +306,14 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
                             SizedBox(height: 8),
                             DisplayText(text: 'Experiments', fontSize: 40),
                             SizedBox(height: 10),
-                            BodyText(
-                              text: 'Find the best version of anything.',
-                              fontSize: 14.5,
-                            ),
+                            BodyText(text: 'Find the best version of anything.', fontSize: 14.5),
                           ],
                         ),
                       ),
                       const SizedBox(width: 14),
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: MixMaxRoundButton(
-                          glyph: MixMaxGlyph.user,
-                          onTap: _openAccount,
-                        ),
+                        child: MixMaxRoundButton(glyph: MixMaxGlyph.user, onTap: _openAccount),
                       ),
                     ],
                   ),
@@ -379,11 +349,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
                     MixMaxButton(
                       label: 'New experiment',
                       variant: MixMaxButtonVariant.ink,
-                      leading: const MixMaxIcon(
-                        MixMaxGlyph.plus,
-                        size: 20,
-                        color: Colors.white,
-                      ),
+                      leading: const MixMaxIcon(MixMaxGlyph.plus, size: 20, color: Colors.white),
                       onPressed: _addExperiment,
                     ),
                   ],
@@ -421,9 +387,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 110),
         );
       }
-      return const Center(
-        child: BodyText(text: 'Signing you in…', textAlign: TextAlign.center),
-      );
+      return const Center(child: BodyText(text: 'Signing you in…', textAlign: TextAlign.center));
     }
 
     // Leave room at the bottom for the floating footer button.
@@ -437,14 +401,10 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
           separatorBuilder: (_, __) => const SizedBox(height: 13),
           builderDelegate: PagedChildBuilderDelegate<SchemaExperiment>(
             itemBuilder:
-                (context, experiment, index) => ExperimentListItem(
-                  experiment: experiment,
-                  onTap: () => _openExperiment(experiment),
-                ),
+                (context, experiment, index) =>
+                    ExperimentListItem(experiment: experiment, onTap: () => _openExperiment(experiment)),
             firstPageProgressIndicatorBuilder:
-                (_) => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
+                (_) => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
             firstPageErrorIndicatorBuilder:
                 (_) => const Center(
                   child: Padding(
@@ -456,8 +416,7 @@ class _ExperimentsListPageState extends State<ExperimentsListPage> {
                     ),
                   ),
                 ),
-            noItemsFoundIndicatorBuilder:
-                (_) => const ExperimentsListEmptyState(),
+            noItemsFoundIndicatorBuilder: (_) => const ExperimentsListEmptyState(),
           ),
         );
       },
