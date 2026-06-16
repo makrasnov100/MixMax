@@ -62,6 +62,7 @@ class ExperimentsList extends StatelessWidget {
 /// Shown when the user has no experiments yet.
 ///
 /// Source: `screens.jsx` `ExperimentsListScreen` empty branch — a gold flask
+///
 /// tile over a serif headline and a soft prompt. Public so the paginated home
 /// list can reuse it as its "no items found" indicator.
 class ExperimentsListEmptyState extends StatelessWidget {
