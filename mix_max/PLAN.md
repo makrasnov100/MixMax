@@ -1,8 +1,5 @@
 ### MVP
 
-- perform security rule audit
-  - setup app check for the app, find easiest way to allow debug deices through
-
 - Start app store page upload existing asssets and version
 - disable multi tasking support apple so that horizontal orientation only can be supported
 - implement sign in with apple on apple
@@ -25,6 +22,7 @@
 - Update download links on the website
 
 ### Updates
+
 - Update entire firebase suite to latest, make sure app builds and queries work
 - Hiding experiments top bar as user navigates up
 - Search feature for expirements
