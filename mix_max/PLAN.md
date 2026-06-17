@@ -9,6 +9,8 @@
 - Update download links on the website
 
 ### Updates
+- app version in accounts section
+- Feature requests board or easy way to give feedback
 - Update entire firebase suite to latest, make sure app builds and queries work
 - Hiding experiments top bar as user navigates up
 - Search feature for expirements
