@@ -32,6 +32,7 @@ class MixMaxDrawerContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.of(context).size.height * maxHeightFraction;
+    final navigationBarHeight = MediaQuery.paddingOf(context).bottom;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -41,6 +42,7 @@ class MixMaxDrawerContainer extends StatelessWidget {
           borderRadius: BorderRadius.vertical(top: Radius.circular(_kRadius)),
           boxShadow: _drawerShadow,
         ),
+        padding: EdgeInsets.only(bottom: navigationBarHeight),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

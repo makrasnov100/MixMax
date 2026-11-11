@@ -24,6 +24,9 @@ class BottomDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double finalHeight = height == -1 ? SizeConfig.safeBlockVertical * 40 : height;
+    double keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
+    double navigationBarHeight = MediaQuery.paddingOf(context).bottom;
+    double bottomSpace = keyboardHeight + navigationBarHeight;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -36,8 +39,8 @@ class BottomDrawer extends StatelessWidget {
             topRight: Radius.circular(SizeConfig.safeBlockHorizontal * borderRadius),
           ),
         ),
-        constraints: BoxConstraints(maxHeight: finalHeight + MediaQuery.of(context).viewInsets.bottom),
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        constraints: BoxConstraints(maxHeight: finalHeight + bottomSpace),
+        padding: EdgeInsets.only(bottom: bottomSpace),
         child: Container(
           margin: EdgeInsets.symmetric(horizontal: horizontalMargins ?? SizeConfig.safeBlockHorizontal * 8),
           child: Column(
