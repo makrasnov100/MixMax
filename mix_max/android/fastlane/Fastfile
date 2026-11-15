@@ -1,0 +1,176 @@
+require "open3"
+require "supply"
+
+default_platform(:android)
+
+PLAY_SERVICE_ACCOUNT = "fastlane-play@my-fortuna-website.iam.gserviceaccount.com"
+PLAY_SCOPE = "https://www.googleapis.com/auth/androidpublisher"
+
+# Short-lived gcloud token impersonating the shared fastlane-play account; no key on disk.
+class GcloudPlayToken
+  def fetch_access_token!(_options = {})
+    out, err, status = Open3.capture3(
+      "gcloud", "auth", "print-access-token",
+      "--impersonate-service-account=#{PLAY_SERVICE_ACCOUNT}", "--scopes=#{PLAY_SCOPE}"
+    )
+    UI.user_error!("gcloud could not get a Google Play token:\n#{err.strip}") unless status.success?
+    @token = out.strip
+  end
+
+  def apply!(headers, _options = {})
+    fetch_access_token! unless @token
+    headers["Authorization"] = "Bearer #{@token}"
+  end
+end
+
+# supply has no option for a ready-made token.
+PLAY_AUTH = GcloudPlayToken.new
+Supply::Client.define_singleton_method(:make_from_config) do |params: nil|
+  new(auth_client: PLAY_AUTH, params: params || Supply.config)
+end
+
+# Guard on every Play call: no review sends (except internal, which Play forces), no cancelling a running review, internal track only.
+PLAY_TRACKS_FASTLANE_MAY_CHANGE = ["internal"].freeze
+
+module PlayPublishingGuard
+  class << self
+    attr_accessor :internal_release_in_progress
+  end
+
+  def commit_edit(package_name, edit_id, changes_in_review_behavior: nil, changes_not_sent_for_review: nil, **rest, &block)
+    if PlayPublishingGuard.internal_release_in_progress
+      super(package_name, edit_id, changes_in_review_behavior: "ERROR_IF_IN_REVIEW", **rest, &block)
+    else
+      super(package_name, edit_id,
+            changes_in_review_behavior: "ERROR_IF_IN_REVIEW",
+            changes_not_sent_for_review: true,
+            **rest, &block)
+    end
+  end
+
+  def update_edit_track(package_name, edit_id, track, *rest, **options, &block)
+    PlayPublishingGuard.refuse_unless_allowed!(track)
+    super
+  end
+
+  def patch_edit_track(package_name, edit_id, track, *rest, **options, &block)
+    PlayPublishingGuard.refuse_unless_allowed!(track)
+    super
+  end
+
+  def self.refuse_unless_allowed!(track)
+    return if PLAY_TRACKS_FASTLANE_MAY_CHANGE.include?(track.to_s)
+    UI.user_error!("fastlane only changes the #{PLAY_TRACKS_FASTLANE_MAY_CHANGE.join(', ')} track, not '#{track}'. Releases to other tracks are made in Play Console.")
+  end
+end
+Google::Apis::AndroidpublisherV3::AndroidPublisherService.prepend(PlayPublishingGuard)
+
+FLUTTER_ROOT = File.expand_path("../..", __dir__)
+AAB_PATH = File.join(FLUTTER_ROOT, "build/app/outputs/bundle/prodRelease/app-prod-release.aab")
+CRASHLYTICS_APP_ID = "1:124263762128:android:e8622bc7d3d243cbf776d5"
+METADATA_PATH = File.expand_path("metadata/android", __dir__)
+
+# Returns ["1.0.0", 2] for `version: 1.0.0+2` in pubspec.yaml.
+def pubspec_version
+  version = File.read(File.join(FLUTTER_ROOT, "pubspec.yaml"))[/^version:\s*(\S+)/, 1]
+  UI.user_error!("No `version: x.y.z+n` line in pubspec.yaml") unless version && version.include?("+")
+  name, code = version.split("+")
+  [name, code.to_i]
+end
+
+def debug_info_dir
+  name, = pubspec_version
+  "./debug_info/#{name}"
+end
+
+def newest_internal_build
+  google_play_track_version_codes(track: "internal").map(&:to_i).max.to_i
+end
+
+platform :android do
+  desc "Show the build numbers on the internal testing track (also checks Play access)"
+  lane :check do
+    name, code = pubspec_version
+    UI.message("pubspec.yaml is at #{name}+#{code}")
+    codes = google_play_track_version_codes(track: "internal")
+    UI.success("Internal testing track has build #{codes.join(', ')}")
+  end
+
+  desc "Build the prod app bundle and release it to the internal testing track. Anything waiting in Play Console's Publishing overview is sent for review with it. build:false uploads the bundle already built. Release notes come from fastlane/metadata/android/<language>/changelogs/<build number>.txt where it exists"
+  lane :internal do |options|
+    name, code = pubspec_version
+
+    # Fail before the build, not after it, when the build number is already taken.
+    live = newest_internal_build
+    if code <= live
+      UI.user_error!("Build number #{code} is not above #{live}, which internal testing already has. Bump the version in pubspec.yaml.")
+    end
+
+    changelogs = Dir.glob(File.join(METADATA_PATH, "*/changelogs/#{code}.txt"))
+    if changelogs.empty?
+      UI.important("No fastlane/metadata/android/<language>/changelogs/#{code}.txt, so the release goes out without release notes")
+    else
+      UI.message("Release notes: #{changelogs.map { |path| path.split('/')[-3] }.join(', ')}")
+    end
+
+    if options[:build] == false
+      UI.user_error!("No bundle at #{AAB_PATH}: run without build:false") unless File.exist?(AAB_PATH)
+      manifest = Zip::File.open(AAB_PATH) { |bundle| bundle.read("base/manifest/AndroidManifest.xml") }
+      UI.user_error!("The bundle at #{AAB_PATH} is not version #{name}: run without build:false") unless manifest.include?(name)
+      UI.message("Uploading the bundle built #{File.mtime(AAB_PATH)}")
+    else
+      Dir.chdir(FLUTTER_ROOT) do
+        sh("flutter", "build", "appbundle", "--flavor", "prod", "--release",
+           "--obfuscate", "--split-debug-info=#{debug_info_dir}")
+      end
+    end
+
+    UI.important("This commit also sends anything waiting in Play Console's Publishing overview for review")
+    PlayPublishingGuard.internal_release_in_progress = true
+    begin
+      upload_to_play_store(
+        track: "internal",
+        aab: AAB_PATH,
+        metadata_path: METADATA_PATH,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_screenshots: true,
+        skip_upload_changelogs: changelogs.empty?,
+        rescue_changes_not_sent_for_review: false
+      )
+    ensure
+      PlayPublishingGuard.internal_release_in_progress = false
+    end
+
+    symbols
+  end
+
+  desc "Upload the Dart debug symbols of the current pubspec version to Crashlytics"
+  lane :symbols do
+    Dir.chdir(FLUTTER_ROOT) do
+      sh("firebase", "crashlytics:symbols:upload", "--app=#{CRASHLYTICS_APP_ID}", debug_info_dir)
+    end
+  end
+
+  desc "Download the live store listing (text, images, release notes) into fastlane/metadata/android. The folder must not exist yet"
+  lane :listing_pull do
+    download_from_play_store(metadata_path: METADATA_PATH)
+  end
+
+  desc "Save the store listing (text, images, screenshots) from fastlane/metadata/android to Play Console as changes not yet sent for review. validate_only:true checks it with Google without saving"
+  lane :listing do |options|
+    # supply needs a release to attach notes to even when skipping them; use internal, not production.
+    upload_to_play_store(
+      metadata_path: METADATA_PATH,
+      track: "internal",
+      version_code: newest_internal_build,
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_changelogs: true,
+      sync_image_upload: true,
+      validate_only: options[:validate_only] == true,
+      changes_not_sent_for_review: true,
+      rescue_changes_not_sent_for_review: false
+    )
+  end
+end

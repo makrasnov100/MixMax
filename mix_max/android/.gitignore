@@ -12,3 +12,10 @@ key.properties
 mix-max-key.jks
 **/*.keystore
 **/*.jks
+
+# fastlane
+/fastlane/report.xml
+# Store images and screenshots are downloaded from Google Play (fastlane listing_pull), not kept in git
+/fastlane/metadata/android/*/images/
+/vendor/bundle
+/.bundle

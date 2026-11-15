@@ -1,0 +1,34 @@
+Ever wonder what the perfect recipe really is? Mix Max takes the guesswork out of optimization giving anyone a mathematical, systematic way to find the best combination of variables, whether you're perfecting a cocktail recipe, dialing in coffee, or fine-tuning a complex process.
+
+Optimize Anything
+Mix Max is an experiment optimizer for the real world. Set the outcomes you care about, and an intelligent algorithm suggests the next mix to try, converging on the best combination in far fewer attempts than random trial and error. Optimize a drink recipe, a coffee ratio, a baking formula, a workout, or an engineering process.
+
+Six Kinds of Parameters
+Build any experiment from six parameter types: numbers, durations, temperatures, on/off toggles, multiple-choice options, and even the order steps are done in. Set ranges, increments, and units. These are the knobs Mix Max learns to tune.
+
+Smart Units and Timer
+Temperatures convert live between °C, °F and K. Durations read as 1h 30m and come with a built-in countdown timer that keeps running even when the app is closed, so you can time a step to exactly the suggested length.
+
+Optimize for Several Goals at Once
+Set each outcome to maximize or minimize and weight how much it matters, so Mix Max balances competing priorities make a recipe tastier and cheaper at the same time.
+
+Lock What Works
+Already happy with a value? Freeze it and let Mix Max tune only the rest or edit any suggested run before you commit.
+
+Consistent Scoring
+Grade every result against your own scoring guide so ratings stay consistent across each run. Mix Max builds a probabilistic model of how your parameters drive the outcome, getting smarter with every data point.
+
+Always Know Your Best Mix
+Mix Max continuously surfaces the Best Mix discovered so far across all your priorities. Revisit the full run history any time, and share a winning recipe with anyone.
+
+Who Mix Max Is For
+You don't need a science degree. If you've ever wanted to know "what's the best possible version of this?". Perfect a cocktail recipe, coffee brew, cooking technique, product formula, workout routine, or an engineering process easily. Mix Max gives you a structured to prioritize and record trails.
+
+The Flow
+- Create an experiment and choose the outcomes to optimize for
+- Define the parameters that influence the result
+- Let the algorithm suggest the next run to try
+- Log and score each result
+- Watch Mix Max converge on the best combination
+
+Stop guessing, start optimizing. Whether you're perfecting a recipe, tuning settings, or running a real experiment, Mix Max is the smart way to find the best mix. Experiment smarter, not harder.
