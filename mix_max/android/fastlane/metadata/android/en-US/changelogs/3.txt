@@ -1,0 +1,1 @@
+• Drawers no longer hide behind the navigation bar on newer Android phones
